@@ -21,9 +21,8 @@
 
 #### Q2: Who are your target users?
 
-  > Short (1 - 2 min' read max)
- * Be specific (e.g. a 'a third-year university student taking CSC301 and studying Computer Science' and not 'a student')
- * **Feel free to use personas. You can create your personas as part of this Markdown file, or add a link to an external site (for example, [Xtensio](https://xtensio.com/user-persona/)).**
+* Users who own older computers, specifically those that are over 5 years old, that are equipped with an HDD and at least a small SSD, and/or cannot afford expensive storage upgrades
+* Power users, system administrators, and tech enthusiasts who enjoy disk management
 
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
