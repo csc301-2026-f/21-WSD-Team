@@ -27,14 +27,14 @@
 
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
-> Short (1 - 2 min' read max)
- * We want you to "connect the dots" for us - Why does your product (as described in your answer to Q1) fits the needs of your users (as described in your answer to Q2)?
- * Explain the benefits of your product explicitly & clearly. For example:
-    * Save users time (how and how much?)
-    * Allow users to discover new information (which information? And, why couldn't they discover it before?)
-    * Provide users with more accurate and/or informative data (what kind of data? Why is it useful to them?)
-    * Does this application exist in another form? If so, how does your differ and provide value to the users?
-    * How does this align with your partner's organization's values/mission/mandate?
+Our product is mainly targeting the users with a PC that is more than five years old with HDD and SSD and do not intend to upgrade their hardware. 
+We aim to accelerate the speed, optimize storage and extend device lifespan on older machines that struggle with slow storage performance. 
+The users will be given advice of data placement, caching recommendations and workload prioritization. 
+git
+WSD will provide users with more informative storage data, such as IOPS, disk I/O activity, throughput and workload information. 
+This helps users to understand which processes are affecting the performance, as they can choose whether to optimize their storage and select different optimization modes. 
+WSD aims to give a lightweight and accessible alternative to the existing storage-management tools, and we will provide a simple and understandable graphical interface for the users, 
+allowing less technical users to view storage performance and understand optimization recommendations without high-level knowledge.
 
 #### Q4: What are the user stories that make up the Minumum Viable Product (MVP)?
 
