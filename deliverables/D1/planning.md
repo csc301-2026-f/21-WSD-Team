@@ -12,7 +12,7 @@
 
 *Figure 1. High-level concept of WSD: the system observes workloads across mixed-speed storage devices and provides workload-aware recommendations and optimization options.*
 
-Nowadays, there are many people cannot affrod a PC completely build with fast storage medium, or, some people just stick on their old computers to wheather the wave of price hikes brings by AI. Thus, their computers always contain storage devices with very different characteristics as a compromise to price. Users often need to decide manually which storage device should hold their files or applications in order to improve performance or make effective use of limited storage capacity, which can be unnecessarily complex for non-technical users. And over time, the importance of the same software for users is constantly changing. However, users often have to endure the decisions made during the initial installation (unless uninstalling or reinstalling, which may result in data loss).
+Nowadays, many people cannot afford a PC built entirely with fast storage medium, or, some people just stick on their old computers to weather the wave of price hikes brings by AI. Thus, their computers always contain storage devices with very different characteristics as a compromise to price. Users often need to decide manually which storage device should hold their files or applications in order to improve performance or make effective use of limited storage capacity, which can be unnecessarily complex for non-technical users. And over time, the importance of the same software for users is constantly changing. However, users often have to endure the decisions made during the initial installation (unless uninstalling or reinstalling, which may result in data loss).
 
 WSD aims to make existing storage hardware more effective by monitoring storage activity and presenting information such as throughput, I/O activity, latency, and frequently accessed files or processes. Based on this information, it can help place performance-sensitive data on faster storage and reduce unnecessary pressure on slower devices. A longer-term goal is to reduce avoidable writes where possible to help extend device lifespan.
 
@@ -50,7 +50,7 @@ WSD is a student-proposed CSC301 project and does not have an external partner o
 
 #### Q5: Have you decided on how you will build it? Share what you know now or tell us the options you are considering.
 
-WSD will use a cross-platform architecture consisting of a local storage-monitoring agent, an analysis with policy component, a database, and a web-based dashboard. The local agent will collect storage and workload information from the host system, the analysis component will convert these observations into recommendations or optimization decisions, and the dashboard will present device status, workload behaviour, recommendations, and compare after results with initial states to the user.
+WSD will use a cross-platform architecture consisting of platform-specific Windows and Linux backend agents, an analysis and policy component, a database, and a web-based dashboard. The local agent will collect storage and workload information from the host system, the analysis component will convert these observations into recommendations or optimization decisions, and the dashboard will present device status, workload behaviour, recommendations, and compare after results with initial states to the user.
 
 #### Technology stack
 
@@ -70,7 +70,7 @@ The initial system will primarily run locally on the user's machine rather than 
 
 The high-level data flow is:
 
-`Storage Devices → OS → Local Agent → Metrics to Database → Analysis & Policy Engine → Web Dashboard → Recommendation → User-approved Action`
+`Storage Devices → OS → Windows/Linux Backend Agent → Metrics Database → Analysis & Policy Engine → Web Dashboard → Recommendation → User-approved Action`
 
 Where an optimization can safely be automated, WSD may allow the user to enable automatic execution. Otherwise, the system can operate in a recommendation-only mode so that the user remains in control of storage changes.
 
