@@ -6,18 +6,23 @@
  
 #### Q1: What is the product?
 
- > Short (1 - 2 min' read)
- * Start with a single sentence, high-level description of the product.
- * Be clear - Describe the problem you are solving in simple terms.
- * Specify if you have a partner, who they are (role/title), and the organization information.
- * Be concrete. For example:
-    * What are you planning to build? Is it a website, mobile app, browser extension, command-line app, etc.?      
-    * When describing the problem/need, give concrete examples of common use cases.
-    * Assume the reader knows nothing about the partner or the problem domain and provide the necessary context. 
- * Focus on *what* your product does, and avoid discussing *how* you're going to implement it.      
-   For example: This is not the time or the place to talk about which programming language and/or framework you are planning to use.
- * **Feel free (and very much encouraged) to include useful diagrams, mock-ups and/or links**.
+**Wise Storage Director (WSD) is a cross-platform storage management and optimization application that helps users make better use of mixed-speed storage devices by observing storage workloads, identifying performance bottlenecks, and recommending or applying workload-aware storage policies.**
 
+![WSD product concept and usage scenario](<CSC301 Q1.drawio.png>)
+
+*Figure 1. High-level concept of WSD: the system observes workloads across mixed-speed storage devices and provides workload-aware recommendations and optimization options.*
+
+Nowadays, many people cannot afford a PC built entirely with fast storage, while others continue using older computers to weather the hardware price hikes driven by growing AI demand. As a result, many systems contain storage devices with very different performance characteristics as a compromise between cost, capacity, and performance. Users often need to decide manually which storage device should hold their files or applications in order to improve performance or make effective use of limited storage capacity, which can be unnecessarily complex for non-technical users. And over time, the importance of the same software for users is constantly changing. However, users often have to endure the decisions made during the initial installation (unless uninstalling or reinstalling, which may result in data loss).
+
+WSD aims to make existing storage hardware more effective by monitoring storage activity and presenting information such as throughput, I/O activity, latency, and frequently accessed files or processes. Based on this information, it can help place performance-sensitive data on faster storage and reduce unnecessary pressure on slower devices. A longer-term goal is to reduce avoidable writes where possible to help extend device lifespan.
+
+The product will be a local storage-management application with an interactive dashboard. The local application monitors and manages storage activity, while the dashboard provides a unified view of storage devices, workloads, performance, and optimization options. It will support both simplified recommendations for general users and more detailed controls for advanced users.
+
+For example, **a user with a small SSD and a large HDD may not have enough SSD capacity for all applications.** WSD can identify frequently accessed or performance-sensitive data that would benefit most from the SSD while leaving colder data on the HDD. 
+
+Similarly, on **systems with several drives of different speeds**, WSD can help users decide where data should be placed based on actual workload behaviour rather than manual guesswork.
+
+WSD is a student-proposed CSC301 project and does not have an external partner organization.
 
 #### Q2: Who are your target users?
 
@@ -45,11 +50,35 @@
 
 #### Q5: Have you decided on how you will build it? Share what you know now or tell us the options you are considering.
 
-> Short (1-2 min' read max)
- * What is the technology stack? Specify languages, frameworks, libraries, PaaS products or tools to be used or being considered. 
- * How will you deploy the application?
- * Describe the architecture - what are the high level components or patterns you will use? Diagrams are useful here. 
- * Will you be using third party applications or APIs? If so, what are they?
+WSD will use a cross-platform architecture consisting of platform-specific Windows and Linux backend agents, an analysis and policy component, a database, and a web-based dashboard. The Windows and Linux agents will collect storage and workload information from the host system, the analysis component will convert these observations into recommendations or optimization decisions, and the dashboard will present device status, workload behaviour, recommendations, and before-and-after performance results to the user.
+
+#### Technology stack
+
+- **Windows Backend Agent:** We are currently considering Python for the initial prototype. The Windows agent will collect storage and workload information using Windows-provided interfaces such as Performance Counters and other OS APIs.
+
+- **Linux Backend Agent:** We are currently considering Python for the initial prototype. The Linux agent will use standard Linux monitoring interfaces and tools such as `iostat`. We are also considering tools such as mergerFS for storage-placement or pooling experiments where appropriate. For caching or tiering experiments, lightweight file-redirection approaches and bcachefs are currently being evaluated, with compatibility and deployment complexity still under investigation.
+
+- **Analysis and policy layer:** This component will process metrics such as throughput, IOPS, latency, read/write behaviour, queue pressure, and hot + cold data information to produce explainable recommendations. The exact policy implementation will evolve as we benchmark different workloads.
+
+- **Database:** A relational database will be used to store device information, workload measurements, historical observations, and recommendations. The specific database technology is still being evaluated.
+
+- **Frontend:** The dashboard will be implemented as a web application. The exact frontend framework is still being evaluated by the frontend team.
+
+#### Architecture and deployment
+
+The initial system will primarily run locally on the user's machine rather than requiring a kernel driver. We plan to rely on existing operating-system APIs and user-space tools wherever possible.
+
+The high-level data flow is:
+
+`Storage Devices → OS → Windows/Linux Backend Agent → Metrics Database → Analysis & Policy Engine → Web Dashboard → Recommendation → User-approved Action`
+
+Where an optimization can safely be automated, WSD may allow the user to enable automatic execution. Otherwise, the system can operate in a recommendation-only mode so that the user remains in control of storage changes.
+
+For development and testing, individual components may run as separate local services. We will decide later whether any shared backend or cloud deployment is useful; it is not required for the initial MVP.
+
+#### Third-party tools and APIs
+
+At this stage, we expect to rely primarily on operating-system interfaces and established open-source tools rather than external commercial APIs. Candidate dependencies include system-monitoring utilities and storage-management tools such as mergerFS on Linux. Additional libraries and frameworks will be selected as the implementation is refined.
 
 ----
 ## Intellectual Property Confidentiality Agreement 
