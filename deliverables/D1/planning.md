@@ -146,6 +146,10 @@ List/describe the artifacts you will produce to organize your team. (We strongly
    * How do tasks get assigned to team members?
    * How do you determine the status of work from inception to completion?
 
+We organize our team using Discord for regular communication and GitHub for collaborative work on the project/deliverables, supported by weekly in-person meetings where we document formal meeting minutes, address blockers, and make architectural decisions. 
+We plan to prioritize tasks by identifying which items are critical, path dependencies for upcoming project deliverables, assigning them based on individual strengths and component ownership (e.g., databases vs. I/O algorithms) while actively encouraging cross-functional pairing so teammates gain exposure to new areas. 
+To track work from inception to completion, tasks advance through explicit workflow columns on the task board from Backlog/Setup, to In Progress/Bug Fixing, to PR/Review Requested, to Merged/Complete with completion verified through code reviews and automated testing before code is merged into the main branch.
+
 #### Q10: What are the rules regarding how your team works?
 
 **Communications:**
@@ -188,3 +192,7 @@ List/describe the artifacts you will produce to organize your team. (We strongly
   * Adding more details for an user story might make it less abstract.
   * Adding an extra user story might increase the project complexity, making it less simple.
 * It's ok if you are unable to find mitigation strategies for all the risks right now.
+
+To mitigate our identified risks, particularly data corruption, unintended crashes, and misaligned implementations, we will implement both technical safeguards and proactive communication practices. 
+Technically, we will conduct rigorous server-side integration testing using sandboxed dummy workloads before running operations on real user data, pair all risky storage mode transitions with clear UI warnings and transactional safeguards (such as write-ahead logging or staged migrations to prevent data loss on mid-process termination), and enforce mandatory peer code reviews on pull requests to catch vulnerabilities or crash-prone logic before merging. 
+Operationally, we will mitigate miscommunication by refining requirements during our weekly in-person meetings to ensure task clarity, using daily Discord check-ins to catch blockers early, and maintaining an open design dialogue so destructive edge cases are caught during the planning phase rather than in production.
