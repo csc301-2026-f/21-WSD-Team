@@ -39,7 +39,7 @@ allowing less technical users to view storage performance and understand optimiz
 WSD not only displays metrics such as IOPS, throughput, and workload information but also translates them into easy-to-understand optimization recommendations, 
 sparing users the trouble of interpreting raw performance data themselves.
 This helps users to understand which processes are affecting the performance, as they can choose whether to optimize their storage and select different optimization modes.
-Users can choose to perform file placement manually or allow WSD to apply selected optimization recommendations.
+By default, WSD only provides optimization recommendations. Users can either apply these recommendations manually or explicitly enable automatic execution for selected optimization strategies. 
 
 #### Q4: What are the user stories that make up the Minumum Viable Product (MVP)?
 
