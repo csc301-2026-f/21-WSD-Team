@@ -12,7 +12,7 @@
 
 *Figure 1. High-level concept of WSD: the system observes workloads across mixed-speed storage devices and provides workload-aware recommendations and optimization options.*
 
-Nowadays, many people cannot afford a PC built entirely with fast storage medium, or, some people just stick on their old computers to weather the wave of price hikes brings by AI. Thus, their computers always contain storage devices with very different characteristics as a compromise to price. Users often need to decide manually which storage device should hold their files or applications in order to improve performance or make effective use of limited storage capacity, which can be unnecessarily complex for non-technical users. And over time, the importance of the same software for users is constantly changing. However, users often have to endure the decisions made during the initial installation (unless uninstalling or reinstalling, which may result in data loss).
+Nowadays, many people cannot afford a PC built entirely with fast storage, while others continue using older computers to weather the hardware price hikes driven by growing AI demand. As a result, many systems contain storage devices with very different performance characteristics as a compromise between cost, capacity, and performance. Users often need to decide manually which storage device should hold their files or applications in order to improve performance or make effective use of limited storage capacity, which can be unnecessarily complex for non-technical users. And over time, the importance of the same software for users is constantly changing. However, users often have to endure the decisions made during the initial installation (unless uninstalling or reinstalling, which may result in data loss).
 
 WSD aims to make existing storage hardware more effective by monitoring storage activity and presenting information such as throughput, I/O activity, latency, and frequently accessed files or processes. Based on this information, it can help place performance-sensitive data on faster storage and reduce unnecessary pressure on slower devices. A longer-term goal is to reduce avoidable writes where possible to help extend device lifespan.
 
@@ -50,7 +50,7 @@ WSD is a student-proposed CSC301 project and does not have an external partner o
 
 #### Q5: Have you decided on how you will build it? Share what you know now or tell us the options you are considering.
 
-WSD will use a cross-platform architecture consisting of platform-specific Windows and Linux backend agents, an analysis and policy component, a database, and a web-based dashboard. The local agent will collect storage and workload information from the host system, the analysis component will convert these observations into recommendations or optimization decisions, and the dashboard will present device status, workload behaviour, recommendations, and compare after results with initial states to the user.
+WSD will use a cross-platform architecture consisting of platform-specific Windows and Linux backend agents, an analysis and policy component, a database, and a web-based dashboard. The Windows and Linux agents will collect storage and workload information from the host system, the analysis component will convert these observations into recommendations or optimization decisions, and the dashboard will present device status, workload behaviour, recommendations, and before-and-after performance results to the user.
 
 #### Technology stack
 
@@ -58,7 +58,7 @@ WSD will use a cross-platform architecture consisting of platform-specific Windo
 
 - **Linux Backend Agent:** We are currently considering Python for the initial prototype. The Linux agent will use standard Linux monitoring interfaces and tools such as `iostat`. We are also considering tools such as mergerFS for storage-placement or pooling experiments where appropriate.
 
-- **Analysis and policy layer:** This component will process metrics such as throughput, IOPS, latency, read/write behaviour, queue pressure, and hot+cold data information to produce explainable recommendations. The exact policy implementation will evolve as we benchmark different workloads.
+- **Analysis and policy layer:** This component will process metrics such as throughput, IOPS, latency, read/write behaviour, queue pressure, and hot + cold data information to produce explainable recommendations. The exact policy implementation will evolve as we benchmark different workloads.
 
 - **Database:** A relational database will be used to store device information, workload measurements, historical observations, and recommendations. The specific database technology is still being evaluated.
 
