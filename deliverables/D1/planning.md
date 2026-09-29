@@ -56,7 +56,7 @@ WSD will use a cross-platform architecture consisting of platform-specific Windo
 
 - **Windows Backend Agent:** We are currently considering Python for the initial prototype. The Windows agent will collect storage and workload information using Windows-provided interfaces such as Performance Counters and other OS APIs.
 
-- **Linux Backend Agent:** We are currently considering Python for the initial prototype. The Linux agent will use standard Linux monitoring interfaces and tools such as `iostat`. We are also considering tools such as mergerFS for storage-placement or pooling experiments where appropriate.
+- **Linux Backend Agent:** We are currently considering Python for the initial prototype. The Linux agent will use standard Linux monitoring interfaces and tools such as `iostat`. We are also considering tools such as mergerFS for storage-placement or pooling experiments where appropriate. For caching or tiering experiments, lightweight file-redirection approaches and bcachefs are currently being evaluated, with compatibility and deployment complexity still under investigation.
 
 - **Analysis and policy layer:** This component will process metrics such as throughput, IOPS, latency, read/write behaviour, queue pressure, and hot + cold data information to produce explainable recommendations. The exact policy implementation will evolve as we benchmark different workloads.
 
