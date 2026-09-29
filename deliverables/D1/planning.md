@@ -127,13 +127,11 @@ List each team member and:
 
 #### Q8: How will you work as a team?
 
-Describe meetings (and other events) you are planning to have. 
- * When and where? Recurring or ad hoc? In-person or online?
- * What's the purpose of each meeting?
- * Other events could be coding sessions, code reviews, quick weekly sync meeting online, etc.
- * You should have 2 meetings with your project partner (if you have one) before D1 is due. Describe them here:
-   * You must keep track of meeting minutes and add them to your repo under "deliverables/minutes" folder
-   * You must have a regular meeting schedule established for the rest of the term.  
+We plan to have weekly meetings. As of now we plan on holding them on Tuesdays at 7PM/19:00. We plan to book meeting rooms in Robarts library.
+
+The purpose of each meeting is to report on progress and discuss areas where difficulties have been encountered, assign tasks, discuss important design choices, and report on what tools or libraries we find that we may want to use.
+
+We will track what is discussed in each meeting by writing the meeting's minutes and/or recording it.
   
 #### Q9: How will you organize your team?
 
@@ -149,12 +147,14 @@ List/describe the artifacts you will produce to organize your team. (We strongly
 #### Q10: What are the rules regarding how your team works?
 
 **Communications:**
- * What is the expected frequency? What methods/channels will be used? 
- * If you have a partner project, what is your process for communicating with your partner? Who is responsible?
- 
+
+For general inquiries, the project's discord server has scope specific channels where team members can ask questions. 
+We also work with github pull requests (PR) that must be reviewed to be merged into main. If a PR doesn't fit the expectations or implementation details expected of it, we can discuss it directly on github to then correct it.
+We expect to communicate progress at least twice a week: once during the meeting and at least once when pushing code or requesting a PR.
+
 **Collaboration:**
- * How are people held accountable for attending meetings, completing action items? What is your process?
- * How will you address the issue if one person doesn't contribute or is not responsive?
+
+People are expected to attend meetings unless communicated 12 hours in advance as to give enough time to discuss delaying the meeting. If a team member does not attend the meeting, they are expected to communicate their progress in the appropriate channels and respond to questions in a timely manner as to mitigate the loss of progress incurred from them missing the meeting. If a team member repeatedly misses meetings and/or clearly does not collaborate sufficiently after repeated attempts at fixing the issue, the TA will be contacted.
 
 ## Organisation Details
 
