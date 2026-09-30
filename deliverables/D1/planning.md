@@ -159,6 +159,8 @@ List/describe the artifacts you will produce to organize your team. (We strongly
 * Compatibility across different OSes (especially Linux).  
   Because this project will support both Windows and Linux, and Linux has many distributions, compatibility across all platforms will be an issue.
 
+* Designing an algorithm that's one size fit all may be overcomplicated.
+  Algorithm thresholds may not suitable across different devices and workloads. Fixed proxies could have different meaning which may lead to unnecessary data movement or ineffective recommendations
 
 #### Q14. What are some potential mitigation strategies for the risks you identified?
 * Examples of mitigation strategies:
