@@ -162,6 +162,8 @@ List/describe the artifacts you will produce to organize your team. (We strongly
 * Designing an algorithm that's one size fit all may be overcomplicated.
   Algorithm thresholds may not suitable across different devices and workloads. Fixed proxies could have different meaning which may lead to unnecessary data movement or ineffective recommendations
 
+* Integration friction due to individually developed component of the project. 
+ Developing the storage interceptor, database, and policy engine independently risks integration friction or delays if data formats and API contracts are not kept tightly aligned.
 #### Q14. What are some potential mitigation strategies for the risks you identified?
 * Examples of mitigation strategies:
   * More communication with the partner might help with improving clarity.
