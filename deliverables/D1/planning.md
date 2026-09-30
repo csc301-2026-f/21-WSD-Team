@@ -32,14 +32,19 @@ WSD is a student-proposed CSC301 project and does not have an external partner o
 
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
-> Short (1 - 2 min' read max)
- * We want you to "connect the dots" for us - Why does your product (as described in your answer to Q1) fits the needs of your users (as described in your answer to Q2)?
- * Explain the benefits of your product explicitly & clearly. For example:
-    * Save users time (how and how much?)
-    * Allow users to discover new information (which information? And, why couldn't they discover it before?)
-    * Provide users with more accurate and/or informative data (what kind of data? Why is it useful to them?)
-    * Does this application exist in another form? If so, how does your differ and provide value to the users?
-    * How does this align with your partner's organization's values/mission/mandate?
+Our product is mainly targeting the users having multiple storage devices with different performance characteristics, especially SSD + HDD systems. 
+We aim to accelerate the speed, optimize storage and help extend device lifespan on systems that struggle with storage performance. 
+The users will be given advice of data placement, caching recommendations and workload prioritization, help them place frequently accessed data on higher-speed storage devices and reduce unnecessary I/O operations.
+
+Currently, users may rely on many storage management tools: Windows task manager and Resource Monitor are used to monitor disk usage and I/O activity of individual processes; 
+WizTree helps users view disk space usage; Storage Spaces allows users to consolidate and manage multiple storage drives. However, 
+WSD aims to give an accessible alternative to the existing storage-management tools, and we will provide a simple and understandable graphical interface for the users,
+allowing less technical users to view storage performance and understand optimization recommendations without advanced technical expertise.
+
+WSD not only displays metrics such as IOPS, throughput, and workload information but also translates them into easy-to-understand optimization recommendations, 
+sparing users the trouble of interpreting raw performance data themselves.
+This helps users to understand which processes are affecting the performance, as they can choose whether to optimize their storage and select different optimization modes.
+By default, WSD only provides optimization recommendations. Users can either apply these recommendations manually or explicitly enable automatic execution for selected optimization strategies. 
 
 #### Q4: What are the user stories that make up the Minumum Viable Product (MVP)?
 
