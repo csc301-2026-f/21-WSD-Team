@@ -21,9 +21,10 @@
 
 #### Q2: Who are your target users?
 
-* College students/recent graduates who own older computers, specifically those that are over 5 years old, that are equipped with and have a basic understanding of storage (e.g. HDD, SSD, etc.)
-* College students/recent graduates that cannot afford expensive storage upgrades
+* College students/recent graduates who own older computers, specifically those that are over 5 years old, that can do a quick search and learn/have a basic understanding of storage (e.g. HDD, SSD, etc.)
+* College students/recent graduates that cannot afford expensive storage upgrades, but wants to make their computer storage faster
 * Power users, system administrators, and tech enthusiasts who enjoy disk management
+* Recent graduates or users who work within the IT industry and/or have strong technical background, enjoy disk management, and want to make their computer storage faster without buying any storage upgrades, such as new hardware
 
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
