@@ -1,5 +1,10 @@
 body {
     background-color: lightgray;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+p {
+    margin: 10px;
 }
 
 div {
@@ -10,6 +15,10 @@ div {
     border-radius: 10px;
     padding: 10px;
     margin: 30px;
+}
+
+h1, h2, h3, h4 {
+    text-decoration: underline;
 }
 
 .box-container {
@@ -48,19 +57,19 @@ div.box.priority-box {
 }
 
 #applications-box {
-    background-color: lightgreen;
-}
-
-#media-box {
     background-color: lightsalmon;
 }
 
+#media-box {
+    background-color: lightgreen;
+}
+
 #documents-box {
-    background-color: plum;
+    background-color: lightcoral;
 }
 
 #backups-box {
-    background-color: lightcoral;
+    background-color: plum;
 }
 
 .hidden {

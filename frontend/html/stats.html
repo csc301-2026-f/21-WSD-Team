@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
     
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet">
 </head>
 
 <body>
@@ -17,7 +20,7 @@
         <h1>CSC301 Project, Home</h1>
     </div>
 
-    <br>
+    
 
     <div>
         <ul>
@@ -66,6 +69,32 @@
             <p>IOPS After: <strong>4,280</strong></p>
             <p>IOPS Gained: <strong>+1,330</strong></p>
             <p>Time Saved: <strong>1.8 seconds</strong></p>
+        </div>
+    </div>
+
+    <div class="box-container">
+        <div class="text-input-container">
+            <label for="process-search">Search for Process:  </label>
+            <input type="text" id="process-search" name="process-search" placeholder="Enter process name...">
+        </div>
+    </div>
+
+    <div class="box-container">
+        <div class="box">
+            <img src="../assets/img/sample_processes.png" title="The User will be able to click and edit these; akin to Task Manager.">
+        </div>
+
+        <div class="box">
+            <h3>Average Process Statistics</h3>
+
+            <p>Average CPU Usage: <strong>4.7%</strong></p>
+            <p>Average Memory Usage: <strong>182 MB</strong></p>
+            <p>Average Read Rate: <strong>18.4 MB/s</strong></p>
+            <p>Average Write Rate: <strong>7.2 MB/s</strong></p>
+            <p>Average IOPS: <strong>620</strong></p>
+            <p>Average I/O Wait: <strong>2.3 ms</strong></p>
+            <p>Average Process Runtime: <strong>14.8 min</strong></p>
+            <p>Active Processes: <strong>37</strong></p>
         </div>
     </div>
     <script type="module" src="../js/ui.js"></script>

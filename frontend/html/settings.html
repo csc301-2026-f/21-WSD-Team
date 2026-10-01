@@ -16,7 +16,7 @@
         <h1>CSC301 Project, Home</h1>
     </div>
 
-    <br>
+    
 
     <div>
         <ul>
@@ -42,6 +42,16 @@
     </div>
 
     <div class="box-container">
+        <div class="box">
+            <h2>Optimize "Auto-Mode" Settings For Me</h2>
+            <p title="Chooses user-safe default settings.">(?)</p>
+
+            <input type="checkbox" id="auto-settings">
+            <label for="auto-settings">Auto-Mode</label>
+        </div>
+    </div>
+
+    <div class="box-container">
 
         <!-- SETTINGS BOX 1 -->
         <div class="box" id="settings">
@@ -50,7 +60,7 @@
             <p title="SSD Caching Mode is reccomended primarily for default users. It is ...">(?)</p>
             <ul>
                 <li>
-                    <input type="checkbox" id="enable-cache">
+                    <input type="checkbox" id="enable-cache" checked>
                     <label for="enable-cache">Enable SSD caching</label>
                 </li>
 
@@ -80,7 +90,7 @@
         <div class="box" id="settings">
 
             <h2>RAID 0 Mode</h2>
-            <p title="RAID 0 Mode is an expiremental mode, use at your own risk. It is ...">(?)</p>
+            <p title="RAID 0 Mode is an expiremental mode. In the context of WSD, RAID 0 implicates the usage of performance-oriented file-level storage pooling, not traditional block-level striping.">(?)</p>
             <ul>
                 <li>
                     <input type="checkbox" id="enable-raid">
