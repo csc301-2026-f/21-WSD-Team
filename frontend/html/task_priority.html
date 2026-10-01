@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CSC301 Project!</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
+</head>
+
+<body>
+    <div>
+        <h1>CSC301 Project, Home</h1>
+    </div>
+
+    <br>
+
+    <div>
+        <ul>
+            <li>
+                <p><a href="index.html">Main Dashboard</a></p>
+            </li>
+            <li>
+                <p><a href="task_priority.html">Task Priority</a></p>
+            </li>
+            <li>
+                <p><a href="stats.html">Disk Usage Statistics</a></p>
+            </li>
+            <li>
+                <p><a href="about.html">About</a></p>
+            </li>
+            <li>
+                <p><a href="settings.html">Settings</a></p>
+            </li>
+            <li>
+                <p><a href="authors.html">Group Info</a></p>
+            </li>
+        </ul>
+    </div>
+
+    <div class="box-container">
+        <div class="box priority-box" id="games-box">
+            <label for="games">Priority:</label>
+
+            <select name="games" id="games">
+                <option value="Highest">Highest</option>
+                <option value="High">High</option>
+                <option value="Average" selected>Average</option>
+                <option value="Low">Low</option>
+                <option value="Lowest">Lowest</option>
+            </select>
+
+            <h3>{ Games }</h3><br>
+            <p>███████████████████░░░░░░░ 75%</p>
+        </div>
+    </div>
+
+    <div class="box-container">
+        <div class="box priority-box" id="applications-box">
+            <label for="applications">Priority:</label>
+
+            <select name="applications" id="applications">
+                <option value="Highest">Highest</option>
+                <option value="High">High</option>
+                <option value="Average" selected>Average</option>
+                <option value="Low">Low</option>
+                <option value="Lowest">Lowest</option>
+            </select>
+
+            <h3>{ Applications }</h3><br>
+            <p>███░░░░░░░░░░░░░░░░░░░░░ 10%</p>
+        </div>
+    </div>
+
+    <div class="box-container">
+        <div class="box priority-box" id="media-box">
+            <label for="media">Priority:</label>
+
+            <select name="media" id="media">
+                <option value="Highest">Highest</option>
+                <option value="High">High</option>
+                <option value="Average" selected>Average</option>
+                <option value="Low">Low</option>
+                <option value="Lowest">Lowest</option>
+            </select>
+
+            <h3>{ Media & Videos }</h3><br>
+            <p>██░░░░░░░░░░░░░░░░░░░░░░ 7%</p>
+        </div>
+    </div>
+
+    <div class="box-container">
+        <div class="box priority-box" id="documents-box">
+            <label for="documents">Priority:</label>
+
+            <select name="documents" id="documents">
+                <option value="Highest">Highest</option>
+                <option value="High">High</option>
+                <option value="Average" selected>Average</option>
+                <option value="Low">Low</option>
+                <option value="Lowest">Lowest</option>
+            </select>
+
+            <h3>{ Documents }</h3><br>
+            <p>█░░░░░░░░░░░░░░░░░░░░░░░ 5%</p>
+        </div>
+    </div>
+
+    <div class="box-container">
+        <div class="box priority-box" id="backups-box">
+            <label for="backups">Priority:</label>
+
+            <select name="backups" id="backups">
+                <option value="Highest">Highest</option>
+                <option value="High">High</option>
+                <option value="Average" selected>Average</option>
+                <option value="Low">Low</option>
+                <option value="Lowest">Lowest</option>
+            </select>
+
+            <h3>{ Backups }</h3><br>
+            <p>█░░░░░░░░░░░░░░░░░░░░░░░ 3%</p>
+        </div>
+    </div>
+
+    <script type="module" src="../js/ui.js"></script>
+</body>
+</html>

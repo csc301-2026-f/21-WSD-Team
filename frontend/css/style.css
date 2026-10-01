@@ -1,6 +1,88 @@
+body {
+    background-color: lightgray;
+}
+
 div {
     display: flex;
     justify-content: center; /* Centers horizontally */
     align-items: center;     /* Centers vertically */
     background-color: bisque;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 30px;
+}
+
+.box-container {
+    background-color: darkgray;
+    display: flex;
+    gap: 20px;
+}
+
+div.box {
+    background-color: gray;
+    padding: 20px;
+    border: 1px solid;
+    border-radius: 10px;
+
+    flex: 1;
+    flex-direction: column;
+}
+
+div.box#settings {
+    background-color: white;
+    height: 400px;
+    font-size: large;
+}
+
+div.box.priority-box {
+    background-color: lightpink;
+    height: 100px;
+    font-size: large;
+    flex-direction: row;
+    padding: 10px;
+    gap: 10px;
+}
+
+#games-box {
+    background-color: lightblue;
+}
+
+#applications-box {
+    background-color: lightgreen;
+}
+
+#media-box {
+    background-color: lightsalmon;
+}
+
+#documents-box {
+    background-color: plum;
+}
+
+#backups-box {
+    background-color: lightcoral;
+}
+
+.hidden {
+    display: none;
+}
+
+#graph {
+    flex-direction: column;
+    margin-top: 20px;
+    padding: 20px;
+    border: 1px solid black;
+    border-radius: 10px;
+    background-color: lightgray;
+    width: 80%;
+}
+
+img {
+  max-width: 600px;
+  height: auto;
+}
+
+div#big-start {
+    font-size: x-large;
+    padding: 20px;
 }

@@ -9,7 +9,7 @@
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
-    <script type="module" src="../js/ui.js"></script>
+    
 </head>
 
 <body>
@@ -44,43 +44,30 @@
 
     <div class="box-container">
         <div class="box">
-            <h3>Drives</h3><br>
-            <p>2 drives found.</p>
+
+            <div id="graph">
+                <h2>Disk Usage Over Time</h2>
+                <img src="../assets/img/wsd_disk_usage_over_time.png">
+            </div>
+
+            <button id="show-button">Refresh Stats</button>
         </div>
+
         <div class="box">
-            <h3>Storage Used</h3>
-            <p>640GB / 2 TB</p>
-        </div>
-        <div class="box">
-            <h3>Drive Health</h3>
-            <p>Moderately Healthy</p>
+            <h3>Storage Performance</h3>
+
+            <p>Real-time I/O: <strong>125 MB/s</strong></p>
+            <p>Current IOPS: <strong>4,280</strong></p>
+            <p>Active Processes: <strong>8</strong></p>
+            <p>Files Accessed: <strong>342</strong></p>
+
+            <h4>Optimization History</h4>
+            <p>IOPS Before: <strong>2,950</strong></p>
+            <p>IOPS After: <strong>4,280</strong></p>
+            <p>IOPS Gained: <strong>+1,330</strong></p>
+            <p>Time Saved: <strong>1.8 seconds</strong></p>
         </div>
     </div>
-
-    <div class="box-container">
-        <div class="box">
-            <h3>C: Drive - Samsung SSD 980</h3><br>
-            <p>███████████████████░░░░░░░  72% used</p>
-        </div>
-    </div>
-
-    <div class="box-container">
-        <div class="box">
-            <h3>D: Drive - WD Blue HDD</h3><br>
-            <p>███████████████████░░░░░░░  72% used</p>
-        </div>
-    </div>
-
-    <div class="box-container">
-        <div class="box" id="big-start">
-            <h1>Toggle On/Off WSD</h1>
-            <h2>Check the statistics page for more info after launch</h2>
-
-            <input type="checkbox" id="power">
-            <label for="power">ON/OFF</label>
-        </div>
-    </div>
-
-    
+    <script type="module" src="../js/ui.js"></script>
 </body>
 </html>

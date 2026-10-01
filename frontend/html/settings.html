@@ -13,15 +13,102 @@
 
 <body>
     <div>
-        <h1>CSC301 Project, Settings Page.</h1>
+        <h1>CSC301 Project, Home</h1>
     </div>
 
     <br>
 
     <div>
-        <li>
-            <p><a href="index.html">Back to main.</a></p>
-        </li>
+        <ul>
+            <li>
+                <p><a href="index.html">Main Dashboard</a></p>
+            </li>
+            <li>
+                <p><a href="task_priority.html">Task Priority</a></p>
+            </li>
+            <li>
+                <p><a href="stats.html">Disk Usage Statistics</a></p>
+            </li>
+            <li>
+                <p><a href="about.html">About</a></p>
+            </li>
+            <li>
+                <p><a href="settings.html">Settings</a></p>
+            </li>
+            <li>
+                <p><a href="authors.html">Group Info</a></p>
+            </li>
+        </ul>
+    </div>
+
+    <div class="box-container">
+
+        <!-- SETTINGS BOX 1 -->
+        <div class="box" id="settings">
+
+            <h2>SSD Caching</h2>
+            <p title="SSD Caching Mode is reccomended primarily for default users. It is ...">(?)</p>
+            <ul>
+                <li>
+                    <input type="checkbox" id="enable-cache">
+                    <label for="enable-cache">Enable SSD caching</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="cache-read">
+                    <label for="cache-read">Cache frequently read data</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="cache-write">
+                    <label for="cache-write">Cache frequently written data</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="auto-cache">
+                    <label for="auto-cache">Automatically manage cached data</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="clear-cache">
+                    <label for="clear-cache">Clear cache before operation</label>
+                </li>
+            </ul>
+        </div>
+        
+        <!-- SETTINGS BOX 2 -->
+        <div class="box" id="settings">
+
+            <h2>RAID 0 Mode</h2>
+            <p title="RAID 0 Mode is an expiremental mode, use at your own risk. It is ...">(?)</p>
+            <ul>
+                <li>
+                    <input type="checkbox" id="enable-raid">
+                    <label for="enable-raid">Enable RAID 0</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="auto-select-drives">
+                    <label for="auto-select-drives">Automatically select drives</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="balance-drives">
+                    <label for="balance-drives">Balance data across drives</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="performance-mode">
+                    <label for="performance-mode">Prioritize performance</label>
+                </li>
+
+                <li>
+                    <input type="checkbox" id="monitor-raid">
+                    <label for="monitor-raid">Monitor RAID status</label>
+                </li>
+            </ul>
+        </div>
+        
     </div>
 
     <script type="module" src="../js/ui.js"></script>

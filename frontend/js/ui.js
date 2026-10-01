@@ -9,3 +9,16 @@ function closeNav() {
   document.getElementById("mySidebar").style.width = "0";
   document.getElementById("main").style.marginLeft = "0";
 }
+
+const button = document.getElementById("show-button");
+const graph = document.getElementById("graph");
+
+button.addEventListener("click", function () {
+    graph.classList.toggle("hidden");
+
+    if (graph.classList.contains("hidden")) {
+        button.textContent = "Show Graph";
+    } else {
+        button.textContent = "Hide Graph";
+    }
+});
