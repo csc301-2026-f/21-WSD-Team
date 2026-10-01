@@ -48,10 +48,19 @@ By default, WSD only provides optimization recommendations. Users can either app
 
 #### Q4: What are the user stories that make up the Minumum Viable Product (MVP)?
 
- * At least 5 user stories concerning the main features of the application - note that this can broken down further
- * You must follow proper user story format (as taught in lecture) ```As a <user of the app>, I want to <do something in the app> in order to <accomplish some goal>```
- * User stories must contain acceptance criteria. Examples of user stories with different formats can be found here: https://www.justinmind.com/blog/user-story-examples/. **It is important that you provide a link to an artifact containing your user stories**.
- * If you have a partner, these must be reviewed and accepted by them. You need to include the evidence of partner approval (e.g., screenshot from email) or at least communication to the partner (e.g., email you sent)
+* As a storage enthusiast, I want to open the GUI in order to monitor the real-time I/O status of each running application.
+
+* As a storage enthusiast, I want to open the GUI and navigate to an individual application in order to monitor its historical I/O usage.
+
+* As a college student with an old computer with slow storage, I want to enable RAID 0 mode in order to maximize storage capacity and move I/O-intensive files to the fastest disk.
+
+* As a college student with an old computer with slow storage, I want to enable caching mode in order to retain data integrity and copy I/O-intensive files to the caching disk.
+
+* As a college student with an old computer with slow storage, I want to open the GUI in order to get recommendations on which files should be moved/cached on the fastest disk.
+
+* As a college student with an old computer with slow storage, I want to enable auto mode in order to automatically have frequently accessed files cached/moved to the fastest storage device on my computer.
+
+* As a college student with an old computer with slow storage, I want to open the GUI in order to see an approximation of how much time was saved by this app.
 
 #### Q5: Have you decided on how you will build it? Share what you know now or tell us the options you are considering.
 
@@ -173,15 +182,22 @@ List/describe the artifacts you will produce to organize your team. (We strongly
 ## Potential Risks
 
 #### Q13. What are some potential risks to your project?
-* Now that you have defined your project, what risks can you identify that might impact it?
-* Some examples of risks at this planning stage could include:
-  * Uncertainties regarding a specific feature
-  * Misaligned expectations or conflicts
-  * Lack of clarity in execution or decision-making
-  * Limited access to data, systems, or other dependencies
-  * User stories that are too abstract or too simple
-* For each risk, provide a brief bullet point and then explain the risk in detail. 
 
+
+* Uncertain about which method to use for the Linux backend to achieve "caching mode."  
+  Because MergerFS doesn't work well with duplicate files, either symbolic links or FUSE will be used. Symbolic links have the advantage of being easy to manage, but have the disadvantage of compatibility issues with certain software, such as anti-cheat-enabled games, while FUSE is much more complicated and requires further investigation.
+
+* Due to the technical nature of this project, some group members will have difficulty understanding the project.  
+  Because this project heavily involves OS and hardware interfaces, some less tech-savvy group members will need to spend more time learning the terminology and relevant information to understand the conversations.
+
+* Compatibility across different OSes (especially Linux).  
+  Because this project will support both Windows and Linux, and Linux has many distributions, compatibility across all platforms will be an issue.
+
+* Designing an algorithm that's one size fit all may be overcomplicated.
+  Algorithm thresholds may not suitable across different devices and workloads. Fixed proxies could have different meaning which may lead to unnecessary data movement or ineffective recommendations
+
+* Integration friction due to individually developed component of the project. 
+ Developing the storage interceptor, database, and policy engine independently risks integration friction or delays if data formats and API contracts are not kept tightly aligned.
 #### Q14. What are some potential mitigation strategies for the risks you identified?
 * Examples of mitigation strategies:
   * More communication with the partner might help with improving clarity.
