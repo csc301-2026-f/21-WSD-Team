@@ -101,8 +101,6 @@ At this stage, we expect to rely primarily on operating-system interfaces and es
 
 WSD is a student-proposed project and does not have an external partner organization. The team currently intends to keep the project open source.
 
-As of now we have agreed to keep the project open source.
-
 ----
 
 ## Teamwork Details
