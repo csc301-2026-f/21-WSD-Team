@@ -1,0 +1,37 @@
+present: John Shengrong Danny Jesslyn Mohan Enrique
+excused: Sahil
+late: Juan
+
+all: Juan is awol for a while, considering talking to the TA
+Danny: ima create the CSV according to the D1 and put it in github so that everyone can chip in
+	what do we want in the UI? asking to draw it on the whiteboard
+	what are each of you guys' tech stacks? 
+
+mohan: sh or C or python
+Enrique: powershell or python
+Danny: html css and javascript
+Shengrong: python and other from Enrique or mohan
+John/Jesslyn: ssh
+Juan: whatever benchmark/validation/debugging requires
+
+Danny and John going over what the UI contains and what the functionalities will be, they go on while we get Juan on the call.
+Juan joins by zoom call
+Juan gets proposed benchmark/validation
+
+Danny will do the prototype Wednesday and have it done for review before the D1 deadline.
+Juan gets proposed to do the slide deck for the D1 presentation, informed of the meeting minutes, and encouraged to participate to catch up on lost time.
+
+Danny: do we expect to meet for 1 hour or more?
+Mohan: please try to be on time, we will try to keep the meeting to one hour
+	Juan can do the powerpoint template/outline so that we can fill it.
+Danny: juan has to do a code contribution, so what to give him?
+John: debugging [...]
+Mohan: putting a review counts as a code contribution?
+Danny: non-code doesn't count tho, is there a language or a gap in what we're creating that you'd like to fill?
+Juan: i'll look into it and try to make a template by tomorrow night.
+Danny: the main file that people will launch will be a pythin file
+Mohan: the actual command will be a command line file but people will use python for ease of access.
+Danny: whatever button needs to be added to the UI example you can tell me and i'll add it.
+Mohan: the Friday meeting is helpful for Juan, do throw it into an llm so that you can catch up to what we talked about. that will be it for today.
+
+meeting ended at 7:59PM/19:59
