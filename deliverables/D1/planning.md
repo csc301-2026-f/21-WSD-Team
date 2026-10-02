@@ -33,7 +33,7 @@ WSD is a student-proposed CSC301 project and does not have an external partner o
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
 Our product is mainly targeting the users having multiple storage devices with different performance characteristics, especially SSD + HDD systems. 
-We aim to accelerate the speed, optimize storage and help extend device lifespan on systems that struggle with storage performance. 
+We aim to improve storage performance and optimize the storage. The longer-term goal is to reduce avoidable writes where possible to help extend device lifespan. 
 The users will be given advice of data placement, caching recommendations and workload prioritization, help them place frequently accessed data on higher-speed storage devices and reduce unnecessary I/O operations.
 
 Currently, users may rely on many storage management tools: Windows task manager and Resource Monitor are used to monitor disk usage and I/O activity of individual processes; 
