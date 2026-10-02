@@ -1,0 +1,115 @@
+Here: Jesslyn, John, Enrique, Shengrong, Mohan
+Absent:
+Late: Sahil, Danny
+
+
+
+John: 1st thing: we don't know much about this project yet so this is a work in progess. I've done some research on the subject and want to circle back on the roles.
+Sahil: databases
+Danny: Frontent, building an interactive display and a UI that i'll hook up with the information that you guys feed me.
+John: you'll need to do a disk managemaent page as well.
+Mohan: ive looked into the caching that merges multiple drives into one.
+Jhon: Shengrong you'll need to look into windows api to see if we can do the same.
+Mohan: Is it possible to intercept the IO operations from application side?
+
+Product Scope:
+John: we've decided to implement a raid0 mode
+Mohan: based on mergerFS so we can split files into multiple drives. idk about caching yet. For merger FS when you write you only write to one drive that is chosen, but when you read you can't chose where you read from, so right now we can't guarantee faster read times.
+John: I think we need to design policies for getter mode/ workload mode. we've also decided on a lifespan mode where the user decides which disk to protect its lifespan
+Mohan: it doesn't seem possible to do in MergerFS. when you want to manipulate read/write it's not in the API.
+John: there's commercial software that does it. It usually guarantees file integrity. we don't need to implement that tho.
+Mohan: I'm assuming our target computers are old so caching stuff to memory to prevent read writes. that's complicated and we aim to accelerate storage on older machines.
+Sahil: without us caching the memory what would be the innovation
+Mohan: raid0 mode and caching mode. Raid0 stores files on faster drives based on usage. It's "raid0 on a file level instead of on a block level" so we don't need to buy newer storage as soon.
+John: we need to design the algorithm for caching mode
+Mohan: do we agree to do the caching and raid0 and then afterwards we can do other things based on the results.
+John: maybe afterwards ML-adaptive mode
+
+User stories:
+
+D1 progress: 
+I/O proxies
+IOPS
+MB/s (throughput of each disk so speed)
+latency = comp of an I/O
+P95 = 95% of IO finish time, when this goes up it means that some of tthe operations are very slow
+
+John: if the user wants to up performance on games the user may be multitasking, the OS doesn't give priority to games, our product can get the cache to speed up the download and lighten the load on the system 
+Mohan: what are we doing that the OS is not doing? that's not cpu stuff. if you're downloading a game it stops usually when you're playing. Caching to memory: what process would that help with
+Sahil: caching to memory is something we can delay.
+Mohan: wh real world use case?
+John: hard to find right now. steam stops downloading when playing. that's an exeption. if that didn't happen we could better the pc performance. When downloading [...]
+Enrique: we're trying to understand in what use case the caching would help.
+Mohan: caching small files is already done with the OS
+John: gaming: the front end can speed up the game by downgrading the IO operations of other processes so as to leave the IO to the game more. we can use a chunk of teh cache to
+Mohan: downloading and gaming together is niche. plus the bottleneck is the cpu operations 
+John: we need to investigate the api's to see what we can build upon. right now we have the concept
+Mohan: 2 of our main modes would be raid0 mode and caching to ssd.
+John:
+1) Memory
+2) SCM (mohan crashout)
+3) ssd (nvme protocol)	 important
+4) SAS/SATA ssd		 IMPORTANT
+5) SAS/SATA hdd		 IMPORTANT
+Mohan: as of now we don't need to consider SCM, we wouldn't need to differenciate it from ssd. also we need to push memory caching to the end as well as lifespan mode
+John: lifespan not so sure, caching sure.
+Mohan: If the user wants to they can select the drive they want for caching
+Enrique: we can show the performance on each once and default based on the mode.
+Sahil: we can mention "our main goal is the non caching of memory modes"
+Mohan: what are we doing that task manager doesn't do?
+John: some Linux distros dont have task manager priority settings (mining distro, ubuntu server,...)
+Mohan: we can profile the memory usage and location of the files per process. display real time disk IO per process.
+
+Mohan: second one: historical data, so what holds what data.
+sahil: i can prototype that by D1
+John: the static prototype wouldn't fly (?)
+Mohan: page says interactive as in buttons there but they dont do anything
+
+John: Jev ai [...] we should have something like that for ml algorithm
+Mohan: one of the user stories could be system recommending where the files should go.
+
+Enrique: filesystem that merges multiple disks and has folders across them
+mohan: ye thats what mergerFS does
+
+John: keep track of how many IO operations happen.
+
+Architecture:
+*graph on whiteboard*
+
+Danny: we can split the markdown for D1 and split it so we equitable comits
+Jesslyn: *has 40-ish tabs open*
+all: we've found our user
+
+target users:
+any user with a 5+ year old pc with an hdd and at least a small ssd 
+
+risk: raid0 specific risks (losing files due to misconfiguration (proper risk - mitigated as discussed later) or disk corruption (innate to raid0))
+Danny: the program doesn't work well if you spill coca cola on the drives
+
+UI: grandma mode (simplified) with simplified UI and advanced mode that has raid0 mode with a warning about the risk, and tutorial.
+Mohan: mergerFS is a user level partition so we dont lose data if the program crashes and cant read the files.
+
+merge conflicts: contact the person it's conflicting with
+
+John, Jesslyn: desision making algorithm, (workload analysis)
+mohan: Linux backend
+Danny: Frontend and UI
+Shengrong: 
+Sahil: Database
+Enrique: Windows backend 
+
+question dibs:
+1 John
+2 Jesslyn
+3 Shengrong
+4 Mohan
+5 John
+6 Danny
+7 Danny
+8 Enrique
+9 Sahil
+10 Enrique
+11 --
+12 --
+13 Mohan
+14 Sahil
