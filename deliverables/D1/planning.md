@@ -26,9 +26,9 @@ WSD is a student-proposed CSC301 project and does not have an external partner o
 
 #### Q2: Who are your target users?
 
-  > Short (1 - 2 min' read max)
- * Be specific (e.g. a 'a third-year university student taking CSC301 and studying Computer Science' and not 'a student')
- * **Feel free to use personas. You can create your personas as part of this Markdown file, or add a link to an external site (for example, [Xtensio](https://xtensio.com/user-persona/)).**
+* College students/recent graduates who own older computers, specifically those that are over 5 years old, that can do a quick search and learn/have a basic understanding of storage (e.g. HDD, SSD, etc.)
+* College students/recent graduates that cannot afford expensive storage upgrades, but want to make their computer storage faster
+* Recent graduates or users who work within the IT industry and/or have a strong technical background, enjoy disk management, and want to make their computer storage faster without buying any storage upgrades, such as new hardware
 
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
