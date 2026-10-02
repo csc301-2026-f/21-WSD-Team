@@ -179,7 +179,7 @@ Therefore, Team 21 acts as the main product development team. We are responsible
 #### Q12. How does your project fit within the overall product from the partner?
 **N/A — WSD is a student-proposed project and is not part of a larger partner product.**
 
-The current CSC301 project is the first MVP and complete prototype of WSD. Our goal is to implement and validate the full workflow from backend data collection and database storage, through analysis and decision making, to frontend presentation and optimization recommendations. At this stage, success means producing a working, demonstrable, and testable prototype.
+The current CSC301 project is the first MVP and working prototype of WSD. Our goal is to implement and validate the full workflow from backend data collection and database storage, through analysis and decision making, to frontend presentation and optimization recommendations. At this stage, success means producing a working, demonstrable, and testable prototype.
 
 ## Potential Risks
 
