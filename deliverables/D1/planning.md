@@ -1,6 +1,4 @@
-# YOUR PRODUCT/TEAM NAME
-> _Note:_ This document will evolve throughout your project. You commit regularly to this file while working on the project (especially edits/additions/deletions to the _Highlights_ section). 
- > **This document will serve as a master plan between your team, your partner and your TA.**
+# Wise Storage Director (WSD) — Team 21
 
 ## Product Details
  
@@ -46,7 +44,7 @@ sparing users the trouble of interpreting raw performance data themselves.
 This helps users to understand which processes are affecting the performance, as they can choose whether to optimize their storage and select different optimization modes.
 By default, WSD only provides optimization recommendations. Users can either apply these recommendations manually or explicitly enable automatic execution for selected optimization strategies. 
 
-#### Q4: What are the user stories that make up the Minumum Viable Product (MVP)?
+#### Q4: What are the user stories that make up the Minimum Viable Product (MVP)?
 
 * As a storage enthusiast, I want to open the GUI in order to monitor the real-time I/O status of each running application.
 
@@ -99,19 +97,9 @@ For development and testing, individual components may run as separate local ser
 At this stage, we expect to rely primarily on operating-system interfaces and established open-source tools rather than external commercial APIs. Candidate dependencies include system-monitoring utilities and storage-management tools such as mergerFS on Linux. Additional libraries and frameworks will be selected as the implementation is refined.
 
 ----
-## Intellectual Property Confidentiality Agreement 
-> Note this section is **not marked** but must be completed briefly if you have a partner. If you have any questions, please ask on Piazza.
->  
-**By default, you own any work that you do as part of your coursework.** However, some partners may want you to keep the project confidential after the course is complete. As part of your first deliverable, you should discuss and agree upon an option with your partner. Examples include:
-1. You can share the software and the code freely with anyone with or without a license, regardless of domain, for any use.
-2. You can upload the code to GitHub or other similar publicly available domains.
-3. You will only share the code under an open-source license with the partner but agree to not distribute it in any way to any other entity or individual. 
-4. You will share the code under an open-source license and distribute it as you wish but only the partner can access the system deployed during the course.
-5. You will only reference the work you did in your resume, interviews, etc. You agree to not share the code or software in any capacity with anyone unless your partner has agreed to it.
+## Intellectual Property Confidentiality Agreement
 
-**Your partner cannot ask you to sign any legal agreements or documents pertaining to non-disclosure, confidentiality, IP ownership, etc.**
-
-Briefly describe which option you have agreed to.
+WSD is a student-proposed project and does not have an external partner organization. The team currently intends to keep the project open source.
 
 ----
 
@@ -147,15 +135,6 @@ The purpose of each meeting is to report on progress and discuss areas where dif
 We will track what is discussed in each meeting by writing the meeting's minutes and/or recording it.
   
 #### Q9: How will you organize your team?
-
-List/describe the artifacts you will produce to organize your team. (We strongly recommend that you use standard collaboration tools like Linear.app, Jira, Slack, Discord, GitHub.)       
-
- * Artifacts can be To-Do lists, Task boards, schedule(s), meeting minutes, etc.
- * We want to understand:
-   * How do you keep track of what needs to get done? (You must grant your TA and partner access to systems you use to manage work)
-   * **How do you prioritize tasks?**
-   * How do tasks get assigned to team members?
-   * How do you determine the status of work from inception to completion?
 
 * We organize our team using Discord for communication and GitHub (Issues, PRs, and repository access, to which our TA will be granted access) for technical tracking, supported by weekly in-person meetings where we document formal meeting minutes, address blockers, and make architectural decisions. 
 * We prioritize tasks by identifying which items are critical path dependencies for upcoming project deliverables, assigning them initially based on individual strengths and component ownership (e.g., databases vs. I/O algorithms) while actively encouraging cross-functional pairing so teammates gain exposure to new areas. 
@@ -205,11 +184,6 @@ The current CSC301 project is the first MVP and working prototype of WSD. Our go
 * Integration friction due to individually developed component of the project. 
  Developing the storage interceptor, database, and policy engine independently risks integration friction or delays if data formats and API contracts are not kept tightly aligned.
 #### Q14. What are some potential mitigation strategies for the risks you identified?
-* Examples of mitigation strategies:
-  * More communication with the partner might help with improving clarity.
-  * Adding more details for an user story might make it less abstract.
-  * Adding an extra user story might increase the project complexity, making it less simple.
-* It's ok if you are unable to find mitigation strategies for all the risks right now.
 
 * Uncertainty Around the Linux Caching Approach: We will build quick, isolated prototypes to benchmark and evaluate multiple Linux caching approaches (such as symbolic links versus FUSE) in terms of performance overhead, maintenance complexity, and software compatibility before committing to a final backend design. This will establish a uniform caching approach with the least problems going forward, so it is important that we test it early.
 * Steep Technical Learning Curve: We will use our weekly in-person meetings for architectural walk-throughs and knowledge sharing, pair experienced members with those newer to systems programming, and encourage teammates to promptly flag blockers or technical questions on Discord so issues are resolved as soon as they arise.
