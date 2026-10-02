@@ -66,9 +66,13 @@ By default, WSD only provides optimization recommendations. Users can either app
 
 WSD will use a cross-platform architecture consisting of platform-specific Windows and Linux backend agents, an analysis and policy component, a database, and a web-based dashboard. The Windows and Linux agents will collect storage and workload information from the host system, the analysis component will convert these observations into recommendations or optimization decisions, and the dashboard will present device status, workload behaviour, recommendations, and before-and-after performance results to the user.
 
+<p align="center">
+  <img src="./mermaid_arch.png" alt="High-level WSD architecture" width="550">
+</p>
+
 #### Technology stack
 
-- **Windows Backend Agent:** We are currently considering Python for the initial prototype. The Windows agent will collect storage and workload information using Windows-provided interfaces such as Performance Counters and other OS APIs.
+- **Windows Backend Agent:** We are currently considering Python for the initial prototype. The Windows agent will collect storage and workload information using Windows-provided interfaces such as Performance Counters and other OS APIs. For storage-management functionality, we are still evaluating open-source and user-space-friendly options on Windows. Unlike Linux, some similar Windows tools are proprietary or license-restricted, so we are currently investigating approaches such as WinFsp and other lightweight implementations that could support functionality similar to the Linux backend without relying on closed-source commercial tools.
 
 - **Linux Backend Agent:** We are currently considering Python for the initial prototype. The Linux agent will use standard Linux monitoring interfaces and tools such as `iostat`. We are also considering tools such as mergerFS for storage-placement or pooling experiments where appropriate. For caching or tiering experiments, we are currently evaluating FUSE-based user-space approaches, with compatibility, performance overhead, and implementation complexity still under investigation.
 
@@ -168,16 +172,14 @@ People are expected to attend meetings unless communicated 12 hours in advance a
 ## Organisation Details
 
 #### Q11. How does your team fit within the overall team organisation of the partner?
-* Given the team structure of your partner, what role do you think your team will play?
-* Examples include product development that includes developing new features, or quality assurance that includes developing features that test the product reliability, or software maintenance that includes fixing crucial bugs in the product.
-* Provide examples of why you think you fit this role.
+**N/A — WSD is a student-proposed project and does not have an external partner organization.**
+
+Therefore, Team 21 acts as the main product development team. We are responsible for the frontend, Windows backend, Linux backend, database, algorithm design, system integration, and testing and validation.
 
 #### Q12. How does your project fit within the overall product from the partner?
-* Look at the big picture of the product and think about how your project fits into this product.
-* Is your project the first step towards building this product? Is it the first prototype? Are you developing the frontend of a product whose backend is developed by the partner? Are you building the release pipelines for a product that is developed by the partner? Are you building a core feature set and take full ownership of these features?
-* You should also provide details of who else is contributing to what parts of the product, if you have this information. This is more important if the project that you will be working on has strong coupling with parts that will be contributed to by members other than your team (e.g., from a partner).
-* You can be creative for these questions and even use a graphical or pictorial representation to demonstrate the fit.
-* Briefly specify what your partner considers a success for this project. Do they want you to build specific features? Publish a usable product? Just a prototype? Be as specific as you can be at this point.
+**N/A — WSD is a student-proposed project and is not part of a larger partner product.**
+
+The current CSC301 project is the first MVP and complete prototype of WSD. Our goal is to implement and validate the full workflow from backend data collection and database storage, through analysis and decision making, to frontend presentation and optimization recommendations. At this stage, success means producing a working, demonstrable, and testable prototype.
 
 ## Potential Risks
 
