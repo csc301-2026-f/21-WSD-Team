@@ -1,4 +1,4 @@
-# YOUR PRODUCT/TEAM NAME
+# WSD Team
 > _Note:_ This document will evolve throughout your project. You commit regularly to this file while working on the project (especially edits/additions/deletions to the _Highlights_ section). 
  > **This document will serve as a master plan between your team, your partner and your TA.**
 
@@ -112,6 +112,8 @@ At this stage, we expect to rely primarily on operating-system interfaces and es
 **Your partner cannot ask you to sign any legal agreements or documents pertaining to non-disclosure, confidentiality, IP ownership, etc.**
 
 Briefly describe which option you have agreed to.
+
+As of now we have agreed to keep the project open source.
 
 ----
 
