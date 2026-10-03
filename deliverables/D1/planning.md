@@ -78,7 +78,7 @@ WSD will use a cross-platform architecture consisting of platform-specific Windo
 
 - **Database:** A relational database will be used to store device information, workload measurements, historical observations, and recommendations. The specific database technology is still being evaluated.
 
-- **Frontend:** The dashboard will be implemented as a web application. The exact frontend framework is still being evaluated by the frontend team.
+- **Frontend:** The dashboard will be implemented as a web application. The frontend will include standard webpage languages such as HTML, CSS, Javascript, etc. The exact frontend framework is still being evaluated by the frontend team.
 
 #### Architecture and deployment
 
@@ -110,7 +110,14 @@ WSD is a student-proposed project and does not have an external partner organiza
 Do a team-building activity in-person or online. This can be playing an online game, meeting for bubble tea, lunch, or any other activity you all enjoy.
 * Get to know each other on a more personal level.
 * Provide a few sentences on what you did and share a picture or other evidence of your team building activity.
+Check deliverables\D1\team_building.jpg for a team image!
+We meet every Tuesday (mostly in-person) for team building and project discussions. A lot of us enjoy video games, and some team members have exchanged Steam Friend invitations.
 * Share at least three fun facts from members of you team (total not 3 for each member).
+Three fun facts about our team:
+  John: Team Liaison; He runs two large servers at home. On one of them, he reverse-engineered a Gigabyte BIOS setup so he could run a QYFR Intel engineering-sample CPU.
+  Danny: Hobbyist Rubik's Cube Enjoyer; could at some point solve a Rubik's Cube blindfolded.
+  Jesslyn: Fan of K-Pop + Asian Entertainment; likes watching animated and live-action Asian entertainment, currently watching Chiikawa, her favorite character is Momonga!
+
 
 
 #### Q7: What are the roles & responsibilities on the team?
@@ -124,6 +131,22 @@ Describe the different roles on the team and the responsibilities associated wit
 List each team member and:
  * A description of their role(s) and responsibilities including the components they'll work on and non-software related work
  * Why did you choose them to take that role? Specify if they are interested in learning that part, experienced in it, or any other reasons. Do no make things up. This part is not graded but may be reviewed later.
+
+ John || Algorithm Design + Decision Making || The reason I chose the coordination and algorithm role is that storage systems are already one of my main technical interests. I maintain an Intel S2600BPB-based storage node, I had a 4-month internship at a certain SSD controller development company, which further sparked my interest in this field. Around August of this year, I also launched a GitHub project The purpose is to stream the expert layer of LLM so that large models (such as Deepseek 0731 full version) can run on a single card 4090. These experiences are why I proposed this project and acted as a coordinator to coordinate everyone's work. 
+
+ Jesslyn || Algorithm Design + Decision Making || I'm interested in trying out new things, and I like a diversity of projects in my resume. I'm pretty new to this field, in fact, but I'm excited to learn about it. I got interested in this project after I saw John's presentation about it, and I asked questions about it. I also liked the flexibility of being able to choose libraries, frameworks, and languages we're comfortable with and that are suitable for this project. I also want to improve my full-stack development skills, especially my backend development skills, so this is a great opportunity.
+
+ Danny || Front-End Developer || I wanted to take charge of making the user-facing web application and making the API that interacts between the front-end and back-end. I was interested in it because I have previous web-dev experience and want to improve my skills manually programming an interactive website for future projects in HTML, CSS, JS, React, and more! I look forwards to refreshing the front end and making it polished and easy to use.
+
+ Sahil || Database / SQL || I chose my role because I have had experience with SQL before, more specifically for an internship I did in the past, so I figured this would be the right project to help further my knowledge with databases and their uses. I’ve never used databases for something like this, I find it very interesting. I have experience with Bash scripts. I've worked on MySQL in the past but the main reason I took this position is to explore additions to the databases and telemetry that SQL has to offer. 
+
+ Juan || QA Testing; DevOps; Debugging || I chose the benchmark & validation role because during my internship I worked on something similar. I wrote Python scripts using Playwright to automate testing and evaluate results, which was basically a benchmark/evaluation setup. I'd like to build on that by applying the same approach to storage performance, measuring workloads before and after WSD's optimizations.
+
+ Mohan || Linux Backend || I have experience with NAS configuration (storage, raid, data protections etc.) and docker deployment. I’m also familiar with networking, I configured my own DNS with custom domain and ad blocking, as well as reverse proxy and DDNS for hosting my own website. I would love to contribute for varies aspect of this project such as OS API integration and data distribution algorithms. I’m also able to provide 24/7 computing power on my TrueNAS, and some small local models!
+
+ Enrique || Windows Backend || Personally, I have already seen how the logic part of apps themselves are developed but now I want to learn how they properly run on an OS. 
+
+ Shengrong || Linux + Windows Integration || I chose the cross-platform backend role because I gained experience with similar backend and integration tasks in CSC207, and I already have some ideas on how to organize, standardize, and share data across different components. Additionally, I am not yet very familiar with Linux, so I see this as a great opportunity to learn it while working on the project.
 
 
 #### Q8: How will you work as a team?
