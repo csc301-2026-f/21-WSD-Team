@@ -107,11 +107,11 @@ Briefly describe which option you have agreed to.
 #### Q6: Have you met with your team?
 
 Do a team-building activity in-person or online. This can be playing an online game, meeting for bubble tea, lunch, or any other activity you all enjoy.
-* Get to know each other on a more personal level.
-* Provide a few sentences on what you did and share a picture or other evidence of your team building activity.
-Check deliverables\D1\team_building.jpg for a team image!
+
+![Team Building Exercise](<team_building.jpg>)
+
 We meet every Tuesday (mostly in-person) for team building and project discussions. A lot of us enjoy video games, and some team members have exchanged Steam Friend invitations.
-* Share at least three fun facts from members of you team (total not 3 for each member).
+
 Three fun facts about our team:
   John: Team Liaison; He runs two large servers at home. On one of them, he reverse-engineered a Gigabyte BIOS setup so he could run a QYFR Intel engineering-sample CPU.
   Danny: Hobbyist Rubik's Cube Enjoyer; could at some point solve a Rubik's Cube blindfolded.
@@ -120,17 +120,6 @@ Three fun facts about our team:
 
 
 #### Q7: What are the roles & responsibilities on the team?
-
-Describe the different roles on the team and the responsibilities associated with each role (e.g., frontend, database). 
- * Roles should reflect the structure of your team and be appropriate for your project. One person may have multiple roles.  
- * Add role(s) to your Team-[Team_Number]-[Team_Name].csv file on the main folder.
- * At least one person must be identified as the dedicated partner liaison. They need to have great organization and communication skills.
- * Everyone must contribute to code. Students who don't contribute to code enough will receive a lower mark at the end of the term.
-
-List each team member and:
- * A description of their role(s) and responsibilities including the components they'll work on and non-software related work
- * Why did you choose them to take that role? Specify if they are interested in learning that part, experienced in it, or any other reasons. Do no make things up. This part is not graded but may be reviewed later.
-
  John || Algorithm Design + Decision Making || The reason I chose the coordination and algorithm role is that storage systems are already one of my main technical interests. I maintain an Intel S2600BPB-based storage node, I had a 4-month internship at a certain SSD controller development company, which further sparked my interest in this field. Around August of this year, I also launched a GitHub project The purpose is to stream the expert layer of LLM so that large models (such as Deepseek 0731 full version) can run on a single card 4090. These experiences are why I proposed this project and acted as a coordinator to coordinate everyone's work. 
 
  Jesslyn || Algorithm Design + Decision Making || I'm interested in trying out new things, and I like a diversity of projects in my resume. I'm pretty new to this field, in fact, but I'm excited to learn about it. I got interested in this project after I saw John's presentation about it, and I asked questions about it. I also liked the flexibility of being able to choose libraries, frameworks, and languages we're comfortable with and that are suitable for this project. I also want to improve my full-stack development skills, especially my backend development skills, so this is a great opportunity.
@@ -143,7 +132,7 @@ List each team member and:
 
  Mohan || Linux Backend || I have experience with NAS configuration (storage, raid, data protections etc.) and docker deployment. I’m also familiar with networking, I configured my own DNS with custom domain and ad blocking, as well as reverse proxy and DDNS for hosting my own website. I would love to contribute for varies aspect of this project such as OS API integration and data distribution algorithms. I’m also able to provide 24/7 computing power on my TrueNAS, and some small local models!
 
- Enrique || Windows Backend || Personally, I have already seen how the logic part of apps themselves are developed but now I want to learn how they properly run on an OS. 
+ Enrique || Windows Backend || Personally I have already seen how the logic part of apps themselves are developed but now I want to learn how they properly run on an OS. This will give me a better overview of how an app is developed since, until then, I relied solely on IDEs launching apps for me, or only had basic C scripts running directly in a linux shell.
 
  Shengrong || Linux + Windows Integration || I chose the cross-platform backend role because I gained experience with similar backend and integration tasks in CSC207, and I already have some ideas on how to organize, standardize, and share data across different components. Additionally, I am not yet very familiar with Linux, so I see this as a great opportunity to learn it while working on the project.
 
