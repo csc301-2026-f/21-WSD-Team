@@ -1,6 +1,4 @@
-# WSD Team
-> _Note:_ This document will evolve throughout your project. You commit regularly to this file while working on the project (especially edits/additions/deletions to the _Highlights_ section). 
- > **This document will serve as a master plan between your team, your partner and your TA.**
+# Wise Storage Director (WSD) — Team 21
 
 ## Product Details
  
@@ -33,7 +31,7 @@ WSD is a student-proposed CSC301 project and does not have an external partner o
 #### Q3: Why would your users choose your product? What are they using today to solve their problem/need?
 
 Our product is mainly targeting the users having multiple storage devices with different performance characteristics, especially SSD + HDD systems. 
-We aim to accelerate the speed, optimize storage and help extend device lifespan on systems that struggle with storage performance. 
+We aim to improve storage performance and optimize the storage. The longer-term goal is to reduce avoidable writes where possible to help extend device lifespan. 
 The users will be given advice of data placement, caching recommendations and workload prioritization, help them place frequently accessed data on higher-speed storage devices and reduce unnecessary I/O operations.
 
 Currently, users may rely on many storage management tools: Windows task manager and Resource Monitor are used to monitor disk usage and I/O activity of individual processes; 
@@ -46,7 +44,7 @@ sparing users the trouble of interpreting raw performance data themselves.
 This helps users to understand which processes are affecting the performance, as they can choose whether to optimize their storage and select different optimization modes.
 By default, WSD only provides optimization recommendations. Users can either apply these recommendations manually or explicitly enable automatic execution for selected optimization strategies. 
 
-#### Q4: What are the user stories that make up the Minumum Viable Product (MVP)?
+#### Q4: What are the user stories that make up the Minimum Viable Product (MVP)?
 
 * As a storage enthusiast, I want to open the GUI in order to monitor the real-time I/O status of each running application.
 
@@ -80,7 +78,7 @@ WSD will use a cross-platform architecture consisting of platform-specific Windo
 
 - **Database:** A relational database will be used to store device information, workload measurements, historical observations, and recommendations. The specific database technology is still being evaluated.
 
-- **Frontend:** The dashboard will be implemented as a web application. The exact frontend framework is still being evaluated by the frontend team.
+- **Frontend:** The dashboard will be implemented as a web application. The frontend will include standard webpage languages such as HTML, CSS, Javascript, etc. The exact frontend framework is still being evaluated by the frontend team.
 
 #### Architecture and deployment
 
@@ -99,21 +97,9 @@ For development and testing, individual components may run as separate local ser
 At this stage, we expect to rely primarily on operating-system interfaces and established open-source tools rather than external commercial APIs. Candidate dependencies include system-monitoring utilities and storage-management tools such as mergerFS on Linux. Additional libraries and frameworks will be selected as the implementation is refined.
 
 ----
-## Intellectual Property Confidentiality Agreement 
-> Note this section is **not marked** but must be completed briefly if you have a partner. If you have any questions, please ask on Piazza.
->  
-**By default, you own any work that you do as part of your coursework.** However, some partners may want you to keep the project confidential after the course is complete. As part of your first deliverable, you should discuss and agree upon an option with your partner. Examples include:
-1. You can share the software and the code freely with anyone with or without a license, regardless of domain, for any use.
-2. You can upload the code to GitHub or other similar publicly available domains.
-3. You will only share the code under an open-source license with the partner but agree to not distribute it in any way to any other entity or individual. 
-4. You will share the code under an open-source license and distribute it as you wish but only the partner can access the system deployed during the course.
-5. You will only reference the work you did in your resume, interviews, etc. You agree to not share the code or software in any capacity with anyone unless your partner has agreed to it.
+## Intellectual Property Confidentiality Agreement
 
-**Your partner cannot ask you to sign any legal agreements or documents pertaining to non-disclosure, confidentiality, IP ownership, etc.**
-
-Briefly describe which option you have agreed to.
-
-As of now we have agreed to keep the project open source.
+WSD is a student-proposed project and does not have an external partner organization. The team currently intends to keep the project open source.
 
 ----
 
@@ -124,7 +110,14 @@ As of now we have agreed to keep the project open source.
 Do a team-building activity in-person or online. This can be playing an online game, meeting for bubble tea, lunch, or any other activity you all enjoy.
 * Get to know each other on a more personal level.
 * Provide a few sentences on what you did and share a picture or other evidence of your team building activity.
+Check deliverables\D1\team_building.jpg for a team image!
+We meet every Tuesday (mostly in-person) for team building and project discussions. A lot of us enjoy video games, and some team members have exchanged Steam Friend invitations.
 * Share at least three fun facts from members of you team (total not 3 for each member).
+Three fun facts about our team:
+  John: Team Liaison; He runs two large servers at home. On one of them, he reverse-engineered a Gigabyte BIOS setup so he could run a QYFR Intel engineering-sample CPU.
+  Danny: Hobbyist Rubik's Cube Enjoyer; could at some point solve a Rubik's Cube blindfolded.
+  Jesslyn: Fan of K-Pop + Asian Entertainment; likes watching animated and live-action Asian entertainment, currently watching Chiikawa, her favorite character is Momonga!
+
 
 
 #### Q7: What are the roles & responsibilities on the team?
@@ -139,6 +132,22 @@ List each team member and:
  * A description of their role(s) and responsibilities including the components they'll work on and non-software related work
  * Why did you choose them to take that role? Specify if they are interested in learning that part, experienced in it, or any other reasons. Do no make things up. This part is not graded but may be reviewed later.
 
+ John || Algorithm Design + Decision Making || The reason I chose the coordination and algorithm role is that storage systems are already one of my main technical interests. I maintain an Intel S2600BPB-based storage node, I had a 4-month internship at a certain SSD controller development company, which further sparked my interest in this field. Around August of this year, I also launched a GitHub project The purpose is to stream the expert layer of LLM so that large models (such as Deepseek 0731 full version) can run on a single card 4090. These experiences are why I proposed this project and acted as a coordinator to coordinate everyone's work. 
+
+ Jesslyn || Algorithm Design + Decision Making || I'm interested in trying out new things, and I like a diversity of projects in my resume. I'm pretty new to this field, in fact, but I'm excited to learn about it. I got interested in this project after I saw John's presentation about it, and I asked questions about it. I also liked the flexibility of being able to choose libraries, frameworks, and languages we're comfortable with and that are suitable for this project. I also want to improve my full-stack development skills, especially my backend development skills, so this is a great opportunity.
+
+ Danny || Front-End Developer || I wanted to take charge of making the user-facing web application and making the API that interacts between the front-end and back-end. I was interested in it because I have previous web-dev experience and want to improve my skills manually programming an interactive website for future projects in HTML, CSS, JS, React, and more! I look forwards to refreshing the front end and making it polished and easy to use.
+
+ Sahil || Database / SQL || I chose my role because I have had experience with SQL before, more specifically for an internship I did in the past, so I figured this would be the right project to help further my knowledge with databases and their uses. I’ve never used databases for something like this, I find it very interesting. I have experience with Bash scripts. I've worked on MySQL in the past but the main reason I took this position is to explore additions to the databases and telemetry that SQL has to offer. 
+
+ Juan || QA Testing; DevOps; Debugging || I chose the benchmark & validation role because during my internship I worked on something similar. I wrote Python scripts using Playwright to automate testing and evaluate results, which was basically a benchmark/evaluation setup. I'd like to build on that by applying the same approach to storage performance, measuring workloads before and after WSD's optimizations.
+
+ Mohan || Linux Backend || I have experience with NAS configuration (storage, raid, data protections etc.) and docker deployment. I’m also familiar with networking, I configured my own DNS with custom domain and ad blocking, as well as reverse proxy and DDNS for hosting my own website. I would love to contribute for varies aspect of this project such as OS API integration and data distribution algorithms. I’m also able to provide 24/7 computing power on my TrueNAS, and some small local models!
+
+ Enrique || Windows Backend || Personally, I have already seen how the logic part of apps themselves are developed but now I want to learn how they properly run on an OS. 
+
+ Shengrong || Linux + Windows Integration || I chose the cross-platform backend role because I gained experience with similar backend and integration tasks in CSC207, and I already have some ideas on how to organize, standardize, and share data across different components. Additionally, I am not yet very familiar with Linux, so I see this as a great opportunity to learn it while working on the project.
+
 
 #### Q8: How will you work as a team?
 
@@ -149,15 +158,6 @@ The purpose of each meeting is to report on progress and discuss areas where dif
 We will track what is discussed in each meeting by writing the meeting's minutes and/or recording it.
   
 #### Q9: How will you organize your team?
-
-List/describe the artifacts you will produce to organize your team. (We strongly recommend that you use standard collaboration tools like Linear.app, Jira, Slack, Discord, GitHub.)       
-
- * Artifacts can be To-Do lists, Task boards, schedule(s), meeting minutes, etc.
- * We want to understand:
-   * How do you keep track of what needs to get done? (You must grant your TA and partner access to systems you use to manage work)
-   * **How do you prioritize tasks?**
-   * How do tasks get assigned to team members?
-   * How do you determine the status of work from inception to completion?
 
 * We organize our team using Discord for communication and GitHub (Issues, PRs, and repository access, to which our TA will be granted access) for technical tracking, supported by weekly in-person meetings where we document formal meeting minutes, address blockers, and make architectural decisions. 
 * We prioritize tasks by identifying which items are critical path dependencies for upcoming project deliverables, assigning them initially based on individual strengths and component ownership (e.g., databases vs. I/O algorithms) while actively encouraging cross-functional pairing so teammates gain exposure to new areas. 
@@ -207,11 +207,6 @@ The current CSC301 project is the first MVP and working prototype of WSD. Our go
 * Integration friction due to individually developed component of the project. 
  Developing the storage interceptor, database, and policy engine independently risks integration friction or delays if data formats and API contracts are not kept tightly aligned.
 #### Q14. What are some potential mitigation strategies for the risks you identified?
-* Examples of mitigation strategies:
-  * More communication with the partner might help with improving clarity.
-  * Adding more details for an user story might make it less abstract.
-  * Adding an extra user story might increase the project complexity, making it less simple.
-* It's ok if you are unable to find mitigation strategies for all the risks right now.
 
 * Uncertainty Around the Linux Caching Approach: We will build quick, isolated prototypes to benchmark and evaluate multiple Linux caching approaches (such as symbolic links versus FUSE) in terms of performance overhead, maintenance complexity, and software compatibility before committing to a final backend design. This will establish a uniform caching approach with the least problems going forward, so it is important that we test it early.
 * Steep Technical Learning Curve: We will use our weekly in-person meetings for architectural walk-throughs and knowledge sharing, pair experienced members with those newer to systems programming, and encourage teammates to promptly flag blockers or technical questions on Discord so issues are resolved as soon as they arise.

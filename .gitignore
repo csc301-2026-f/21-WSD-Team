@@ -1,0 +1,21 @@
+# Compiled C binaries
+*.exe
+*.out
+*.o
+
+# Debug/build output
+build/
+bin/
+
+# Debugging files
+*.dSYM/
+*.pdb
+*.ilk
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
