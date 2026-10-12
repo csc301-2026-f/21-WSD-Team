@@ -461,9 +461,23 @@ repository interface. ALGO should NOT depend on raw SQL/table internals.
 ### 02.3 | ALL REVIEWERS — Shared schema acceptance
 
 - [ ] **TODO · SHENGRONG + ENRIQUE + MOHAN** — Every metric is labeled raw / derived / estimated and a source is specified.
-  - **Decision / evidence:** _Write here._
+  - **Decision / evidence:** 
+
+| Metric | Source Type | Windows Source | Linux Source |  Windows Evidence | Linux Evidence |
+---|---|---|---|---|---|
+| DeviceMetric | raw + derived(for Linux) | Performance Counters | /proc/diskstats | Performance counter consumer APIs(PDH.dll) | Linux kernel I/O statistics fields |
+| ProcessMetric | raw(read/write bps for Windows) + derived(for Linux) | Performance Counters + ETW | /proc/<pid>/io | Performance counter consumer APIs(PDH.dll) + ETW | Linux kernel 3.3 /proc/<pid>/io - Display the IO accounting fields |
+
 - [ ] **TODO · SHENGRONG + SAHIL + JOHN/JESSLYN + JUAN** — Agree on required/optional fields, `null`, empty collections, and explicit `UNSUPPORTED` semantics.
-  - **Decision / evidence:** _Write here._
+  - **Decision / evidence:** 
+    Proposed:
+  - 
+| value | definition |
+---|---|
+| 0 | the field is defined and a valid and measured value of zero |
+| null | the field is defined but no valid value |
+| [] | a valid return value empty collections |
+| UNSUPPORTED | the requested metric is not supported by the platform |
 
 ---
 
@@ -787,18 +801,44 @@ def evaluate_ssd_caching_policy(
 > **IF YOU OWN CORE/INTEGRATION:** Please fill in each **TODO** below. **UI + DB + ALGO reviewers:** Confirm the behavior and response shape. **QA:** Test the integration path.
 
 
-- [ ] **TODO · SHENGRONG** — Local transport/framework and bind/security model
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SHENGRONG** — How OS agent gets selected and normalized
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SHENGRONG** — Ingestion loop and/or event cadence
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SHENGRONG** — How DB / Algorithm get called (including the unresolved history route)
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SHENGRONG** — Response envelope; 4xx/5xx/error/unsupported behavior
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SHENGRONG** — One real or mocked end-to-end JSON response + branch/PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [X] **TODO · SHENGRONG** — Local transport/framework and bind/security model
+  - **Answer / evidence:** local HTTP + JSON. Bind to localhost
+- [X] **TODO · SHENGRONG** — How OS agent gets selected and normalized
+  - **Answer / evidence:** Through Windows/Linux Agent depends on host OS, normalized to DeviceMetric and ProcessMetric
+- [X] **TODO · SHENGRONG** — Ingestion loop and/or event cadence
+  - **Answer / evidence:** Every second
+- [X] **TODO · SHENGRONG** — How DB / Algorithm get called (including the unresolved history route)
+  - **Answer / evidence:** Core retrieves required history data from DB and latest data from agents then combines them and passes to Algorithm
+- [X] **TODO · SHENGRONG** — Response envelope; 4xx/5xx/error/unsupported behavior
+  - **Answer / evidence:** Response envelope: **status** indicates whether the request is succeeded or failed , **data** indicates the data contained, **error** indicates error type, null if the status is success
+
+| Status | Definition | Notes |
+---|---|---|
+| 4xx | Invalid request | Return "error" with error code and message |
+| 5xx | Core error | Return "error" with error code and message |
+| UNSUPPORTED | Request is not supported | Return UNSUPPORTED error code |
+- [X] **TODO · SHENGRONG** — One real or mocked end-to-end JSON response + branch/PR
+  - **Answer / evidence:** 
+```json
+{
+  "status": "success",
+  "data": {
+    "host_id": "host_mock",
+    "device_id": "disk_mock",
+    "timestamp_utc": "2026-10-11T08:30:57Z",
+    "sample_window_seconds": 1,
+    "read_bytes_per_sec": 1919810,
+    "write_bytes_per_sec": 114514,
+    "read_iops": 150.5,
+    "write_iops": 40.0,
+    "avg_read_latency_ms": null,
+    "avg_write_latency_ms": null,
+    "source": "mock"
+  },
+  "error": null
+}
+```
+**Branch**: `shengrong/d2-contract`
 
 ### 06.3 | DANNY — FRONTEND CONSUMER CHECKLIST
 
