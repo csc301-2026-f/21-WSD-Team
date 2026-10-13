@@ -110,7 +110,7 @@ Please check one of these summary items **only after** the corresponding detaile
 - [ ] **TODO · DANNY** — Frontend requirements: complete §6, review endpoint shapes against every current UI screen.
 - [ ] **TODO · JUAN** — Testing / benchmarks / CI: complete §8, attach fixtures, runnable tests, and PR/CI evidence.
 
-**Our progress / evidence links:** _Add PR number(s), review date(s), and any blockers here._
+**Our progress / evidence links:** Juan: mock fixtures started in `tests/fixtures/` on Juan-branch (devices, device/process metrics, empty history). Next: validator + first runnable test, CI draft. Waiting on producers for real success/error payloads (§08.4.2).
 
 ---
 
@@ -274,7 +274,7 @@ From D1, the **two core storage modes** are:
 - [ ] **TODO · JUAN + SAHIL + SHENGRONG + DANNY** — Define measurable baseline/comparison data and missing-evidence behavior for time-saved estimates (US-07).
   - **Answer / evidence:** _Write here, or link a benchmark or fixture / PR._
 - [ ] **TODO · JUAN** — Trace the seven D1 stories to at least one agreed contract test or a clearly documented unsupported/deferred path; do not claim a passing test for an unimplemented feature.
-  - **Answer / evidence:** _Write here, or link a QA test matrix / PR._
+   - **Answer / evidence:** Draft mapping: US-01 → T-OS-01/02, T-HTTP-01 · US-02 → T-DB-01/02, T-HTTP-01 (needs HTTP-01m history test) · US-03/04 → T-ALG-01/02, execution DEFERRED via T-ACT-01 · US-05 → T-ALG-01..03, T-UI-01, T-E2E-01 · US-06 → **gap: no test ID yet, propose T-AUTO-01** · US-07 → **gap: no test ID yet, propose T-IMPACT-01**. To be confirmed with team._
 
 ### 00.1 | Shared data flow (Juan tests every boundary)
 
@@ -1059,8 +1059,8 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
 
 - [ ] **TODO · JUAN** — Test framework and Python version(s)
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · JUAN** — Fixtures format/schema source of truth
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Fixtures format/schema source of truth
+  - **Answer / evidence:** JSON files in `tests/fixtures/` (Juan-branch). Source of truth = §02 of this doc. Any schema change = one PR updating §02 + fixtures together. Fixtures are MOCK until producers send real payloads (§08.4.2).box above.
 - [ ] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JUAN** — Mocking approach when Windows/Linux test host is unavailable
