@@ -533,22 +533,33 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
 > **IF YOU OWN THE WINDOWS AGENT:** Please complete each **TODO** below and provide evidence. **CORE + ALGO reviewers:** Confirm the data is usable. **QA:** Define test cases.
 
 
-- [ ] **TODO · ENRIQUE** — Actual module path / language / callable signatures
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Windows data source(s) and permissions required
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · ENRIQUE** — Actual module path / language / callable signatures
+  - **Answer / evidence:** backend/windows/backend.py
+- [x] **TODO · ENRIQUE** — Windows data source(s) and permissions required
+  - **Answer / evidence:** ETW and windows API for device info
 - [ ] **TODO · ENRIQUE** — Available device metrics and units / unavailable fields
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Process I/O and file-level attribution feasibility
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · ENRIQUE** — Process I/O and file-level attribution feasibility
+  - **Answer / evidence:** Doable given no ETW events are dropped (rare)
 - [ ] **TODO · ENRIQUE** — Sample cadence and measured overhead
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — File-level pooling and SSD cache feasibility (WinFsp or alternative)
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · ENRIQUE** — File-level pooling and SSD cache feasibility (WinFsp or alternative)
+  - **Answer / evidence:** WinFsp still considered for this
+- [x] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
+  - **Answer / evidence:** return None on data fields like IO
 - [ ] **TODO · ENRIQUE** — One success fixture, one unsupported fixture, relevant PR
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+     
+**Current proposed API**
+```python
+{
+     "get_devices": list[Device]
+     "get_device_metrics": list[DeviceMetric]
+     "get_process_metrics": list[ProcessMetric]
+     "get_file_activity": list[FileActivity]
+     "get_collection_health": CollectionHealth
+}
+```
 
 ### 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
 
