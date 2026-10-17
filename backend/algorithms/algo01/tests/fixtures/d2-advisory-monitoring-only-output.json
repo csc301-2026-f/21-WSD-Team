@@ -1,0 +1,22 @@
+[
+  {
+    "recommendation_id": "raid0-f6eced8dc1447d09278187c5",
+    "mode": "raid0",
+    "action": "move",
+    "file_id": "sample-video",
+    "source_device_id": "hdd-1",
+    "target_device_id": "ssd-1",
+    "reason": "MOCK: sample-video: 120 reads (2 reads/s). Consider hdd-1 -> ssd-1. D2 read-activity heuristic; SSD speedup is unmeasured. Advice only; file-move execution support is not confirmed.",
+    "created_at_utc": "2026-10-17T12:00:00Z",
+    "requires_approval": true,
+    "estimated_benefit": null,
+    "constraints": [
+      "approval_required",
+      "d2_read_activity_heuristic_unbenchmarked",
+      "d2_single_ssd_target_per_evaluation",
+      "executor_revalidate_identity_capacity_permissions_and_path_compatibility",
+      "file_move_execution_not_confirmed",
+      "mock_data_not_real_file_activity"
+    ]
+  }
+]

@@ -1,0 +1,28 @@
+[
+  {
+    "recommendation_id": "rec-raid0-001",
+    "mode": "raid0",
+    "action": "move",
+    "file_id": "file-001",
+    "source_device_id": "disk-hdd-01",
+    "target_device_id": "disk-ssd-01",
+    "reason": "MOCK: example only, not a real measurement",
+    "created_at_utc": "2026-10-12T21:00:05Z",
+    "requires_approval": true,
+    "estimated_benefit": null,
+    "constraints": ["target_has_free_space"]
+  },
+  {
+    "recommendation_id": "rec-raid0-002",
+    "mode": "raid0",
+    "action": "none",
+    "file_id": null,
+    "source_device_id": null,
+    "target_device_id": null,
+    "reason": "MOCK: not enough data to recommend",
+    "created_at_utc": "2026-10-12T21:00:05Z",
+    "requires_approval": true,
+    "estimated_benefit": null,
+    "constraints": []
+  }
+]
