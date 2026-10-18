@@ -1,0 +1,24 @@
+[
+  {
+    "host_id": "test-host-01",
+    "pid": 4242,
+    "start_time_utc": "2026-10-12T20:55:00Z",
+    "process_name": "game.exe",
+    "timestamp_utc": "2026-10-12T21:00:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": 31457280.0,
+    "write_bytes_per_sec": 0.0,
+    "attributed_device_id": "disk-hdd-01"
+  },
+  {
+    "host_id": "test-host-01",
+    "pid": 5150,
+    "start_time_utc": null,
+    "process_name": null,
+    "timestamp_utc": "2026-10-12T21:00:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": null,
+    "write_bytes_per_sec": null,
+    "attributed_device_id": null
+  }
+]

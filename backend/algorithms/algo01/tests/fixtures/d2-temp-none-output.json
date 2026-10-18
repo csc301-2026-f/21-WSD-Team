@@ -1,0 +1,18 @@
+[
+  {
+    "recommendation_id": "raid0-f55891b614a523efb1e4abe0",
+    "mode": "raid0",
+    "action": "none",
+    "file_id": null,
+    "source_device_id": null,
+    "target_device_id": null,
+    "reason": "no_eligible_recommendation",
+    "created_at_utc": "2026-10-17T12:00:00Z",
+    "requires_approval": false,
+    "estimated_benefit": null,
+    "constraints": [
+      "missing_file_activity",
+      "no_eligible_recommendation"
+    ]
+  }
+]

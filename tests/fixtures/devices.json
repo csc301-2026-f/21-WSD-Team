@@ -1,0 +1,22 @@
+[
+  {
+    "host_id": "test-host-01",
+    "device_id": "disk-ssd-01",
+    "display_name": "Test SSD",
+    "media_type": "ssd",
+    "capacity_bytes": 512000000000,
+    "free_bytes": 200000000000,
+    "mount_points": ["C:\\"],
+    "is_available": true
+  },
+  {
+    "host_id": "test-host-01",
+    "device_id": "disk-hdd-01",
+    "display_name": "Test HDD",
+    "media_type": "hdd",
+    "capacity_bytes": 1000000000000,
+    "free_bytes": null,
+    "mount_points": ["D:\\"],
+    "is_available": true
+  }
+]
