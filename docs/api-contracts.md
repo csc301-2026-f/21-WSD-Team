@@ -615,30 +615,40 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 > [!TIP]
 > **IF YOU OWN THE DATABASE:** Please complete each **TODO** below, including query examples. **ALGO + CORE reviewers:** Confirm that the history queries meet our needs. **QA:** Test save/query round-trips.
 
-
 - [x] **TODO · SAHIL** — Database engine, table/schema approach, migrations
-  - **Answer / evidence:** _Embedded SQLite with Write-Ahead Logging enabled for high-concurrency local access. Zero external server requirement. Schema initialized automatically on boot with standard CREATE TABLE IF NOT EXISTS statements; lightweight migrations managed via a single schema_version pragma table._
+  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: PROPOSED).
+
 - [x] **TODO · SAHIL** — Concrete Python callable/module or service adapter
-  - **Answer / evidence:** _wsd.db.repository.SQLiteHistoryRepository implementing the clean HistoryRepository protocol. Algorithms and Core consume plain Python dictionaries/dataclasses—no SQL strings or SQLite handles leak across component boundaries._
+  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: PROPOSED interface signature).
+
 - [x] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:** Proposed design: Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
+    - `bucket_seconds=None`: Returns raw recorded samples within `[start_utc, end_utc]`.
+    - `bucket_seconds > 0`: Aggregates samples using SQL `AVG(read_bytes_per_sec)`, `MAX()`, and `AVG(read_iops)` binned by timestamp intervals.
+
 - [x] **TODO · SAHIL** — Empty database, missing/stale data, retention, timestamp policy
-  - **Answer / evidence:** _Queries on an empty database or non-existent time windows return an empty list [] with HTTP 200. All timestamps are normalized to UTC ISO-8601 strings (YYYY-MM-DDTHH:MM:SSZ). Raw telemetry older than 7 days is automatically pruned via an hourly rolling cleanup job._
+  - **Answer / evidence:** 
+    - Queries on an empty database or non-existent time windows return an empty list `[]` with status 200 (never raises an uncaught exception or returns fabricated zeroes).
+    - All timestamps normalized to UTC ISO-8601 strings (`YYYY-MM-DDTHH:MM:SSZ`).
+    - Retention policy: Planned background rolling pruning for raw telemetry older than 7 days.
+
 - [x] **TODO · SAHIL** — Stable device/process IDs; optional file history source
-  - **Answer / evidence:** _Devices tracked by OS persistent hardware identifiers (device_id). Processes identified using composite strings: f"{pid}_{start_time_utc}" to prevent PID collision across application restarts. If the OS agent does not provide file activity, query_file_heat() returns an explicit empty list [] with status indicating file tracking is unsupported, heat scores are never guessed._
+  - **Answer / evidence:** 
+    - Devices tracked by persistent hardware IDs (`device_id`).
+    - Processes identified using composite strings: `f"{pid}_{start_time_utc}"` to prevent PID collision across restarts (US-02).
+    - If the OS agent does not provide file activity, `query_file_heat()` returns an explicit empty list `[]` with status indicating file tracking is unsupported—heat scores are never guessed.
+
 - [x] **TODO · SAHIL** — Expected query cost, indexes and batch limits
-  - **Answer / evidence:** _Answer / evidence: Indexed on composite keys:; (device_id, timestamp_utc) and (process_instance_id, timestamp_utc). Ingestion uses batched transactions up to 500 records per commit. Query response target is <10ms for 24-hour historical windows._
+  - **Answer / evidence:** Composite indexes planned for `(device_id, timestamp_utc)` and `(process_instance_id, timestamp_utc)`. Ingestion planned with batched transactions (`executemany`) up to 500 records per commit. **Performance note:** `<10ms` for 24-hour historical queries is an unverified design target, not an empirically measured benchmark. Actual latency will be verified in QA benchmarks.
+
 - [x] **TODO · SAHIL** — Document history needed for US-02 and benchmark comparison data retention/queries for US-07; do not generate a time-saved number from device IOPS alone.
-  - **Answer / evidence:** _US-02 queries query historical process trends via query_process_history. US-07 (estimated time saved) delegates impact calculation to QA benchmark baselines: DB stores baseline run IDs and actual run durations, returning {"status": "unavailable"} if no direct baseline benchmark exists._
+  - **Answer / evidence:** US-02 historical process queries handled via `query_process_history`. US-07 (estimated time saved) delegates impact calculation to QA benchmark baselines: DB stores baseline run IDs and actual run durations, returning `{"status": "unavailable"}` if no direct baseline benchmark exists.
+
 - [x] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
-  - **Answer / evidence:** _
-  Fixtures added to repository:
-
-  Success: tests/fixtures/history_sample.json
-
-  Empty: tests/fixtures/history_empty.json
-
-  Unsupported File Heat: tests/fixtures/file_heat_unsupported.json_
+  - **Answer / evidence:** Fixtures committed to repository branch under `tests/fixtures/`:
+    - Success: `tests/fixtures/history_sample.json`
+    - Empty: `tests/fixtures/history_empty.json`
+    - Unsupported File Heat: `tests/fixtures/file_heat_unsupported.json`
 
 ### 04.2 | DB CONSUMERS + JUAN — Review and test checklist
 
