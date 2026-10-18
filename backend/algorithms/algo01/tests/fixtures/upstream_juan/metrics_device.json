@@ -1,0 +1,28 @@
+[
+  {
+    "host_id": "test-host-01",
+    "device_id": "disk-ssd-01",
+    "timestamp_utc": "2026-10-12T21:00:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": 52428800.0,
+    "write_bytes_per_sec": 10485760.0,
+    "read_iops": 1200.0,
+    "write_iops": 300.0,
+    "avg_read_latency_ms": 0.4,
+    "avg_write_latency_ms": 0.9,
+    "source": "mock"
+  },
+  {
+    "host_id": "test-host-01",
+    "device_id": "disk-hdd-01",
+    "timestamp_utc": "2026-10-12T21:00:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": 8388608.0,
+    "write_bytes_per_sec": 2097152.0,
+    "read_iops": 90.0,
+    "write_iops": 40.0,
+    "avg_read_latency_ms": null,
+    "avg_write_latency_ms": null,
+    "source": "mock"
+  }
+]

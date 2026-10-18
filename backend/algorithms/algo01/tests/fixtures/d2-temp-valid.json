@@ -1,0 +1,56 @@
+{
+  "devices": [
+    {
+      "host_id": "mock-host",
+      "device_id": "hdd-1",
+      "display_name": "hdd-1",
+      "media_type": "hdd",
+      "capacity_bytes": 21474836480,
+      "free_bytes": 10737418240,
+      "mount_points": [
+        "/mock/hdd-1"
+      ],
+      "is_available": true
+    },
+    {
+      "host_id": "mock-host",
+      "device_id": "ssd-1",
+      "display_name": "ssd-1",
+      "media_type": "ssd",
+      "capacity_bytes": 21474836480,
+      "free_bytes": 10737418240,
+      "mount_points": [
+        "/mock/ssd-1"
+      ],
+      "is_available": true
+    }
+  ],
+  "realtime": {
+    "host_id": "mock-host",
+    "evaluation_time_utc": "2026-10-17T12:00:00Z"
+  },
+  "history": {
+    "file_activity": [
+      {
+        "host_id": "mock-host",
+        "file_id": "sample-video",
+        "path": "/mock/hdd-1/video.mp4",
+        "device_id": "hdd-1",
+        "window_start_utc": "2026-10-17T11:59:00Z",
+        "window_end_utc": "2026-10-17T12:00:00Z",
+        "read_bytes": 16777216,
+        "write_bytes": 0,
+        "read_ops": 120,
+        "write_ops": 0,
+        "file_size_bytes": 4194304,
+        "source": "mock:d2-contract-example"
+      }
+    ]
+  },
+  "mode_config": {},
+  "capabilities": {
+    "file_access_metrics": true,
+    "file_move": true,
+    "file_level_pooling": true
+  }
+}
