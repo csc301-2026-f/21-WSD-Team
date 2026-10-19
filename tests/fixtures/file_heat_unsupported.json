@@ -1,0 +1,11 @@
+{
+  "query_metadata": {
+    "device_ids": ["sda1"],
+    "start_utc": "2026-10-08T20:00:00Z",
+    "end_utc": "2026-10-08T20:05:00Z",
+    "limit": 100
+  },
+  "status": "UNSUPPORTED",
+  "reason": "File-level telemetry source unavailable from OS agent",
+  "results": []
+}

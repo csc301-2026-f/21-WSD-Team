@@ -1,0 +1,16 @@
+{
+  "data_kind": "MOCK",
+  "query": {
+    "process_instance_ids": [
+      "process:[\"test-host-01\",4242,\"2026-10-12T20:55:00Z\"]"
+    ],
+    "start_utc": "2026-10-12T20:57:00Z",
+    "end_utc": "2026-10-12T21:01:00Z",
+    "bucket_seconds": 60
+  },
+  "response_fixture": "process-history-mock.json",
+  "notes": [
+    "PROPOSED identity encoding and bucket end timestamps; Sahil/Shengrong review required",
+    "MOCK ONLY, not output from a DB query or HTTP endpoint"
+  ]
+}
