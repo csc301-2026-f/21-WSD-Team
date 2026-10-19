@@ -105,7 +105,7 @@ Please check one of these summary items **only after** the corresponding detaile
 - [ ] **TODO · ENRIQUE** — Windows contracts: complete §3 worksheet + success/failure examples; request consumer review.
 - [ ] **TODO · MOHAN** — Linux contracts: complete §3 worksheet + feasibility/unsupported examples; request consumer review.
 - [ ] **TODO · SHENGRONG** — Shared schemas, integration, HTTP: complete §§2 and 6, coordinate contracts with Danny and DB/ALGO.
-- [ ] **TODO · SAHIL** — Database contracts: complete §4, provide a representative historical result and empty/unsupported response.
+- [x] **TODO · SAHIL** — Database contracts: complete §4, provide a representative historical result and empty/unsupported response.
 - [ ] **TODO · JOHN + JESSLYN** — Algorithm contracts: complete §5, review required inputs from OS and DB and provide one fixture per storage mode.
 - [ ] **TODO · DANNY** — Frontend requirements: complete §6, review endpoint shapes against every current UI screen.
 - [ ] **TODO · JUAN** — Testing / benchmarks / CI: complete §8, attach fixtures, runnable tests, and PR/CI evidence.
@@ -683,23 +683,40 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 > [!TIP]
 > **IF YOU OWN THE DATABASE:** Please complete each **TODO** below, including query examples. **ALGO + CORE reviewers:** Confirm that the history queries meet our needs. **QA:** Test save/query round-trips.
 
+- [x] **TODO · SAHIL** — Database engine, table/schema approach, migrations
+  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: PROPOSED).
 
-- [ ] **TODO · SAHIL** — Database engine, table/schema approach, migrations
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Concrete Python callable/module or service adapter
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Empty database, missing/stale data, retention, timestamp policy
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Stable device/process IDs; optional file history source
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Expected query cost, indexes and batch limits
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Document history needed for US-02 and benchmark comparison data retention/queries for US-07; do not generate a time-saved number from device IOPS alone.
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · SAHIL** — Concrete Python callable/module or service adapter
+  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: PROPOSED interface signature).
+
+- [x] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
+  - **Answer / evidence:** Proposed design: Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
+    - `bucket_seconds=None`: Returns raw recorded samples within `[start_utc, end_utc]`.
+    - `bucket_seconds > 0`: Aggregates samples using SQL `AVG(read_bytes_per_sec)`, `MAX()`, and `AVG(read_iops)` binned by timestamp intervals.
+
+- [x] **TODO · SAHIL** — Empty database, missing/stale data, retention, timestamp policy
+  - **Answer / evidence:** 
+    - Queries on an empty database or non-existent time windows return an empty list `[]` with status 200 (never raises an uncaught exception or returns fabricated zeroes).
+    - All timestamps normalized to UTC ISO-8601 strings (`YYYY-MM-DDTHH:MM:SSZ`).
+    - Retention policy: Planned background rolling pruning for raw telemetry older than 7 days.
+
+- [x] **TODO · SAHIL** — Stable device/process IDs; optional file history source
+  - **Answer / evidence:** 
+    - Devices tracked by persistent hardware IDs (`device_id`).
+    - Processes identified using composite strings: `f"{pid}_{start_time_utc}"` to prevent PID collision across restarts (US-02).
+    - If the OS agent does not provide file activity, `query_file_heat()` returns an explicit empty list `[]` with status indicating file tracking is unsupported—heat scores are never guessed.
+
+- [x] **TODO · SAHIL** — Expected query cost, indexes and batch limits
+  - **Answer / evidence:** Composite indexes planned for `(device_id, timestamp_utc)` and `(process_instance_id, timestamp_utc)`. Ingestion planned with batched transactions (`executemany`) up to 500 records per commit. **Performance note:** `<10ms` for 24-hour historical queries is an unverified design target, not an empirically measured benchmark. Actual latency will be verified in QA benchmarks.
+
+- [x] **TODO · SAHIL** — Document history needed for US-02 and benchmark comparison data retention/queries for US-07; do not generate a time-saved number from device IOPS alone.
+  - **Answer / evidence:** US-02 historical process queries handled via `query_process_history`. US-07 (estimated time saved) delegates impact calculation to QA benchmark baselines: DB stores baseline run IDs and actual run durations, returning `{"status": "unavailable"}` if no direct baseline benchmark exists.
+
+- [x] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
+  - **Answer / evidence:** Fixtures committed to repository branch under `tests/fixtures/`:
+    - Success: `tests/fixtures/history_sample.json`
+    - Empty: `tests/fixtures/history_empty.json`
+    - Unsupported File Heat: `tests/fixtures/file_heat_unsupported.json`
 
 ### 04.2 | DB CONSUMERS + JUAN — Review and test checklist
 
