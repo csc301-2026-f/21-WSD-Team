@@ -2,6 +2,7 @@ import subprocess
 
 def get_drive_io(
         drive_name: str,
+        wait_time: int,
 ) -> tuple[int, int]:
     """
     Block for wait_time seconds and returns the read / write stats happened during the block time
