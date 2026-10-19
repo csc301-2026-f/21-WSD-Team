@@ -105,12 +105,12 @@ Please check one of these summary items **only after** the corresponding detaile
 - [ ] **TODO · ENRIQUE** — Windows contracts: complete §3 worksheet + success/failure examples; request consumer review.
 - [ ] **TODO · MOHAN** — Linux contracts: complete §3 worksheet + feasibility/unsupported examples; request consumer review.
 - [ ] **TODO · SHENGRONG** — Shared schemas, integration, HTTP: complete §§2 and 6, coordinate contracts with Danny and DB/ALGO.
-- [ ] **TODO · SAHIL** — Database contracts: complete §4, provide a representative historical result and empty/unsupported response.
+- [x] **TODO · SAHIL** — Database contracts: complete §4, provide a representative historical result and empty/unsupported response.
 - [ ] **TODO · JOHN + JESSLYN** — Algorithm contracts: complete §5, review required inputs from OS and DB and provide one fixture per storage mode.
 - [ ] **TODO · DANNY** — Frontend requirements: complete §6, review endpoint shapes against every current UI screen.
 - [ ] **TODO · JUAN** — Testing / benchmarks / CI: complete §8, attach fixtures, runnable tests, and PR/CI evidence.
 
-**Our progress / evidence links:** _Add PR number(s), review date(s), and any blockers here._
+**Our progress / evidence links:** Juan: mock fixtures started in `tests/fixtures/` on Juan-branch (devices, device/process metrics, empty history, RAID0 recommendations). Next: validator + first runnable test, CI draft. Waiting on producers for real success/error payloads (§08.4.2).
 
 ---
 
@@ -274,7 +274,7 @@ From D1, the **two core storage modes** are:
 - [ ] **TODO · JUAN + SAHIL + SHENGRONG + DANNY** — Define measurable baseline/comparison data and missing-evidence behavior for time-saved estimates (US-07).
   - **Answer / evidence:** _Write here, or link a benchmark or fixture / PR._
 - [ ] **TODO · JUAN** — Trace the seven D1 stories to at least one agreed contract test or a clearly documented unsupported/deferred path; do not claim a passing test for an unimplemented feature.
-  - **Answer / evidence:** _Write here, or link a QA test matrix / PR._
+   - **Answer / evidence:** Draft mapping: US-01 → T-OS-01/02, T-HTTP-01 · US-02 → T-DB-01/02, T-HTTP-01 (needs HTTP-01m history test) · US-03/04 → T-ALG-01/02, execution DEFERRED via T-ACT-01 · US-05 → T-ALG-01..03, T-UI-01, T-E2E-01 · US-06 → **gap: no test ID yet, propose T-AUTO-01** · US-07 → **gap: no test ID yet, propose T-IMPACT-01**. To be confirmed with team.
 
 ### 00.1 | Shared data flow (Juan tests every boundary)
 
@@ -373,6 +373,60 @@ repository interface. ALGO should NOT depend on raw SQL/table internals.
 
 **Consumer reviewer(s) + date:** _names / date / PR comments_  
 **QA reviewer + date:** _name / date / PR comments_
+
+---
+
+
+#### ALGO-01 | Contract Review — John
+
+**API ID:** `ALGO-01`  
+**Producer:** John (ALGO-01 implementation), Jesslyn (shared algorithm review)  
+**Consumers:** Shengrong (CORE), Enrique/Mohan (OS), Danny (UI)  
+**QA reviewer:** Juan  
+
+**Signature / endpoint:**  
+`evaluate_raid0_policy(devices, realtime, history, mode_config, capabilities) -> list[dict]`
+
+**Required fields / types / units:**  
+See [§05.1 — ALGO-01](#algo-01-spec) for the required inputs and algorithm rules. We use the existing Device, FileActivity and Recommendation structures defined in §02.1 and §02.2. File sizes and device capacities are measured in bytes, timestamps use UTC, and read/write counts refer to operations within a sampling interval.
+
+**Optional / missing / access-denied behavior:**  
+See [§05.1 — Missing data fallback](#algo-01-spec). Files without the required information are skipped. If file-level data is unavailable or no suitable SSD is found, ALGO-01 returns `none`. Invalid evaluation time raises `PolicyInputError`.
+
+**Success example:**  
+- [Input](../backend/algorithms/algo01/tests/fixtures/d2-temp-valid.json)
+- [Expected output](../backend/algorithms/algo01/tests/fixtures/d2-temp-valid-output.json)
+
+A simulated HDD file with 120 reads in 60 seconds. The algorithm recommends SSD placement when enough space is available.
+
+**Failure or unsupported example:**  
+- [Input](../backend/algorithms/algo01/tests/fixtures/d2-temp-none.json)
+- [Expected output](../backend/algorithms/algo01/tests/fixtures/d2-temp-none-output.json)
+
+No file-level activity is available, so the algorithm returns `none`.
+
+**Platform limits:**  
+See [§05.1 — ALGO-01 limitations](#algo-01-spec). For D2, the algorithm only supports the `performance` goal and selects one SSD per evaluation. It recommends file placement but does not move files, implement caching or estimate actual performance improvements.
+
+**Evidence / PR:**  
+Local implementation and tests: `backend/algorithms/algo01/`
+
+Test command:  
+`python -B -m unittest discover -s backend/algorithms/algo01/tests -v`
+
+PR: Pending. CORE integration has not been completed.
+
+- [x] **TODO · PRODUCER** — Signature and input/output schemas filled in; sample values supplied.
+- [x] **TODO · PRODUCER** — Errors, capability limits and unsupported cases documented.
+- [ ] **TODO · CONSUMER(S)** — API provides the needed fields and behavior, or a mutually agreed fallback.
+- [ ] **TODO · JUAN** — Test fixture and validation/negative-test plan available.
+- [ ] **TODO · PRODUCER + CONSUMER** — Agreement recorded in the PR discussion.
+- [ ] **TODO · IMPLEMENTED** — Callable implementation merged.
+- [ ] **TODO · VERIFIED** — Automated tests passed with linked evidence.
+
+**Consumer reviewer(s) + date:** Pending.  
+**QA reviewer + date:** Pending.
+
 ---
 
 ## 02 | SHARED DATA SCHEMAS — Owner: Shengrong
@@ -629,23 +683,40 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 > [!TIP]
 > **IF YOU OWN THE DATABASE:** Please complete each **TODO** below, including query examples. **ALGO + CORE reviewers:** Confirm that the history queries meet our needs. **QA:** Test save/query round-trips.
 
+- [x] **TODO · SAHIL** — Database engine, table/schema approach, migrations
+  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: PROPOSED).
 
-- [ ] **TODO · SAHIL** — Database engine, table/schema approach, migrations
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Concrete Python callable/module or service adapter
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Empty database, missing/stale data, retention, timestamp policy
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Stable device/process IDs; optional file history source
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Expected query cost, indexes and batch limits
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Document history needed for US-02 and benchmark comparison data retention/queries for US-07; do not generate a time-saved number from device IOPS alone.
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · SAHIL** — Concrete Python callable/module or service adapter
+  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: PROPOSED interface signature).
+
+- [x] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
+  - **Answer / evidence:** Proposed design: Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
+    - `bucket_seconds=None`: Returns raw recorded samples within `[start_utc, end_utc]`.
+    - `bucket_seconds > 0`: Aggregates samples using SQL `AVG(read_bytes_per_sec)`, `MAX()`, and `AVG(read_iops)` binned by timestamp intervals.
+
+- [x] **TODO · SAHIL** — Empty database, missing/stale data, retention, timestamp policy
+  - **Answer / evidence:** 
+    - Queries on an empty database or non-existent time windows return an empty list `[]` with status 200 (never raises an uncaught exception or returns fabricated zeroes).
+    - All timestamps normalized to UTC ISO-8601 strings (`YYYY-MM-DDTHH:MM:SSZ`).
+    - Retention policy: Planned background rolling pruning for raw telemetry older than 7 days.
+
+- [x] **TODO · SAHIL** — Stable device/process IDs; optional file history source
+  - **Answer / evidence:** 
+    - Devices tracked by persistent hardware IDs (`device_id`).
+    - Processes identified using composite strings: `f"{pid}_{start_time_utc}"` to prevent PID collision across restarts (US-02).
+    - If the OS agent does not provide file activity, `query_file_heat()` returns an explicit empty list `[]` with status indicating file tracking is unsupported—heat scores are never guessed.
+
+- [x] **TODO · SAHIL** — Expected query cost, indexes and batch limits
+  - **Answer / evidence:** Composite indexes planned for `(device_id, timestamp_utc)` and `(process_instance_id, timestamp_utc)`. Ingestion planned with batched transactions (`executemany`) up to 500 records per commit. **Performance note:** `<10ms` for 24-hour historical queries is an unverified design target, not an empirically measured benchmark. Actual latency will be verified in QA benchmarks.
+
+- [x] **TODO · SAHIL** — Document history needed for US-02 and benchmark comparison data retention/queries for US-07; do not generate a time-saved number from device IOPS alone.
+  - **Answer / evidence:** US-02 historical process queries handled via `query_process_history`. US-07 (estimated time saved) delegates impact calculation to QA benchmark baselines: DB stores baseline run IDs and actual run durations, returning `{"status": "unavailable"}` if no direct baseline benchmark exists.
+
+- [x] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
+  - **Answer / evidence:** Fixtures committed to repository branch under `tests/fixtures/`:
+    - Success: `tests/fixtures/history_sample.json`
+    - Empty: `tests/fixtures/history_empty.json`
+    - Unsupported File Heat: `tests/fixtures/file_heat_unsupported.json`
 
 ### 04.2 | DB CONSUMERS + JUAN — Review and test checklist
 
@@ -712,26 +783,56 @@ def evaluate_ssd_caching_policy(
 ) -> list[dict]: ...
 ```
 
+<a id="algo-01-spec"></a>
+
 ### 05.1 | JOHN + JESSLYN — ALGORITHM PRODUCER CHECKLIST
 
 > [!IMPORTANT]
 > **IF YOU OWN THE ALGORITHM:** Please complete each **TODO** below with proposed input/output behavior. **CORE + OS + UI reviewers:** Check whether you can use the result. **QA:** Cover both modes and edge cases.
 
 
-- [ ] **TODO · JOHN + JESSLYN** — **RAID0** minimum *required* fields vs optional telemetry
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JOHN + JESSLYN** — **RAID0** minimum *required* fields vs optional telemetry
+  - **Answer / evidence:** 
+    - **Required:** Device ID, media type (HDD/SSD), availability, and target SSD's free space. ALGO-01 in my design would propose some candidates of files to move, so for each file, I require a file ID, source device ID, file size, read and write op counts, sampling intervals(timesteps), and data source(eg. Mock? from Windows? Linux?). CORE also provides the host ID and evaluation time.
+    - **Optional:** File path, read and write bytes during sample interval, judgement on wether and operation is sequential or random I/O(classification), latency, I/O queue depth(when multiple tasks are all unfinishing on same storage device, depth++, just like ready queue in CSC369), and detailed per device performance metrics.
 - [ ] **TODO · JOHN + JESSLYN** — **SSD caching** minimum required fields vs optional telemetry
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JOHN + JESSLYN** — Actual policy functions/heuristics and configuration keys
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **ALGO-01 (John):** `evaluate_raid0_policy(devices, realtime, history, mode_config, capabilities)`
+      - **For D2, the algorithm follows these rules:**
+        1. Use the most recent valid I/O activity record for each file.
+        2. Consider files on HDDs with at least 0.1 read operations per second, where reads account for at least 80% of total read/write operations.
+        3. Prioritize files with higher read frequencies. If two files have the same frequency, prioritize the smaller file.
+        4. Select the SSD with the most available space after reserving capacity.
+        5. Recommend moving eligible files to the selected SSD, deducting each file's size from the remaining capacity.
+      - **Configuration:** The default thresholds are 0.1 reads/second and 80% reads. The algorithm reserves at least 1 GiB or 10% of the SSD's total capacity, whichever is larger, and generates at most 10 recommendations.
+      - **Limitations:** For D2, only the `performance` goal is supported. The algorithm generates recommendations but does not move files or estimate actual performance improvements.
+    - **ALGO-02 (Jesslyn):** Pending Jesslyn's implementation details.
 - [ ] **TODO · JOHN + JESSLYN** — User goal translation (if adopted; do not hard-code three algorithms)
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:**
+    - **ALGO-01 (John):** For D2, I only support the `performance` goal. The algorithm tries to find frequently read files on HDDs and recommends moving them to SSDs if enough space is available.
+    - Other goals, such as `balanced` and `lifespan`, are not implemented yet. The algorithm returns `none` for unsupported goals instead of running three separate algorithms.
+    - **ALGO-02 (Jesslyn):** Pending.
 - [ ] **TODO · JOHN + JESSLYN** — Missing/stale/file-level-unavailable data fallback
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:** 
+    - **ALGO-01 (John):**
+      1. If file-level I/O data is unavailable, return `none`. Per-process or per-device I/O cannot tell us which specific files are frequently accessed.
+      2. If a file is missing important information (like file ID, size, read or write counts, etc.), skip that file.
+      3. If the I/O data is too old (more than 300 seconds), ignore it.
+      4. If no SSD is available or there is not enough space, return `none`.
+      5. If the evaluation time is invalid, raise `PolicyInputError`.
 - [ ] **TODO · JOHN + JESSLYN** — Allowed recommendation actions, constraints, reason format
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:** 
+    - **ALGO-01 (John):** The algorithm currently only returns two actions: `move` and `none`.
+      - `move` means the algorithm recommends placing a file on an SSD. It does NOT actually move the file, and user approval is required.
+      - `none` means no suitable recommendation can be made. The reason should explain why.
+      - Each recommendation will explain which file is selected, where it should be moved, and why it was selected.
+      - Simulated data is marked as `MOCK`.
+      - `estimated_benefit=null` because we haven't measured the actual performance improvement.
 - [ ] **TODO · JOHN + JESSLYN** — Example recommendation for RAID0 + caching and a `none` case
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:** - **Answer / evidence:**
+    - **ALGO-01 (John):** Suppose we have a 4 MiB file on an HDD. During a 60-second sampling interval, it is read 120 times and written 0 times. Its read frequency is 2 IOPS, and 100% of its I/O operations are reads. Since this file meets our thresholds, if an SSD has enough free space, the algorithm recommends moving it to that SSD (`action="move"`). User approval is required, and no actual file movement occurs in stage D2.
+    - **None case:** If no file-level I/O data is available, the algorithm returns `action="none"` with a reason explaining that the required data is missing.
 
 ### 05.2 | ALGORITHM CONSUMERS + JUAN — Review and test checklist
 
@@ -1099,8 +1200,8 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
 
 - [ ] **TODO · JUAN** — Test framework and Python version(s)
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · JUAN** — Fixtures format/schema source of truth
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Fixtures format/schema source of truth
+  - **Answer / evidence:** JSON files in `tests/fixtures/` (Juan-branch). Source of truth = §02 of this doc. Any schema change = one PR updating §02 + fixtures together. Fixtures are MOCK until producers send real payloads (§08.4.2).
 - [ ] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JUAN** — Mocking approach when Windows/Linux test host is unavailable
@@ -1127,6 +1228,16 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
 - [ ] **TODO · ALL PRODUCERS** — Clearly specified units, null behavior, stable identifiers and allowed enum values.
 - [ ] **TODO · ALL PRODUCERS** — A callable implementation, stub or mock adapter for automated tests.
 - [ ] **TODO · ALL PRODUCERS** — A named person to investigate a failed contract or integration test.
+
+**ALGO-01 — John**
+
+1. **Success example:** `d2-temp-valid.json`. A frequently read HDD file receives an SSD placement recommendation (`action="move"`), provided enough space is available.
+2. **Negative example:** `d2-temp-none.json`. If file-level activity is unavailable, the algorithm returns `action="none"`. Invalid evaluation time raises `PolicyInputError`.
+3. **Data format:** See [§05.1](#algo-01-spec). File sizes and capacities are in bytes, timestamps use UTC, and read/write operation counts refer to each sampling interval. `null` means unknown, not zero. File and device IDs identify the monitored objects; recommendation IDs identify generated records. Allowed actions are `move` and `none`.
+4. **Implementation:** `evaluate_raid0_policy(devices, realtime, history, mode_config, capabilities)`. Tests can be run from the repository root using:
+   `python -B -m unittest discover -s backend/algorithms/algo01/tests -v`
+5. **Responsible developer:** John. I will investigate and fix bugs related to ALGO-01. CORE/OS/DB integration issues will be discussed with the corresponding developers.
+
 
 **Test ownership rule:** **QA owns the test infrastructure and test code.** If you own an implementation, please fix the bugs found in your module. A passing test confirms the specified behavior only; it does not guarantee every storage operation is safe or fast.
 
