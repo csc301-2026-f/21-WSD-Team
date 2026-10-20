@@ -1,4 +1,4 @@
-"""Select the latest usable FileActivity window; never sum overlapping history."""
+"""Select the latest usable FileActivity window for SSD caching candidates."""
 from collections import defaultdict
 from ..common.validation import is_integer, is_text, is_fresh, parse_utc, is_mock_source
 
@@ -28,6 +28,7 @@ def _read_window(row, context, warnings):
     except (ValueError, TypeError, OverflowError):
         warnings.add("invalid_or_stale_activity_window")
         return None
+    
     if not (context.config["min_window_seconds"] <= duration <= context.config["max_window_seconds"]
             and is_fresh(row.get("window_end_utc"), context.now, context.config["max_age_seconds"])):
         warnings.add("invalid_or_stale_activity_window")
@@ -57,7 +58,7 @@ def _choose_latest(windows, warnings):
 
 
 def collect_candidates(context, devices, warnings):
-    """Choose one recent window/file, then rank qualifying HDD files by read rate."""
+    """Choose one recent window/file, then rank qualifying HDD files for caching by read rate and size."""
     by_file = defaultdict(list)
 
     for row in context.activity:
@@ -75,7 +76,6 @@ def collect_candidates(context, devices, warnings):
             continue
 
         row = window["row"]
-        # read times / (read times + write times) >= 80%
         source, reads, writes = row["device_id"], row["read_ops"], row["write_ops"]
         device = devices.get(source)
 
@@ -83,8 +83,9 @@ def collect_candidates(context, devices, warnings):
             warnings.add("source_unavailable_or_unknown")
             continue
 
+        # Caching typically targets slow storage sources like HDDs
         if device.get("media_type") != "hdd":
-            warnings.add("source_outside_d2_hdd_scope")
+            warnings.add("source_outside_ssd_caching_scope")
             continue
 
         rate = reads / window["duration"]
@@ -93,11 +94,25 @@ def collect_candidates(context, devices, warnings):
             warnings.add("insufficient_read_activity")
             continue
 
-        if reads / (reads + writes) < context.config["min_read_fraction"]:
+        # Filter out write-heavy workloads to protect SSD write endurance
+        if (reads + writes) > 0 and (reads / (reads + writes)) < context.config["min_read_fraction"]:
             warnings.add("write_heavy_workload_deferred")
             continue
         
-        result.append({"file_id": file_id, "source": source, "size": row["file_size_bytes"],
-            "read_rate": rate, "read_ops": reads, "is_mock": is_mock_source(row["source"])})
-    # Tie breaker, choose highest freq; if tie, smaller size file wins; if tie, smaller id wins
+        # Optional caching-specific size check (e.g., if max cache file size is configured)
+        max_cache_size = context.config.get("max_cache_file_bytes")
+        if max_cache_size and row["file_size_bytes"] > max_cache_size:
+            warnings.add("file_too_large_for_cache")
+            continue
+
+        result.append({
+            "file_id": file_id, 
+            "source": source, 
+            "size": row["file_size_bytes"],
+            "read_rate": rate, 
+            "read_ops": reads, 
+            "is_mock": is_mock_source(row["source"])
+        })
+        
+    # Ranking heuristic for caching: highest read frequency first, then smaller file size (to pack more cache items), then alphabetical file_id
     return sorted(result, key=lambda row: (-row["read_rate"], row["size"], row["file_id"]))
