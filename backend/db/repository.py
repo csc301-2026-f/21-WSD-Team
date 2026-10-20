@@ -172,7 +172,7 @@ class SQLiteHistoryRepository:
             query = f"""
                 SELECT 
                     device_id,
-                    datetime((strftime('%s', timestamp_utc) / ?) * ?, 'unixepoch') AS timestamp_utc,
+                    strftime('%Y-%m-%dT%H:%M:%SZ', (strftime('%s', timestamp_utc) / ?) * ?, 'unixepoch') AS timestamp_utc,
                     COUNT(*) as sample_count,
                     AVG(read_bytes_per_sec) as avg_read_bytes_per_sec,
                     AVG(write_bytes_per_sec) as avg_write_bytes_per_sec,
@@ -224,7 +224,7 @@ class SQLiteHistoryRepository:
                     process_instance_id,
                     pid,
                     process_name,
-                    datetime((strftime('%s', timestamp_utc) / ?) * ?, 'unixepoch') AS timestamp_utc,
+                    strftime('%Y-%m-%dT%H:%M:%SZ', (strftime('%s', timestamp_utc) / ?) * ?, 'unixepoch') AS timestamp_utc,
                     COUNT(*) as sample_count,
                     AVG(read_bytes_per_sec) as avg_read_bytes_per_sec,
                     AVG(write_bytes_per_sec) as avg_write_bytes_per_sec,

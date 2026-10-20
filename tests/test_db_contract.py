@@ -66,6 +66,9 @@ def test_process_history_raw_and_bucketed(repo):
     assert bucketed[0]["sample_count"] == 2
     assert bucketed[0]["avg_read_bytes_per_sec"] == 2000000.0
     assert bucketed[0]["avg_write_bytes_per_sec"] == 3000000.0
+    assert bucketed[0]["timestamp_utc"] == "2026-10-08T20:00:00Z"
+    assert "T" in bucketed[0]["timestamp_utc"]
+    assert bucketed[0]["timestamp_utc"].endswith("Z")
 
 def test_recommendation_upsert_updates_fields(repo):
     rec = [{
