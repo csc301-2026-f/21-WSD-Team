@@ -1,0 +1,30 @@
+Wise Storage Director (WSD) — Team 21
+Stakeholder Information
+
+Partner Organization
+--------------------
+WSD is a student-proposed CSC301 project and does not have an external partner organization.
+
+Primary Partner Contact
+-----------------------
+N/A — no external partner.
+
+Secondary Partner Contact
+-------------------------
+N/A — no external partner.
+
+Teaching Team Contact
+---------------------
+Mentor TA: Rui Song
+Email: ruii.song@mail.utoronto.ca
+
+Lead TA: Pritish Mishra
+Email: pritish.mishra@mail.utoronto.ca
+
+Instructor: David Jorjani
+
+Project Team
+------------
+Team 21 — Wise Storage Director (WSD)
+
+John Deng serves as the team liaison and coordinates communication for the project.

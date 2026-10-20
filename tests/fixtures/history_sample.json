@@ -1,0 +1,32 @@
+{
+  "query_metadata": {
+    "device_ids": ["nvme0n1"],
+    "start_utc": "2026-10-08T20:00:00Z",
+    "end_utc": "2026-10-08T20:05:00Z",
+    "bucket_seconds": 60
+  },
+  "results": [
+    {
+      "timestamp_utc": "2026-10-08T20:00:00Z",
+      "device_id": "nvme0n1",
+      "sample_count": 12,
+      "avg_read_bytes_per_sec": 52428800.0,
+      "avg_write_bytes_per_sec": 10485760.0,
+      "avg_read_iops": 1250.5,
+      "avg_write_iops": 310.0,
+      "avg_read_latency_ms": 0.45,
+      "avg_write_latency_ms": 0.82
+    },
+    {
+      "timestamp_utc": "2026-10-08T20:01:00Z",
+      "device_id": "nvme0n1",
+      "sample_count": 12,
+      "avg_read_bytes_per_sec": 41943040.0,
+      "avg_write_bytes_per_sec": 8388608.0,
+      "avg_read_iops": 980.0,
+      "avg_write_iops": 240.0,
+      "avg_read_latency_ms": 0.48,
+      "avg_write_latency_ms": 0.79
+    }
+  ]
+}

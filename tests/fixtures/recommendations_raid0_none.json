@@ -1,0 +1,15 @@
+[
+  {
+    "recommendation_id": "rec-raid0-002",
+    "mode": "raid0",
+    "action": "none",
+    "file_id": null,
+    "source_device_id": null,
+    "target_device_id": null,
+    "reason": "MOCK: not enough data to recommend",
+    "created_at_utc": "2026-10-12T21:00:05Z",
+    "requires_approval": false,
+    "estimated_benefit": null,
+    "constraints": []
+  }
+]
