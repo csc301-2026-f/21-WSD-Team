@@ -19,3 +19,11 @@ bin/
 # OS-generated files
 .DS_Store
 Thumbs.db
+/backend/algorithms/_future/
+/local_validation/
+/backend/algorithms.zip
+
+# Local algorithm notes
+/backend/algorithms/docs/policy_1_jesslyn_reuse.md
+/backend/algorithms/docs/policy_1_learning.md
+/backend/algorithms/docs/policy_1_reference.md
