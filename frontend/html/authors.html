@@ -9,40 +9,24 @@
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
-    <script type="module" src="../js/ui.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet">
+    
 </head>
 
 <body>
-    <div>
-        <h1>Wise Storage Director</h1>
+    <div class="header-box">
+        <h1>Wise Storage Director - Group Member Information</h1>
     </div>
 
-    
+    <span id="navOpenButton" onclick="openNav()">&#9776;</span>
 
-    <div>
-        <ul>
-            <li>
-                <p><a href="index.html">Main Dashboard</a></p>
-            </li>
-            <li>
-                <p><a href="task_priority.html">Task Priority</a></p>
-            </li>
-            <li>
-                <p><a href="stats.html">Disk Usage Statistics</a></p>
-            </li>
-            <li>
-                <p><a href="about.html">About</a></p>
-            </li>
-            <li>
-                <p><a href="settings.html">Settings</a></p>
-            </li>
-            <li>
-                <p><a href="authors.html">Group Info</a></p>
-            </li>
-        </ul>
+    <div id="mainSidenav" class="sidenav">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <a href="index.html">Main Dashboard</a>
+        <a href="task_priority.html">Task Priority</a>
+        <a href="stats.html">Disk Usage Statistics</a>
+        <a href="about.html">About</a>
+        <a href="settings.html">Settings</a>
+        <a href="authors.html">Group Info</a>
     </div>
 
     <div class="box-container">
@@ -58,6 +42,6 @@
         </ul>
     </div>
 
-    
+    <script src="../js/ui.js"></script>
 </body>
 </html>
