@@ -1,7 +1,11 @@
 from .normalization import (normalize_windows_device,
                             normalize_windows_device_metric,
                             normalize_windows_process_metric,
-                            normalize_windows_file_activity)
+                            normalize_windows_file_activity,
+                            normalize_linux_device,
+                            normalize_linux_device_metric,
+                            normalize_linux_process_metric,
+                            normalize_linux_file_activity)
 
 class WindowsAgentAdapter:
     def __init__(self, backend):
@@ -31,19 +35,28 @@ class LinuxAgentAdapter:
         self.backend = backend
 
     def start(self) -> None:
-        pass
+        self.backend.start()
 
-    def get_devices(self, drive_name):
-        pass
+    def get_devices(self) -> list[dict]:
+        return normalize_linux_device(self.backend.list_devices(), self.backend.host_id)
 
-    def get_device_metrics(self, drive_name):
-        pass
+    def get_device_metrics(self, sample_window_seconds = 10.0) -> list[dict]:
+        devices = self.backend.list_devices()
+        device_metric = []
+        for device in devices:
+            device_id = device.device_id
+            metric = self.backend.get_device_io(sample_window_seconds, device_id)
+            if metric is not None:
+                device_metric.append((device_id, metric))
+        return normalize_linux_device_metric(device_metric, self.backend.host_id)
 
-    def get_process_metrics(self):
+    def get_process_metrics(self, sample_window_seconds = 10.0) -> list[dict]:
         pass
+    #TODO agent not done
 
     def get_file_activity(self):
         pass
+    #TODO agent not done
 
     def close(self):
-        pass
+        self.backend.close()

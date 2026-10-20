@@ -26,7 +26,7 @@ class CoreService:
         self.database.ingest_process_metrics(process_metric)
 
     def check_history_record(self):
-
+        ######## Not for D2
         pass
 
     def get_current_process_activity(self):
@@ -55,7 +55,21 @@ class CoreService:
         Flow: Agent + DB -> CORE -> Algorithm -> DB / HTTP/UI
         User Story: US-05
         """
-        pass
+        devices = self.agent.get_devices()
+        host_id = None
+        if devices:
+            host_id = devices[0].get("host_id")
+        evaluation_time_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        realtime={
+            "host_id": host_id,
+            "evaluation_time_utc": evaluation_time_utc}
+        file_activity = None #TODO agent not done
+        history={"file_activity": file_activity}
+        mode_config= {} #Not required in D2
+        capabilities= {} #TODO agent not done
+        recommendations =self.algorithm.evaluate_raid0(devices, realtime, history, mode_config, capabilities)
+        self.database.save_recommendations(recommendations)
+        return recommendations
 
 
 
