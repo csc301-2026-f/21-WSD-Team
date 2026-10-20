@@ -1,4 +1,3 @@
-
 from collections import deque
 from datetime import datetime, timezone
 from threading import Lock
@@ -8,6 +7,7 @@ from .contracts import (
     DeviceMetric,
     ProcessMetric,
     RawIoEvent,
+    FileActivity,
 )
 
 
@@ -182,3 +182,11 @@ class EventAggregator:
             ))
 
         return results
+    def file_activity(
+            self,
+            sample_window_seconds: float,
+            now_ns: int | None = None,
+        ) -> list[FileActivity]:
+        if sample_window_seconds <= 0:
+            raise ValueError("Sample window must be positive")
+        raise NotImplementedError("file attribution not yet implemented")

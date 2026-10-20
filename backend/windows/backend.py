@@ -55,13 +55,13 @@ class WindowsBackend:
 
     def get_file_activity(
         self,
-        window_start_ns: int,
-        window_end_ns: int,
+        sample_window_seconds: int,
+        now_ns: int | None = None,
     ) -> list[FileActivity]:
         """Return verified file-level activity, if available."""
         return self.aggregator.file_activity(
-            window_start_ns=window_start_ns,
-            window_end_ns=window_end_ns,
+            sample_window_seconds=sample_window_seconds,
+            now_ns=now_ns,
         )
 
     def get_collection_health(self) -> CollectionHealth: 
