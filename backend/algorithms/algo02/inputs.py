@@ -9,8 +9,8 @@ DEFAULTS = {
     "min_window_seconds": 60, 
     "max_window_seconds": 3600, 
     "max_age_seconds": 300,
-    "cache_reserve_bytes": 1073741824, 
-    "cache_reserve_fraction": 0.1, 
+    "reserve_bytes": 1073741824, 
+    "reserve_fraction": 0.1, 
     "max_recommendations": 10
     }
 
@@ -20,7 +20,7 @@ class PolicyInputError(ValueError):
         self.code, self.timestamp = code, timestamp
 
 @dataclass(frozen=True)
-class D2SSDInputs:
+class D2Inputs:
     now: datetime
     timestamp: str
     host: str
@@ -57,11 +57,11 @@ def validate_inputs(devices, realtime, history, mode_config, capabilities):
         if key == "goal":
             continue
         valid = is_integer(value, 1 if key == "max_recommendations" else 0) if key in (
-            "cache_reserve_bytes", "max_recommendations") else is_number(value)
+            "reserve_bytes", "max_recommendations") else is_number(value)
         if not valid:
             reject("invalid_config")
 
-    if not (0 <= config["cache_reserve_fraction"] < 1 and 0 <= config["min_read_fraction"] <= 1
+    if not (0 <= config["reserve_fraction"] < 1 and 0 <= config["min_read_fraction"] <= 1
             and 0 < config["min_window_seconds"] <= config["max_window_seconds"]):
         reject("invalid_config")
 
@@ -73,4 +73,4 @@ def validate_inputs(devices, realtime, history, mode_config, capabilities):
     if not isinstance(activity, list):
         reject("invalid_file_activity_collection")
 
-    return D2SSDInputs(now, timestamp, realtime["host_id"], config, activity)
+    return D2Inputs(now, timestamp, realtime["host_id"], config, activity)
