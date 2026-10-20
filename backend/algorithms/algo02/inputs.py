@@ -56,8 +56,10 @@ def validate_inputs(devices, realtime, history, mode_config, capabilities):
     for key, value in config.items():
         if key == "goal":
             continue
+
         valid = is_integer(value, 1 if key == "max_recommendations" else 0) if key in (
             "reserve_bytes", "max_recommendations") else is_number(value)
+        
         if not valid:
             reject("invalid_config")
 
