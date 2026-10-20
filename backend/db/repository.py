@@ -127,6 +127,16 @@ class SQLiteHistoryRepository:
                 records,
             )
             conn.commit()
+    
+    # For Shengrong (Core): Safe no-op ingestion for file activity ---
+    def ingest_file_activity(self, samples: List[Dict[str, Any]]) -> None:
+        """
+        Ingests file-level activity if provided by OS agent.
+        Currently safely accepts incoming samples without error while file heat 
+        tracking is uninstrumented at the OS level.
+        """
+        # Kept as safe no-op so Core's ingestion loop does not raise AttributeError
+        pass
 
     # For John & Jesslyn (Algorithm) & Shengrong (HTTP-01f): Device historical range and aggregation
     def query_device_history(
@@ -196,15 +206,37 @@ class SQLiteHistoryRepository:
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            if not bucket_seconds or bucket_seconds <= 0:
+                query = f"""
+                    SELECT process_instance_id, pid, process_name, timestamp_utc, 
+                    sample_window_seconds, read_bytes_per_sec, write_bytes_per_sec, 
+                    attributed_device_id
+                    FROM process_metrics
+                    WHERE process_instance_id IN ({placeholders})
+                    AND timestamp_utc BETWEEN ? AND ?
+                    ORDER BY timestamp_utc ASC
+                """
+                cursor.execute(query, params)
+                return [dict(row) for row in cursor.fetchall()]
+            # Aggregated by bucket window
             query = f"""
-                SELECT process_instance_id, pid, process_name, timestamp_utc,
-                       read_bytes_per_sec, write_bytes_per_sec, attributed_device_id
+                SELECT 
+                    process_instance_id,
+                    pid,
+                    process_name,
+                    datetime((strftime('%s', timestamp_utc) / ?) * ?, 'unixepoch') AS timestamp_utc,
+                    COUNT(*) as sample_count,
+                    AVG(read_bytes_per_sec) as avg_read_bytes_per_sec,
+                    AVG(write_bytes_per_sec) as avg_write_bytes_per_sec,
+                    attributed_device_id
                 FROM process_metrics
                 WHERE process_instance_id IN ({placeholders})
                   AND timestamp_utc BETWEEN ? AND ?
+                GROUP BY process_instance_id, (strftime('%s', timestamp_utc) / ?)
                 ORDER BY timestamp_utc ASC
             """
-            cursor.execute(query, params)
+            agg_params = [bucket_seconds, bucket_seconds] + params + [bucket_seconds]
+            cursor.execute(query, agg_params)
             return [dict(row) for row in cursor.fetchall()]
 
     # For John & Jesslyn (Algorithm): Returns empty list when OS agents lack file telemetry
@@ -285,6 +317,8 @@ class SQLiteHistoryRepository:
                     mode = excluded.mode,
                     action = excluded.action,
                     reason = excluded.reason,
+                    created_at_utc = excluded.created_at_utc,
+                    requires_approval = excluded.requires_approval,
                     estimated_benefit = excluded.estimated_benefit,
                     constraints = excluded.constraints
                 """,
