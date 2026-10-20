@@ -25,8 +25,7 @@ class SQLiteHistoryRepository:
                     conn.executescript(f.read())
             conn.commit()
 
-    # --- INGESTION METHODS ---
-
+    # For Shengrong (Core): Ingests discovered storage devices
     def upsert_devices(self, devices: List[Dict[str, Any]]) -> None:
         now = datetime.now(timezone.utc).isoformat()
         with self._get_connection() as conn:
@@ -62,6 +61,7 @@ class SQLiteHistoryRepository:
                 )
             conn.commit()
 
+    # For Shengrong (Core): Ingests periodic physical device I/O telemetry
     def ingest_device_metrics(self, samples: List[Dict[str, Any]]) -> None:
         if not samples:
             return
@@ -94,6 +94,7 @@ class SQLiteHistoryRepository:
             )
             conn.commit()
 
+    # For Shengrong (Core): Ingests per-process I/O telemetry with stable composite IDs
     def ingest_process_metrics(self, samples: List[Dict[str, Any]]) -> None:
         if not samples:
             return
@@ -127,12 +128,7 @@ class SQLiteHistoryRepository:
             )
             conn.commit()
 
-    def ingest_file_activity(self, samples: List[Dict[str, Any]]) -> None:
-        # File activity tracking is currently optional / conditional based on OS agent capabilities
-        pass
-
-    # --- QUERY METHODS ---
-
+    # For John & Jesslyn (Algorithm) & Shengrong (HTTP-01f): Device historical range and aggregation
     def query_device_history(
         self,
         device_ids: List[str],
@@ -184,6 +180,7 @@ class SQLiteHistoryRepository:
             cursor.execute(query, agg_params)
             return [dict(row) for row in cursor.fetchall()]
 
+    # For Shengrong (HTTP-01m) & Danny (UI): Historical I/O for specific app instances (US-02)
     def query_process_history(
         self,
         process_instance_ids: List[str],
@@ -210,6 +207,7 @@ class SQLiteHistoryRepository:
             cursor.execute(query, params)
             return [dict(row) for row in cursor.fetchall()]
 
+    # For John & Jesslyn (Algorithm): Returns empty list when OS agents lack file telemetry
     def query_file_heat(
         self,
         start_utc: str,
@@ -217,11 +215,13 @@ class SQLiteHistoryRepository:
         limit: int = 100,
         device_ids: Optional[List[str]] = None,
     ) -> List[Dict[str, Any]]:
-        # Returns empty list as file-level tracking is currently unsupported from OS agents[cite: 1]
+        # Returns empty list as file-level tracking is currently unsupported from OS agents
         return []
 
-    # --- SETTINGS & RECOMMENDATIONS ---
+    #SETTINGS & RECOMMENDATIONS
 
+    # For Shengrong (HTTP-01i) & Danny (UI): Persist user preferences & auto-mode flags, this was for US-06
+    # but I chose to get it done anyway since it's part of the repo 
     def save_settings(self, settings: Dict[str, Any]) -> None:
         now = datetime.now(timezone.utc).isoformat()
         with self._get_connection() as conn:
@@ -240,6 +240,7 @@ class SQLiteHistoryRepository:
                 )
             conn.commit()
 
+    # For Shengrong (HTTP-01i) & John/Jesslyn (ALGO): Retrieve current active settings
     def get_settings(self) -> Dict[str, Any]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
@@ -252,6 +253,7 @@ class SQLiteHistoryRepository:
                     result[row["key"]] = row["value"]
             return result
 
+    # For John & Jesslyn (Algorithm): Store generated recommendations
     def save_recommendations(self, items: List[Dict[str, Any]]) -> None:
         if not items:
             return
@@ -290,6 +292,7 @@ class SQLiteHistoryRepository:
             )
             conn.commit()
 
+    # For Shengrong (HTTP-01g) & Danny (UI): Surface recommendations to the user
     def list_recommendations(self, mode: Optional[str] = None) -> List[Dict[str, Any]]:
         with self._get_connection() as conn:
             cursor = conn.cursor()
