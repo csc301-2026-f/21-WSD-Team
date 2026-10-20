@@ -1,4 +1,6 @@
 import subprocess
+import time
+
 
 def get_drive_io(
         drive_name: str,
@@ -14,7 +16,25 @@ def get_drive_io(
     example return: [1024, 1024]
     """
 
-    pass
+    def get_stats():
+        output = subprocess.check_output(["cat", "/proc/diskstats"], text=True)
+
+        for line in output.splitlines():
+            fields = line.split()
+            if fields[2] == drive_name:
+                return int(fields[5]), int(fields[9])
+
+        raise ValueError(f"Drive {drive_name} not found")
+
+    before = get_stats()
+    time.sleep(wait_time)
+    after = get_stats()
+
+    return (
+        (after[0] - before[0]) * 512,
+        (after[1] - before[1]) * 512
+    )
+
 
 def get_all_drive_name() -> tuple[str]:
     """
@@ -25,7 +45,16 @@ def get_all_drive_name() -> tuple[str]:
     example return: (nvme0n1, nvme1n1, sda, sdb)
     """
 
-    pass
+    output = subprocess.check_output(["lsblk", "-dnro", "NAME,TYPE"], text=True)
+
+    drives = []
+    for line in output.splitlines():
+        name, device_type = line.split()
+        if device_type == "disk":
+            drives.append(name)
+
+    return tuple(drives)
+
 
 def get_drive_info(
         drive_name: str
@@ -41,7 +70,11 @@ def get_drive_info(
 
     """
 
-    pass
+    output = subprocess.check_output(
+        ["lsblk", "-dnbo", "MODEL,SERIAL,SIZE", f"/dev/{drive_name}"],
+        text=True
+    ).strip()
+
 
 def get_all_process_id_name() -> dict[int:str]:
     """
@@ -81,6 +114,21 @@ def get_pid_open_file(
     example return: ("/home/xxx/program1", "/home/xxx/program2", "/mnt/smbshare/file1")
     """
 
+    pass
+
+
+def get_media_type(
+        device_name: str
+) -> str:
+    """
+
+    :param device_name: id of drive, can be obtained using lsblk
+    :return: a string that's either "HDD" or "SSD"
+    """
 
     pass
 
+
+if __name__ == "__main__":
+    print(get_all_drive_name())
+    print(get_drive_io("nvme0n1", 1))
