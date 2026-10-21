@@ -43,14 +43,17 @@ def normalize_windows_collection_health(collection):
 def normalize_linux_device(devices, host_id) -> list[dict]:
     normalized_devices = []
     for device in devices:
+        free_bytes = 0
+        for partition in device.partitions:
+            free_bytes += partition.available_bytes
         device_dict = {"host_id": host_id,
                        "device_id": device.device_id,
                        "display_name": device.model,
                        "media_type": device.media_type.lower(),
                        "capacity_bytes": device.size_bytes,
                        "free_bytes": device.free_bytes,
-                       "mount_points": [], #TODO data not provide
-                       "is_available": device.is_available}
+                       "mount_points": None, #TODO data not provide
+                       "is_available": None} #TODO data not provide
         normalized_devices.append(device_dict)
     return normalized_devices
 
@@ -72,9 +75,24 @@ def normalize_linux_device_metric(metrics, host_id) -> list[dict]:
         normalized_device_matric.append(metric_dict)
     return normalized_device_matric
 
-def normalize_linux_process_metric(metrics) -> list[dict]:
-    #TODO agent not done
-    pass
+def normalize_linux_process_metric(metrics, host_id) -> list[dict]:
+    #TODO agent not done, assumpted form
+    normalized_process_matric = []
+    for tup in metrics:
+        process = tup[0]
+        metric = tup[1]
+        metric_dict = {
+            "host_id": host_id,
+            "pid": process.pid,
+            "start_time_utc": process.start_time_timestamp,
+            "process_name": process.name,
+            "timestamp_utc": metric.timestamp,
+            "sample_window_seconds": metric.duration,
+            "read_bytes_per_sec": metric.read_bytes / metric.duration,
+            "write_bytes_per_sec": metric.write_bytes / metric.duration,
+            "attributed_device_id": None} #TODO data not provide
+        normalized_process_matric.append(metric_dict)
+    return normalized_process_matric
 
 def normalize_linux_file_activity():
     #TODO agent not done

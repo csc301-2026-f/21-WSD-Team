@@ -51,8 +51,16 @@ class LinuxAgentAdapter:
         return normalize_linux_device_metric(device_metric, self.backend.host_id)
 
     def get_process_metrics(self, sample_window_seconds = 10.0) -> list[dict]:
-        pass
-    #TODO agent not done
+        #TODO agent not done, assumpted form
+        processes = self.backend.list_processes()
+        process_metric = []
+        for process in processes:
+            pid = process.pid
+            metric = self.backend.get_pid_io(pid)
+            if metric is not None:
+                process_metric.append((process, metric))
+        return normalize_linux_process_metric(process_metric, self.backend.host_id)
+
 
     def get_file_activity(self):
         pass
