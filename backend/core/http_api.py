@@ -36,6 +36,12 @@ def create_http_api(core_service):
         response = success_response(recommendations)
         return jsonify(response)
 
+    @http_api.get("/api/v1/capabilities")
+    def get_capabilities():
+        capabilities = core_service.get_capabilities()
+        response = success_response(capabilities)
+        return jsonify(response)
+
     @http_api.errorhandler(404)
     def handle_not_found(error):
         response = fail_response("NOT_FOUND", "Endpoint Not Found")

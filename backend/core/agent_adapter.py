@@ -40,7 +40,7 @@ class LinuxAgentAdapter:
     def get_devices(self) -> list[dict]:
         return normalize_linux_device(self.backend.list_devices(), self.backend.host_id)
 
-    def get_device_metrics(self, sample_window_seconds = 10.0) -> list[dict]:
+    def get_device_metrics(self, sample_window_seconds = 10) -> list[dict]:
         devices = self.backend.list_devices()
         device_metric = []
         for device in devices:
@@ -50,13 +50,12 @@ class LinuxAgentAdapter:
                 device_metric.append((device_id, metric))
         return normalize_linux_device_metric(device_metric, self.backend.host_id)
 
-    def get_process_metrics(self, sample_window_seconds = 10.0) -> list[dict]:
-        #TODO agent not done, assumpted form
+    def get_process_metrics(self, sample_window_seconds = 10) -> list[dict]:
         processes = self.backend.list_processes()
         process_metric = []
         for process in processes:
             pid = process.pid
-            metric = self.backend.get_pid_io(pid)
+            metric = self.backend.get_process_io(sample_window_seconds, pid)
             if metric is not None:
                 process_metric.append((process, metric))
         return normalize_linux_process_metric(process_metric, self.backend.host_id)

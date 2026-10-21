@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 
 class CoreService:
-    def __init__(self, agent, algorithm, database):
+    def __init__(self, agent, algorithm, database, capabilities=None):
         self.agent = agent
         self.algorithm = algorithm
         self.database = database
+        self.capabilities = capabilities
 
     def start(self) -> None:
         self.agent.start()
@@ -37,6 +38,9 @@ class CoreService:
 
     def get_recommendations(self, mode=None):
         return self.database.list_recommendations(mode)
+
+    def get_capabilities(self):
+        return self.capabilities
 
     def get_current_process_activity(self):
         """
@@ -75,8 +79,7 @@ class CoreService:
         file_activity = None #TODO agent not done
         history={"file_activity": file_activity}
         mode_config= {} #Not required in D2
-        capabilities= {} #TODO agent not done
-        recommendations =self.algorithm.evaluate_raid0(devices, realtime, history, mode_config, capabilities)
+        recommendations =self.algorithm.evaluate_raid0(devices, realtime, history, mode_config, self.capabilities)
         self.database.save_recommendations(recommendations)
         return recommendations
 

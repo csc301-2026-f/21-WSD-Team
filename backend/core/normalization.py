@@ -51,7 +51,7 @@ def normalize_linux_device(devices, host_id) -> list[dict]:
                        "display_name": device.model,
                        "media_type": device.media_type.lower(),
                        "capacity_bytes": device.size_bytes,
-                       "free_bytes": device.free_bytes,
+                       "free_bytes": free_bytes,
                        "mount_points": None, #TODO data not provide
                        "is_available": None} #TODO data not provide
         normalized_devices.append(device_dict)
@@ -76,7 +76,6 @@ def normalize_linux_device_metric(metrics, host_id) -> list[dict]:
     return normalized_device_matric
 
 def normalize_linux_process_metric(metrics, host_id) -> list[dict]:
-    #TODO agent not done, assumpted form
     normalized_process_matric = []
     for tup in metrics:
         process = tup[0]
