@@ -1,15 +1,16 @@
 from collections import deque
 import threading
 import time
-import constants
 
+
+from . import constants
 from .models import DriveMetric, ProcessMetric, Drive, Process
 from .os_command_api import sample_all_drive
 
 
 class DiskIOCollector:
     def __init__(self, drives: tuple[Drive]):
-        self._history = deque(maxlen=constants.MAX_HISTORY_LENGTH)
+        self._history = deque(maxlen=constants.MAX_DRIVE_SAMPLE_HISTORY_LENGTH)
         self._thread = None
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
@@ -70,7 +71,7 @@ class ProcessIOCollector:
     # TODO
 
     def __init__(self):
-        self.history = deque(maxlen=constants.MAX_HISTORY_LENGTH)
+        self._history = deque(maxlen=constants.MAX_DRIVE_SAMPLE_HISTORY_LENGTH)
         self._thread = None
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
@@ -89,8 +90,15 @@ class ProcessIOCollector:
             self._thread.join(timeout=2.0)
 
     def _fetch_data_loop(self) -> None:
+        next_sample = time.monotonic()
+
         while not self._stop_event.is_set():
-            self._stop_event.wait(1)
+            with self._lock:
+                self._history.append()
+            next_sample += 1
+
+            sleep_time = max(0, next_sample - time.monotonic())
+            self._stop_event.wait(sleep_time)
 
     def get_metric(self, time_interval: float, pid: str) -> ProcessMetric:
         pass

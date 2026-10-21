@@ -2,14 +2,21 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class Partition:
+    name: str
+    size_bytes: int
+    available_bytes: int
+
+
+@dataclass(frozen=True)
 class Drive:
+    timestamp: str
     device_id: str
     model: str
     serial: str
     size_bytes: int
-    free_bytes: int
-    is_available: bool
     media_type: str
+    partitions: tuple[Partition, ...]
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,7 @@ class ProcessMetric:
     reads_complete: int
     writes_complete: int
 
+
 @dataclass(frozen=True)
 class DriveSample:
     device_id: str
@@ -50,8 +58,7 @@ class DriveSample:
 
 @dataclass(frozen=True)
 class ProcessSample:
-    pid: str
-    timestamp: str
+    process: Process
     sectors_read: int
     sectors_write: int
     reads_complete: int

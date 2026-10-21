@@ -511,6 +511,32 @@ def sample_process_io(interval_seconds: float) -> list[dict]: ...
 def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict]: ...  # OPTIONAL
 ```
 
+
+### Python signatures — Linux Backend
+
+Current implemented interface:
+
+```python
+class LinuxBackend:
+    def __init__(self, host_id: str): ...
+    def start(self) -> None: ...
+    def close(self) -> None: ...
+
+    def list_devices(self) -> list[Drive]: ...
+    def list_processes(self) -> list[Process]: ...
+
+    def get_device_io(
+        self, interval_seconds: int, device_name: str
+    ) -> DriveMetric | None: ...
+
+    def get_pid_io(
+        self, pid: int
+    ) -> ProcessMetric | None: ...
+```
+
+The requested `get_capabilities()`, `sample_device_io()`, and `sample_file_activity()` interfaces have not yet been implemented with their specified signatures.
+
+
 **Expected capabilities** (each owner must mark **working / planned / unsupported**):
 
 ```python
@@ -526,6 +552,29 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
     "notes": list[str],
 }
 ```
+
+
+### Expected capabilities — Linux
+
+| Capability | Status | Notes |
+|---|---|---|
+| `device_metrics` | **Working (implementation)** | Background sampling through `/proc/diskstats`; integration testing pending |
+| `process_metrics` | **Partial** | Blocking 1-second PID sampling implemented; background collector unfinished |
+| `process_to_device_attribution` | **Unsupported \| pending** | `/proc/[pid]/io` does not identify the physical device |
+| `file_access_metrics` | **Planned** | No file-level monitoring implemented |
+| `file_level_pooling` | **Planned** | mergerFS integration not implemented |
+| `ssd_caching` | **Planned** | Cache and redirection mechanism not implemented |
+| `file_move` | **Planned** | No migration operation implemented |
+| `dry_run_action` | **Planned** | No dry-run operation implemented |
+
+**Notes:**
+- Device and process information is represented using frozen Python dataclasses.
+- Device collection uses a background thread and bounded history.
+- Process I/O sampling currently blocks for approximately one second.
+- File-level I/O attribution is not currently available.
+- Capabilities have not yet been exposed through a callable API.
+
+---
 
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
 
@@ -550,29 +599,230 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
 - [ ] **TODO · ENRIQUE** — One success fixture, one unsupported fixture, relevant PR
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 
-### 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
 
-> [!NOTE]
-> **IF YOU OWN THE LINUX AGENT:** Please complete each **TODO** below and document unsupported capabilities. **CORE + ALGO reviewers:** Confirm the data is usable. **QA:** Test fixtures and failures.
+## 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
 
+- [x] **TODO · MOHAN** — Actual module path / language / callable signatures
 
-- [ ] **TODO · MOHAN** — Actual module path / language / callable signatures
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — Linux data source(s), permissions and supported distributions
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — Available device/process/file metrics and units
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  **Answer / evidence:**
+
+  Language: Python 3.
+
+  Current modules:
+  - `backend.py` — `LinuxBackend` public interface and lifecycle
+  - `collector.py` — Background I/O collectors
+  - `os_command_api.py` — Linux system interfaces
+  - `models.py` — Data models
+  - `constants.py` — Sampling configuration
+
+  Implemented backend methods:
+  - `start()` / `close()`
+  - `list_devices() -> list[Drive]`
+  - `list_processes() -> list[Process]`
+  - `get_device_io(interval_seconds, device_name) -> DriveMetric | None`
+  - `get_pid_io(pid) -> ProcessMetric | None`
+
+  The existing API differs from the originally proposed signatures. Results are returned as dataclasses rather than dictionaries.
+
+  **Known integration issue:** `LinuxBackend` constructs `DiskIOCollector()` without arguments, while its constructor requires a tuple of `Drive` objects. This must be fixed before the backend can start successfully.
+
+- [x] **TODO · MOHAN** — Linux data source(s), permissions and supported distributions
+
+  **Answer / evidence:**
+
+  Data sources:
+  - `/proc/diskstats` — Physical device I/O counters
+  - `/proc/[pid]/io` — Per-process I/O counters
+  - `/proc` — Process enumeration and metadata
+  - `/sys/class/block/` — Device availability and rotational status
+  - `lsblk` — Device identification, model, serial, size, and mount points
+  - `shutil.disk_usage()` — Available filesystem space
+
+  Permissions:
+  - Device I/O counters are generally readable by normal users.
+  - Process I/O access may require matching user credentials, appropriate ptrace permissions, or elevated privileges.
+  - Inaccessible processes currently return `None` from `get_process_io()`.
+  - No automatic privilege escalation is implemented.
+
+  Supported distributions:
+  - Designed for Linux distributions exposing procfs, sysfs, and util-linux `lsblk`.
+  - Expected to work on conventional Ubuntu, Debian, and Fedora installations.
+  - Distribution-specific compatibility testing has not yet been completed.
+
+- [x] **TODO · MOHAN** — Available device/process/file metrics and units
+
+  **Answer / evidence:**
+
+  **Device metrics — implemented:**
+
+  | Field | Unit |
+  |---|---|
+  | `timestamp` | UTC ISO 8601 |
+  | `duration` | Seconds |
+  | `read_bytes` | Bytes |
+  | `write_bytes` | Bytes |
+  | `read_count` | Completed read operations |
+  | `write_count` | Completed write operations |
+
+  Device byte counts are calculated using sector-counter differences multiplied by 512.
+
+  Additional device information:
+  - Device ID
+  - Model
+  - Serial number
+  - Total size in bytes
+  - Available filesystem space in bytes
+  - Availability status
+  - Media type (`SSD`, `HDD`, `Unknown`)
+
+  **Process metrics — partially implemented:**
+
+  | Field | Unit |
+  |---|---|
+  | `timestamp` | UTC ISO 8601 |
+  | `duration` | Seconds |
+  | `read_bytes` | Bytes |
+  | `write_bytes` | Bytes |
+  | `reads_complete` | Read syscall count (`syscr`) |
+  | `writes_complete` | Write syscall count (`syscw`) |
+
+  Process byte counters are obtained from `/proc/[pid]/io`. The syscall counters are not equivalent to completed physical disk operations.
+
+  Process metadata includes PID, process name, and a timestamp currently derived from `/proc/[pid]` directory metadata.
+
+  **File metrics — not implemented.**
+
+  No file-level read/write byte counters, operation counts, or process-to-file attribution are currently exposed.
+
 - [ ] **TODO · MOHAN** — Sample cadence and measured overhead
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — mergerFS file-level placement/migration semantics and limitations
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — SSD cache mechanism (FUSE/symlink/alternative), redirect + coherency
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — Return shape for unsupported/error conditions
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — One success fixture, one unsupported fixture, relevant PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 
+  **Answer / evidence:**
+
+  Current device sampling implementation:
+  - Dedicated background thread
+  - Target sampling cadence: 1 second
+  - Uses `time.monotonic()` for scheduling
+  - Thread-safe history protected by `threading.Lock`
+  - Maximum history length: 600 samples
+  - Nonblocking retrieval of previously collected device metrics
+
+  `get_device_io()` calculates the difference between historical samples for a requested interval.
+
+  Current process sampling:
+  - `get_process_io(pid)` takes two readings approximately one second apart.
+  - This operation is blocking.
+  - `ProcessIOCollector` has a background-thread skeleton but does not yet collect metrics.
+
+  **Measured overhead: Not available.**
+
+  CPU usage, memory consumption, sampling latency, and performance under large process counts have not been benchmarked.
+
+  **Known limitations:**
+  - Device sampling currently executes a separate `/proc/diskstats` read for each drive.
+  - Sampling occurs while holding the history lock.
+  - The returned device duration uses the requested interval rather than measured elapsed time.
+  - The configured `DEFAULT_SAMPLE_INTERVAL` constant is not currently used by the collector loop.
+
+- [ ] **TODO · MOHAN** — mergerFS file-level placement/migration semantics and limitations
+
+  **Answer / evidence:**
+
+  **Status: Planned; not implemented.**
+
+  The current Linux backend only enumerates storage devices and collects device/process metrics.
+
+  There is no mergerFS integration, file-placement policy, migration function, or tracking of individual file locations.
+
+  Proposed investigation:
+  - Determine which underlying device stores each file.
+  - Evaluate mergerFS placement policies.
+  - Define file migration between backing filesystems.
+  - Handle open files, concurrent writes, and migration failures.
+
+  mergerFS provides a unified filesystem namespace but does not inherently provide transparent file migration or automatic SSD caching.
+
+- [ ] **TODO · MOHAN** — SSD cache mechanism (FUSE/symlink/alternative), redirect + coherency
+
+  **Answer / evidence:**
+
+  **Status: Planned; mechanism not selected.**
+
+  No SSD caching, file redirection, or cache coherency functionality is present in the uploaded implementation.
+
+  Potential approaches for future evaluation:
+  - FUSE-based transparent file access
+  - Filesystem-level caching
+  - Application-managed file placement or redirection
+
+  Outstanding design requirements:
+  - Cache hit/miss detection
+  - Cache population and eviction
+  - Read/write redirection
+  - Cache invalidation and coherency
+  - Crash recovery and data consistency
+
+  No performance or correctness claims can currently be made.
+
+- [x] **TODO · MOHAN** — Return shape for unsupported/error conditions
+
+  **Answer / evidence:**
+
+  Current behavior:
+
+  | Operation | Unsupported/error result |
+  |---|---|
+  | `list_devices()` | `[]` if backend not started |
+  | `list_processes()` | `[]` if backend not started |
+  | `get_device_io()` | `None` if unavailable, invalid interval, or insufficient history |
+  | `get_pid_io()` | `None` for handled process-read failures |
+  | `get_all_drive()` | `[]` for handled `lsblk` failures |
+  | `_sample_drive_io()` | Raises `RuntimeError` if device is not found |
+
+  Limitations:
+  - No standardized error dictionary or status codes.
+  - `None` does not distinguish permission errors, missing processes, and other handled failures.
+  - Unsupported capability responses have not been standardized.
+  - Some subprocess or background-thread failures may propagate or terminate collection.
+
+- [ ] **TODO · MOHAN** — One success fixture, one unsupported fixture, relevant PR
+
+  **Answer / evidence:**
+
+  No executable test fixtures or PR reference were supplied.
+
+  Proposed success fixture:
+
+  ```python
+  DriveMetric(
+      timestamp="2026-10-20T09:00:00Z",
+      duration=1,
+      read_bytes=1048576,
+      write_bytes=524288,
+      read_count=16,
+      write_count=8,
+  )
+  ```
+
+  This is an illustrative fixture, not a measured result.
+
+  Proposed unsupported/error fixture:
+
+  ```python
+  backend.get_device_io(1, "nonexistent")
+  # Expected: None, once backend is running
+  ```
+
+  Remaining work:
+  - Add automated tests for device collection.
+  - Test process permissions and disappearing PIDs.
+  - Validate historical sample accuracy.
+  - Fix collector initialization and module imports.
+  - Benchmark CPU and memory overhead.
+  - Attach relevant PR link when available.
+
+---
+
+**Current milestone:** Linux device discovery and historical device I/O sampling are implemented at the component level. Process discovery and blocking process I/O sampling are also implemented. Full backend integration, background process metrics, file-level monitoring, and storage-management functionality remain incomplete.
 ### 03.3 | OS CONSUMERS + JUAN — Review and test checklist
 
 - [ ] **TODO · SHENGRONG** — Windows/Linux outputs can be mapped into the same normalized schema.

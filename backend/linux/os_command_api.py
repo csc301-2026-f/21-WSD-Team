@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
 import subprocess
-from .models import Drive, DriveSample, Process, ProcessSample, ProcessMetric
+from .models import Drive, DriveSample, Process, ProcessSample, ProcessMetric, Partition
 import json
 import shutil
 import os
 import time
+
 
 def _get_media_type(
         device_name: str
@@ -82,7 +83,7 @@ def _is_drive_available(drive_name: str) -> bool:
     return False
 
 
-def _get_drive_available_space(drive_name: str) -> int:
+"""def _get_drive_available_space(drive_name: str) -> int:
     try:
         output = subprocess.check_output(
             ["lsblk", "-rn", "-o", "MOUNTPOINTS", f"/dev/{drive_name}"],
@@ -91,54 +92,125 @@ def _get_drive_available_space(drive_name: str) -> int:
     except (subprocess.SubprocessError, FileNotFoundError):
         return 0
 
+    available_space = 0
+
+    print(output)
     for line in output.splitlines():
-        mount_point = line.strip()
-        if mount_point:
+        for mount_point in line.strip().split(r"\x0a"):
+            if not mount_point or mount_point == "[SWAP]":
+                continue
             try:
                 usage = shutil.disk_usage(mount_point)
-                return usage.free
+                available_space += usage.free
+                print(usage)
             except OSError:
+                print(f"cannot read volume {mount_point}")
                 continue
+    return available_space"""
 
-    return 0
+
+def get_all_partition(drive_name: str) -> list[str]:
+
+    try:
+        output = subprocess.check_output(
+            ["lsblk", "-J", "-o", "NAME,TYPE", f"/dev/{drive_name}"],
+            text=True
+        )
+        devices = json.loads(output).get("blockdevices", [])
+    except (subprocess.SubprocessError, FileNotFoundError, json.JSONDecodeError):
+        return []
+
+    partitions = []
+
+    def traverse(device):
+        name = device.get("name")
+
+        if device.get("type") == "part":
+            partitions.append(name)
+
+        for child in device.get("children") or []:
+            traverse(child)
+
+    for device in devices:
+        traverse(device)
+
+    return partitions
+
+
+def get_partition_storage(partition_name: str) -> tuple[int, int]:
+    try:
+        output = subprocess.check_output(
+            ["lsblk", "-J", "-o", "MOUNTPOINTS", f"/dev/{partition_name}"],
+            text=True
+        )
+
+        data = json.loads(output)
+
+        for device in data.get("blockdevices", []):
+            for mount_point in device.get("mountpoints") or []:
+                if not mount_point:
+                    continue
+                usage = shutil.disk_usage(mount_point)
+                return usage.total, usage.free
+
+    except (subprocess.SubprocessError, FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+
+    return 0, 0
 
 
 def get_all_drive() -> list[Drive]:
     """
-    Returns a tuple with name of all physical drives currently mounted
+    Returns a list of object Drive
 
-    :return: a tuple of all physical drive names
-
-    example return: (nvme0n1, nvme1n1, sda, sdb)
+    :return: a list of all physical drive
     """
     try:
-        # -J requests JSON format, -d excludes partitions, -n hides headers, -o specifies columns
         output = subprocess.check_output(
-            ["lsblk", "-Jdnro", "NAME,TRAN,MODEL,SERIAL,SIZE"], text=True
+            ["lsblk", "-Jdb", "-o", "NAME,TRAN,MODEL,SERIAL,SIZE"],
+            text=True
         )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return []
-
-    try:
-        data = json.loads(output)
-        blockdevices = data.get("blockdevices", [])
-    except json.JSONDecodeError:
+        blockdevices = json.loads(output).get("blockdevices", [])
+    except (subprocess.SubprocessError, FileNotFoundError, json.JSONDecodeError):
         return []
 
     drives = []
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
     for dev in blockdevices:
         name = dev.get("name")
         tran = dev.get("tran") or ""
+
+        if not name or tran not in ("sata", "nvme", "usb", "sas", "scsi", "mmc"):
+            continue
+
         model = dev.get("model") or "Unknown Model"
         serial = dev.get("serial") or "N/A"
-        size = int(dev.get("size") or "0") * 512
-        available_space = _get_drive_available_space(name)
-        is_available = _is_drive_available(name)
+        size = int(dev.get("size") or 0)
         media_type = _get_media_type(name)
 
-        # Filter for physical transports
-        if tran in ("sata", "nvme", "usb", "sas", "scsi", "mmc"):
-            drives.append(Drive(name, model, serial, size, available_space, is_available, media_type))
+        partitions = []
+        for partition_name in get_all_partition(name):
+            total, available = get_partition_storage(partition_name)
+            partitions.append(
+                Partition(
+                    name=partition_name,
+                    size_bytes=total,
+                    available_bytes=available
+                )
+            )
+
+        drives.append(
+            Drive(
+                timestamp=timestamp,
+                device_id=name,
+                model=model,
+                serial=serial,
+                size_bytes=size,
+                media_type=media_type,
+                partitions=tuple(partitions)
+            )
+        )
 
     return drives
 
