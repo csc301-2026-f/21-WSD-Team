@@ -29,6 +29,15 @@ class CoreService:
         ######## Not for D2
         pass
 
+    def get_devices(self):
+        return self.agent.get_devices()
+
+    def get_current_device_metrics(self):
+        return self.agent.get_device_metrics()
+
+    def get_recommendations(self, mode=None):
+        return self.database.list_recommendations(mode)
+
     def get_current_process_activity(self):
         """
         Return current per-process I/O activity.
