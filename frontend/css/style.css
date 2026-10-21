@@ -1,6 +1,6 @@
 /* GENERAL GERNERIC DECOR */
 body {
-    background-color: lightgray;
+    background: linear-gradient(to bottom right, #3366ff, #ff66ff 100%);
     font-family: Verdana, Geneva, Tahoma, sans-serif;
 }
 
@@ -20,7 +20,8 @@ h1, h2, h3, h4 {
 .box-container {
     display: flex;
 
-    background-color: darkgray;
+    border: solid 2px black;
+    background: linear-gradient(to bottom right, #666699 0%, darkgray 100%);
     margin: 30px;
     gap: 20px;
 }
@@ -29,10 +30,12 @@ div.header-box {
     display: flex;
     justify-content: center; /* Centers horizontally */
     align-items: center; /* Centers vertically */
-    background-color: bisque;
     border-radius: 10px;
     padding: 10px;
     margin: 30px;
+
+    background: linear-gradient(to bottom, #336699 0%, #666699 100%);
+    border: solid 5px black;
 }
 
 div.box {
@@ -43,7 +46,7 @@ div.box {
     background-color: gray;
     padding: 20px;
     margin: 30px;
-    border: 1px solid;
+    border: 2px dashed;
     border-radius: 10px;
 
     flex: 1;
@@ -146,20 +149,27 @@ div#big-start {
 }
 
 .sidenav a {
-  padding: 8px 8px 8px 32px;
-  text-decoration: none;
-  font-size: 25px;
-  color: white;
-  display: block;
-  transition: 0.3s;
-  opacity: 100%;
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 25px;
+    color: white;
+    display: block;
+    transition: 0.3s;
+    opacity: 100%;
+}
+
+.sidenav a:hover {
+    background-color: purple;
 }
 
 .sidenav .closebtn {
-  position: absolute;
-  top: 0;
-  right: 25px;
-  font-size: 36px;
-  margin-left: 50px;
+    position: absolute;
+    top: 0;
+    right: 25px;
+    font-size: 36px;
+    margin-left: 50px;
 }
 
+.sidenav .closebtn:hover {
+    background-color: black;
+}
