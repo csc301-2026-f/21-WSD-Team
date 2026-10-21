@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 import subprocess
-from .models import Drive, DriveSample, Process, ProcessSample, ProcessMetric, Partition
 import json
 import shutil
 import os
-import time
+
+from .models import Drive, DriveSample, Process, ProcessSample, Partition
 
 
 def _get_media_type(
@@ -29,42 +29,33 @@ def _get_media_type(
         return "Unknown"
 
 
-def _sample_drive_io(
-    drive_name: str,
-) -> DriveSample:
-    """
-    Sample the current IO stats for target drive
+def sample_all_drive(drives: tuple[str, ...]) -> tuple[DriveSample, ...]:
+    wanted = set(drives)
 
-    :param drive_name: id of drive, can be obtained using lsblk
-    :return: a DriveSample object
-    """
+    with open("/proc/diskstats", encoding="utf-8") as f:
+        lines = f.readlines()
 
-    output = subprocess.check_output(["cat", "/proc/diskstats"], text=True)
-
-    for line in output.splitlines():
-        fields = line.split()
-        if len(fields) >= 10 and fields[2] == drive_name:
-            return DriveSample(
-                device_id=drive_name,
-                timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),                sectors_read=int(fields[5]),
-                sectors_write=int(fields[9]),
-                reads_complete=int(fields[3]),
-                writes_complete=int(fields[7]),
-            )
-
-    raise RuntimeError(f"Drive '{drive_name}' not found in /proc/diskstats")
-
-
-def sample_all_drive(
-        drives: tuple[str, ...]
-) -> tuple[DriveSample]:
+    timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     samples = []
-    for drive in drives:
-        samples.append(_sample_drive_io(drive))
+
+    for line in lines:
+        fields = line.split()
+        if len(fields) < 10 or fields[2] not in wanted:
+            continue
+
+        samples.append(DriveSample(
+            device_id=fields[2],
+            timestamp=timestamp,
+            sectors_read=int(fields[5]),
+            sectors_write=int(fields[9]),
+            reads_complete=int(fields[3]),
+            writes_complete=int(fields[7]),
+        ))
+
     return tuple(samples)
 
 
-def _is_drive_available(drive_name: str) -> bool:
+"""def _is_drive_available(drive_name: str) -> bool:
 
     sysfs_path = f"/sys/class/block/{drive_name}"
 
@@ -80,33 +71,7 @@ def _is_drive_available(drive_name: str) -> bool:
     except (OSError, ValueError):
         return False
 
-    return False
-
-
-"""def _get_drive_available_space(drive_name: str) -> int:
-    try:
-        output = subprocess.check_output(
-            ["lsblk", "-rn", "-o", "MOUNTPOINTS", f"/dev/{drive_name}"],
-            text=True
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        return 0
-
-    available_space = 0
-
-    print(output)
-    for line in output.splitlines():
-        for mount_point in line.strip().split(r"\x0a"):
-            if not mount_point or mount_point == "[SWAP]":
-                continue
-            try:
-                usage = shutil.disk_usage(mount_point)
-                available_space += usage.free
-                print(usage)
-            except OSError:
-                print(f"cannot read volume {mount_point}")
-                continue
-    return available_space"""
+    return False"""
 
 
 def get_all_partition(drive_name: str) -> list[str]:
@@ -122,13 +87,13 @@ def get_all_partition(drive_name: str) -> list[str]:
 
     partitions = []
 
-    def traverse(device):
-        name = device.get("name")
+    def traverse(disks):
+        name = disks.get("name")
 
-        if device.get("type") == "part":
+        if disks.get("type") == "part":
             partitions.append(name)
 
-        for child in device.get("children") or []:
+        for child in disks.get("children") or []:
             traverse(child)
 
     for device in devices:
@@ -236,7 +201,6 @@ def _get_all_pid() -> tuple[int, ...]:
 
 def _get_process_info(pid: int) -> Process | None:
 
-    #TODO: permission
     proc_path = f"/proc/{pid}"
 
     if not os.path.exists(proc_path):
@@ -247,11 +211,9 @@ def _get_process_info(pid: int) -> Process | None:
         with open(comm_path, "r", encoding="utf-8") as f:
             name = f.read().strip()
 
-        # 2. Extract start time from the /proc/[pid] directory stats (st_mtime)
         stat_info = os.stat(proc_path)
         dt = datetime.fromtimestamp(stat_info.st_mtime, tz=timezone.utc)
         start_time_timestamp = dt.isoformat().replace("+00:00", "Z")
-
         return Process(
             pid=pid,
             name=name,
@@ -276,53 +238,48 @@ def get_all_process() -> list[Process]:
     return processes
 
 
-def get_pid_open_file() -> tuple[str]:
-    """
-    Returns a tuple of all files opened by process PID
-
-    :param pid: PID of target process
-    :return: a tuple of all opened file by the target process
-
-    example return: ("/home/xxx/program1", "/home/xxx/program2", "/mnt/smbshare/file1")
-    """
-    #TODO
-
-    pass
-
-
-def get_process_io(pid: int) -> ProcessMetric | None:
-    def sample() -> dict[str, int]:
-        output = subprocess.check_output(
-            ["cat", f"/proc/{pid}/io"],
-            text=True,
-        )
-        return {
-            key: int(value)
-            for key, value in (
-                line.split(":") for line in output.splitlines()
-            )
-        }
-
+def sample_process_io(process: Process) -> ProcessSample | None:
     try:
+        with open(f"/proc/{process.pid}/io") as f:
+            data = {
+                key.strip(): int(value.strip())
+                for key, value in (
+                    line.split(":", 1) for line in f
+                )
+            }
+
         timestamp = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-        before = sample()
 
-        time.sleep(1)
-
-        after = sample()
-
-        return ProcessMetric(
+        return ProcessSample(
+            process=process,
             timestamp=timestamp,
-            duration=1,
-            read_bytes=after["read_bytes"] - before["read_bytes"],
-            write_bytes=after["write_bytes"] - before["write_bytes"],
-            reads_complete=after["syscr"] - before["syscr"],
-            writes_complete=after["syscw"] - before["syscw"]
+            read_bytes=data["read_bytes"],
+            write_bytes=data["write_bytes"],
+            reads_complete=data["syscr"],
+            writes_complete=data["syscw"],
         )
 
-    except (subprocess.CalledProcessError, FileNotFoundError, PermissionError):
+    except (OSError, ValueError, KeyError):
         return None
 
+
+def sample_all_process() -> dict[Process, ProcessSample]:
+    processes = get_all_process()
+
+    processes_io = {}
+    for process in processes:
+        sample = sample_process_io(process)
+        if sample is not None:
+            processes_io[process] = sample
+
+    return processes_io
+
+
+def get_process_from_pid(pid: int) -> Process | None:
+    for process in get_all_process():
+        if process.pid == pid:
+            return process
+    return None
 
 
 if __name__ == "__main__":
