@@ -5,6 +5,7 @@ import shutil
 import os
 
 from .models import Drive, DriveSample, Process, ProcessSample, Partition
+from .constants import *
 
 
 def _get_media_type(
@@ -29,6 +30,49 @@ def _get_media_type(
         return "Unknown"
 
 
+def _get_all_pid() -> tuple[int, ...]:
+    """
+    Returns every pid of currently running process
+
+    :return: a tuple of pid
+
+    example return: (1, 2, 3)
+    """
+    pids = []
+    try:
+        for entry in os.listdir("/proc"):
+            if entry.isdigit():
+                pids.append(int(entry))
+    except (FileNotFoundError, PermissionError):
+        return ()
+
+    return tuple(sorted(pids))
+
+
+def _get_process_info(pid: int) -> Process | None:
+
+    proc_path = f"/proc/{pid}"
+
+    if not os.path.exists(proc_path):
+        return None
+
+    try:
+        comm_path = os.path.join(proc_path, "comm")
+        with open(comm_path, "r", encoding="utf-8") as f:
+            name = f.read().strip()
+
+        stat_info = os.stat(proc_path)
+        dt = datetime.fromtimestamp(stat_info.st_mtime, tz=timezone.utc)
+        start_time_timestamp = dt.isoformat().replace("+00:00", "Z")
+        return Process(
+            pid=pid,
+            name=name,
+            start_time_timestamp=start_time_timestamp
+        )
+    except (PermissionError, FileNotFoundError, OSError, ValueError):
+        return None
+
+
 def sample_all_drive(drives: tuple[str, ...]) -> tuple[DriveSample, ...]:
     wanted = set(drives)
 
@@ -40,16 +84,16 @@ def sample_all_drive(drives: tuple[str, ...]) -> tuple[DriveSample, ...]:
 
     for line in lines:
         fields = line.split()
-        if len(fields) < 10 or fields[2] not in wanted:
+        if len(fields) < DISKSTATS_MIN_FIELDS or fields[DISKSTATS_DEVICE_ID_INDEX] not in wanted:
             continue
 
         samples.append(DriveSample(
-            device_id=fields[2],
+            device_id=fields[DISKSTATS_DEVICE_ID_INDEX],
             timestamp=timestamp,
-            sectors_read=int(fields[5]),
-            sectors_write=int(fields[9]),
-            reads_complete=int(fields[3]),
-            writes_complete=int(fields[7]),
+            sectors_read=int(fields[DISKSTATS_SECTORS_READ_INDEX]),
+            sectors_write=int(fields[DISKSTATS_SECTORS_WRITE_INDEX]),
+            reads_complete=int(fields[DISKSTATS_READS_COMPLETE_INDEX]),
+            writes_complete=int(fields[DISKSTATS_WRITES_COMPLETE_INDEX]),
         ))
 
     return tuple(samples)
@@ -74,7 +118,7 @@ def sample_all_drive(drives: tuple[str, ...]) -> tuple[DriveSample, ...]:
     return False"""
 
 
-def get_all_partition(drive_name: str) -> list[str]:
+def _get_all_partition(drive_name: str) -> list[str]:
 
     try:
         output = subprocess.check_output(
@@ -102,7 +146,7 @@ def get_all_partition(drive_name: str) -> list[str]:
     return partitions
 
 
-def get_partition_storage(partition_name: str) -> tuple[int, int]:
+def _get_partition_storage(partition_name: str) -> tuple[int, int]:
     try:
         output = subprocess.check_output(
             ["lsblk", "-J", "-o", "MOUNTPOINTS", f"/dev/{partition_name}"],
@@ -155,8 +199,8 @@ def get_all_drive() -> list[Drive]:
         media_type = _get_media_type(name)
 
         partitions = []
-        for partition_name in get_all_partition(name):
-            total, available = get_partition_storage(partition_name)
+        for partition_name in _get_all_partition(name):
+            total, available = _get_partition_storage(partition_name)
             partitions.append(
                 Partition(
                     name=partition_name,
@@ -180,49 +224,6 @@ def get_all_drive() -> list[Drive]:
     return drives
 
 
-def _get_all_pid() -> tuple[int, ...]:
-    """
-    Returns every pid of currently running process
-
-    :return: a tuple of pid
-
-    example return: (1, 2, 3)
-    """
-    pids = []
-    try:
-        for entry in os.listdir("/proc"):
-            if entry.isdigit():
-                pids.append(int(entry))
-    except (FileNotFoundError, PermissionError):
-        return ()
-
-    return tuple(sorted(pids))
-
-
-def _get_process_info(pid: int) -> Process | None:
-
-    proc_path = f"/proc/{pid}"
-
-    if not os.path.exists(proc_path):
-        return None
-
-    try:
-        comm_path = os.path.join(proc_path, "comm")
-        with open(comm_path, "r", encoding="utf-8") as f:
-            name = f.read().strip()
-
-        stat_info = os.stat(proc_path)
-        dt = datetime.fromtimestamp(stat_info.st_mtime, tz=timezone.utc)
-        start_time_timestamp = dt.isoformat().replace("+00:00", "Z")
-        return Process(
-            pid=pid,
-            name=name,
-            start_time_timestamp=start_time_timestamp
-        )
-    except (PermissionError, FileNotFoundError, OSError, ValueError):
-        return None
-
-
 def get_all_process() -> list[Process]:
     """
     Returns all running processes as Process objects.
@@ -238,7 +239,7 @@ def get_all_process() -> list[Process]:
     return processes
 
 
-def sample_process_io(process: Process) -> ProcessSample | None:
+def _sample_process_io(process: Process) -> ProcessSample | None:
     try:
         with open(f"/proc/{process.pid}/io") as f:
             data = {
@@ -268,7 +269,7 @@ def sample_all_process() -> dict[Process, ProcessSample]:
 
     processes_io = {}
     for process in processes:
-        sample = sample_process_io(process)
+        sample = _sample_process_io(process)
         if sample is not None:
             processes_io[process] = sample
 
