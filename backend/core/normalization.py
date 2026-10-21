@@ -53,7 +53,7 @@ def normalize_linux_device(devices, host_id) -> list[dict]:
                        "capacity_bytes": device.size_bytes,
                        "free_bytes": free_bytes,
                        "mount_points": None, #TODO data not provide
-                       "is_available": None} #TODO data not provide
+                       "is_available": True} #TODO data not provide
         normalized_devices.append(device_dict)
     return normalized_devices
 

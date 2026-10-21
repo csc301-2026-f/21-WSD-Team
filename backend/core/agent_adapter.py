@@ -50,7 +50,7 @@ class LinuxAgentAdapter:
                 device_metric.append((device_id, metric))
         return normalize_linux_device_metric(device_metric, self.backend.host_id)
 
-    def get_process_metrics(self, sample_window_seconds = 10) -> list[dict]:
+    def get_process_metrics(self, sample_window_seconds = 1) -> list[dict]:
         processes = self.backend.list_processes()
         process_metric = []
         for process in processes:
