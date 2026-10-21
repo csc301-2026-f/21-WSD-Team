@@ -832,10 +832,10 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 > **IF YOU OWN THE DATABASE:** Please complete each **TODO** below, including query examples. **ALGO + CORE reviewers:** Confirm that the history queries meet our needs. **QA:** Test save/query round-trips.
 
 - [x] **TODO · SAHIL** — Database engine, table/schema approach, migrations
-  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: PROPOSED).
+  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: Implemented).
 
 - [x] **TODO · SAHIL** — Concrete Python callable/module or service adapter
-  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: PROPOSED interface signature).
+  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: Implemented).
 
 - [x] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
   - **Answer / evidence:** Proposed design: Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
@@ -862,8 +862,9 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 
 - [x] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
   - **Answer / evidence:** Fixtures committed to repository branch under `tests/fixtures/`:
-    - Success: `tests/fixtures/history_sample.json`
-    - Empty: `tests/fixtures/history_empty.json`
+    - Device History Success: `tests/fixtures/history_sample.json`
+    - Empty Result: `tests/fixtures/history_empty.json`
+    - Process History (US-02): `tests/fixtures/process_history_sample.json`
     - Unsupported File Heat: `tests/fixtures/file_heat_unsupported.json`
 
 ### 04.2 | DB CONSUMERS + JUAN — Review and test checklist
