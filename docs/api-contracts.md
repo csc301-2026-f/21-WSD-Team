@@ -465,8 +465,8 @@ repository interface. ALGO should NOT depend on raw SQL/table internals.
 
 | Metric | Source Type | Windows Source | Linux Source |  Windows Evidence | Linux Evidence |
 ---|---|---|---|---|---|
-| DeviceMetric | raw + derived(for Linux) | Performance Counters | /proc/diskstats | Performance counter consumer APIs(PDH.dll) | Linux kernel I/O statistics fields |
-| ProcessMetric | raw(read/write bps for Windows) + derived(for Linux) | Performance Counters + ETW | /proc/<pid>/io | Performance counter consumer APIs(PDH.dll) + ETW | Linux kernel 3.3 /proc/<pid>/io - Display the IO accounting fields |
+| DeviceMetric | raw + derived(for Linux) | ETW | /proc/diskstats | Kernel IO Tracing (ETW) | Linux kernel I/O statistics fields |
+| ProcessMetric | raw(read/write bps for Windows) + derived(for Linux) | ETW | /proc/<pid>/io | Kernel IO Tracing (ETW) | Linux kernel 3.3 /proc/<pid>/io - Display the IO accounting fields |
 
 - [ ] **TODO · SHENGRONG + SAHIL + JOHN/JESSLYN + JUAN** — Agree on required/optional fields, `null`, empty collections, and explicit `UNSUPPORTED` semantics.
   - **Decision / evidence:** 
@@ -526,7 +526,68 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
     "notes": list[str],
 }
 ```
+### Python signatures — Windows Backend
 
+Current access point:
+```python
+__init__.py
+     def create_backend(host_id: str) -> WindowsBackend
+```
+Current implemented interface:
+
+```python
+class WindowsBackend:
+    # don't call __init__, call create_backend instead
+    def __init__(self, host_id: str,etw_source: EtwSource,device_provider: DeviceProvider): ...
+
+    def start(self) -> None: ...
+    def close(self) -> None: ...
+
+    def get_devices(self) -> list[Device]: ...
+
+    def get_device_metrics(
+        self,
+        sample_window_seconds: float = 10.0,
+    ) -> list[DeviceMetric]: ...
+
+    def get_process_metrics(
+        self,
+        sample_window_seconds: float = 10.0,
+    ) -> list[ProcessMetric]: ...
+
+    def get_file_activity(
+        self,
+        sample_window_seconds: int,
+        now_ns: int | None = None,
+    ) -> list[FileActivity]:
+
+    def get_collection_health(self) -> CollectionHealth:
+```
+
+The coded `get_file_activity()`, and `get_collection_health` interfaces do not work as of now.
+
+
+### Expected capabilities — Windows
+
+| Capability | Status | Notes |
+|---|---|---|
+| `device_metrics` | **Implemented; verification pending** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
+| `process_metrics` | **Planned** | Already tracing every single FileIO event the kernel fires as to also catch cache hits, can order by PID |
+| `process_to_device_attribution` | **Planned** | Can sort/filter DiskIO events by PID if required |
+| `file_access_metrics` | **Planned** | Tracing FileIO events, need to complete the path with drive letter. |
+| `file_level_pooling` | **Planned** | WinFsp envisioned |
+| `ssd_caching` | **Planned** | No cache/redirection implementation |
+| `file_move` | **Planned** | No file migration function |
+| `dry_run_action` | **Planned** | No dry-run function |
+
+**Notes:**
+- Device and process information is represented using frozen Python dataclasses.
+- Collects events with a callback: only runs when needed with as little overhead as required.
+- Metrics are always cumulative viewed events: no history from before tracking started is available.
+- FileIO metrics are currently unavailable.
+- No end-to-end integration or benchmark evidence was supplied.
+
+---
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
 
 > [!NOTE]
@@ -534,32 +595,77 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
 
 
 - [x] **TODO · ENRIQUE** — Actual module path / language / callable signatures
-  - **Answer / evidence:** backend/windows/backend.py
+  - **Answer / evidence:**
+  - Python 3; 
+    - `backend.py` (public API), 
+    - `contracts.py` (frozen dataclasses),
+    - `aggregation.py` (keeps all processed events and uses them to create metrics),
+    - `device_provider.py` (discovers disks and mount points with WMI), 
+    - `etw_source.py` (ETW DiskIO and FileIO events decoder),
+    - `transport.py` (Kernel tracking setup),
+    - `__init.py__` (links the modules together with create_backend),
+    - `__main__.py` (callable from the admin console with python -m),   
+    The implemented `WindowsBackend` API is listed above. `create_backend(host_id : str)` is constructed with the required argument.
 - [x] **TODO · ENRIQUE** — Windows data source(s) and permissions required
-  - **Answer / evidence:** ETW and windows API for device info
-- [ ] **TODO · ENRIQUE** — Available device metrics and units / unavailable fields
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [x] **TODO · ENRIQUE** — Process I/O and file-level attribution feasibility
-  - **Answer / evidence:** Doable given no ETW events are dropped (rare)
-- [ ] **TODO · ENRIQUE** — Sample cadence and measured overhead
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [x] **TODO · ENRIQUE** — File-level pooling and SSD cache feasibility (WinFsp or alternative)
+  - **Answer / evidence:**
+    - ETW:
+      - automatically receive IO events as they are being processed
+      - admin permission required as it uses the kernel
+    - WMI:
+      - discover all disks and mount points
+      - admin permission may be required
+- [x] **TODO · ENRIQUE** — Available process/file/device IO metrics and units / unavailable fields
+
+  - **Answer / evidence:**
+ 
+| Record | Fields | Units / source |
+|---|---|---|
+| `DeviceMetric` | `host_id`, `device_id`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `read_iops`, `write_iops`, `avg_read_latency_ms`, `avg_write_latency_ms`, `source` | UTC ISO 8601; requested seconds (`float`); bytes; completed disk operations from ETW |
+| `ProcessMetric` | `host_id`, `pid`, `start_time_utc`, `process_name`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `attributed_device_id` | UTC ISO 8601; requested seconds (`float`); bytes requested by this PID, based on the I/O operations it emitted |
+| `FileActivity` | `host_id`, `file_id`, `path`, `device_id`, `window_start_utc`, `window_end_utc`, `read_bytes`, `write_bytes`, `read_ops`, `write_ops`, `file_size_bytes`, `source` | UTC ISO 8601; file path determined by `FileObject` name attribution using other `FileIo` events; drive/volume mapping determined through correlation with storage metadata and, where possible, `DiskIo` events; not yet emitted |
+| `Device` | `host_id`, `device_id`, `display_name`, `media_type`, `capacity_bytes`, `free_bytes`, `mount_points`, `is_available` | WMI; capacity reported for each disk/device |
+  
+- [x] **TODO · ENRIQUE** — Sample cadence and measured overhead
+  - **Answer / evidence:**
+  Event handling happens by callback, so cadence is as fast as events happen. Overhead not yet measured.
+
+  **Known Limitations**
+  - FileIO events are dropped if no prior DiskIO event has mapped their FileObject to a physical drive
+  - Likewise DiskIO events will not count towards a file's diskIO if no prior FileIO event has mapped it to its FileObject
+  - A FileIO event is only duplicated as DiskIO event if it misses the cache
+  - Process name may not always be obtainable
+
+- [ ] **TODO · ENRIQUE** — File-level pooling and SSD cache feasibility (WinFsp or alternative)
   - **Answer / evidence:** WinFsp still considered for this
 - [x] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
-  - **Answer / evidence:** return None on data fields like IO
+  - **Answer / evidence:**
+    - Any unavailable field will be None
+    - A metric (e.g. read IOPS) with 0 events contributing towards it (e.g. only writes) will be marked as None
+    - 
 - [ ] **TODO · ENRIQUE** — One success fixture, one unsupported fixture, relevant PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-     
-**Current proposed API**
-```python
-{
-     "get_devices": list[Device]
-     "get_device_metrics": list[DeviceMetric]
-     "get_process_metrics": list[ProcessMetric]
-     "get_file_activity": list[FileActivity]
-     "get_collection_health": CollectionHealth
-}
-```
+  - **Answer / evidence:**
+    
+    ```python
+    DeviceMetric(host_id='debug session', device_id=0, timestamp_utc='2026-10-22T10:34:00.795578Z'
+        , sample_window_seconds=1, read_bytes_per_sec=81920.0, write_bytes_per_sec=37888.0
+        , read_iops=2.0, write_iops=7.0, avg_read_latency_ms=None
+        , avg_write_latency_ms=None, source='windows_etw')
+    ```
+    Bad call:
+    ```python
+    backend.get_device_metrics(-1)
+    raises ValueError
+    ```
+Remaining Work:
+  - properly filter by FileIO or DiskIO for their respective metrics
+  - properly assign FileIO paths
+  - measure collection health and dropped events
+  - move from pid to either (start_time,pid) or process name
+  - investigate WinFsp
+
+---
+
+**Current milestone:** The Windows backend currently implements EWT to track system-wide IO operations for disk, file, and processes alike. While only diskIO can effectively be measures as of now, the events pertaining to file and process operations are processed correctly. ssd caching, integration tests, process start time and storage actions remain to be implemented.
 
 ### 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
 
