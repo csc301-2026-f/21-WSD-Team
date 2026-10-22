@@ -24,7 +24,7 @@ class EtwTransport:
     def __init__(self) -> None:
         self._session: Any | None = None
         self._on_record: Callable[[dict[str, Any]], None] | None = None
-        #the function to process the IO operations received. type dict[str,Any]->None
+        #the function to process the IO operations received. type RawIoEvent->None
         self._lock = Lock()
         self._running = False
         self._events_received = 0
@@ -47,7 +47,11 @@ class EtwTransport:
             provider = etw.ProviderInfo(
                 "Windows Kernel Trace",
                 etw.GUID(KERNEL_TRACE_GUID),
-                any_keywords=0x500, #documented on microsoft docs as disk_io and disk_io_init
+                any_keywords=0x00000100  # DISK_IO
+                            | 0x00000200  # DISK_FILE_IO
+                            | 0x00000400  # DISK_IO_INIT
+                            | 0x02000000  # FILE_IO
+                            | 0x04000000  # FILE_IO_INIT, #documented on microsoft docs as disk_io and disk_io_init
             )
 
             session = etw.ETW(
@@ -69,6 +73,7 @@ class EtwTransport:
 
     def _handle_event(self, item: Any) -> None:
         #Adapt pywintrace's (event_id, event_data) callback.
+        #print(f"transport got called for event {item[1]}")
         try:
             if (
                 isinstance(item, tuple)

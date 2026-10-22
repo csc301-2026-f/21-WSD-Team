@@ -6,22 +6,22 @@ from typing import Literal
 MediaType = Literal["nvme", "hdd", "ssd", "unknown"]
 
 
-@dataclass(frozen=True)
-class Device:
-    host_id: str
-    device_id: str
+@dataclass(frozen=True) 
+class Device: #need: wmi
+    host_id: str 
+    device_id: int #disk_number
     display_name: str
     media_type: MediaType | None
     capacity_bytes: int | None
     free_bytes: int | None
-    mount_points: list[str]
+    mount_points: list[str] #disk_letters
     is_available: bool
 
 
 @dataclass(frozen=True)
-class DeviceMetric:
+class DeviceMetric: #need: only diskIO events
     host_id: str
-    device_id: str
+    device_id: int
     timestamp_utc: str
     sample_window_seconds: float
 
@@ -36,7 +36,7 @@ class DeviceMetric:
 
 
 @dataclass(frozen=True)
-class ProcessMetric:
+class ProcessMetric: #need: only fileIO
     host_id: str
     pid: int
     start_time_utc: str | None
@@ -50,12 +50,12 @@ class ProcessMetric:
 
 
 @dataclass(frozen=True)
-class FileActivity:
+class FileActivity: #need: only fileIO
     # Only emit this model when file-level attribution is verified.
     host_id: str
     file_id: str | None
     path: str | None
-    device_id: str | None
+    device_id: int | None
 
     window_start_utc: str
     window_end_utc: str
@@ -80,11 +80,11 @@ class RawIoEvent:
     process_start_time_utc: str | None
     process_name: str | None
 
-    device_id: str | None
+    device_id: int | None
     transferred_bytes: int | None
     duration_ns: int | None
 
-    file_id: str | None = None
+    file_id: int | None = None
     path: str | None = None
     file_size_bytes: int | None = None
 
@@ -92,7 +92,7 @@ class RawIoEvent:
     file_attribution_verified: bool = False
 
     # The decoder should emit one event per completed logical I/O.
-    source: str = "windows_etw"
+    source: str = "windows_etw" # "diskIO" or "fileIO"
 
 
 @dataclass(frozen=True)

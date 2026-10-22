@@ -1,4 +1,3 @@
-
 from .contracts import (
     Device,
     DeviceMetric,

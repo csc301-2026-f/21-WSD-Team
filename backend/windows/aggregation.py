@@ -78,7 +78,7 @@ class EventAggregator:
             ] #manually sort the events per device when asked
             reads = [e for e in selected if e.operation == "read"]
             writes = [e for e in selected if e.operation == "write"]
-
+            #print(f"R/W in snapshot at time {end_ns} : {len(reads)}, {len(writes)}")
             def byte_total(items: list[RawIoEvent]) -> int | None:
                 if not items or any(
                     e.transferred_bytes is None for e in items

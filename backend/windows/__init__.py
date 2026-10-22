@@ -1,5 +1,4 @@
 
-from .aggregation import EventAggregator
 from .backend import WindowsBackend
 from .contracts import (
     CollectionHealth,
@@ -15,13 +14,14 @@ from .transport import EtwTransport
 
 def create_backend(host_id: str) -> WindowsBackend:
     """Returns the windows backend fully wired up."""
+    device_provider = DeviceProvider(host_id)
+    decoder = EtwDecoder(device_provider=device_provider)
     transport = EtwTransport()
-    decoder = EtwDecoder()
     source = EtwSource(
         transport=transport,
         decoder=decoder,
     )
-    device_provider = DeviceProvider(host_id)
+    
 
     return WindowsBackend(
         host_id=host_id,
