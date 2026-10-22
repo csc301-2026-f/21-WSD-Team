@@ -205,4 +205,6 @@ class ProcessSample:
 class ErrorCode(IntEnum):
     SUCESS = 0
     PROCESS_NOT_FOUND = 1
-    PERMSSION_DENIED = 2
+    PROCESS_PID_REUSED = 2
+    BACKEND_NOT_STARTED = 3
+    INVALID_TIME_INTERVAL = 4
