@@ -5,6 +5,7 @@ from pathlib import Path
 
 from backend.algorithms.algo01 import evaluate_raid0_policy
 from backend.db.repository import SQLiteHistoryRepository
+from .frontend_routes import register_frontend_routes
 from .agent_adapter import LinuxAgentAdapter
 from .algo_adapter import AlgorithmAdapter
 from .db_adapter import DataBaseAdaptor
@@ -85,5 +86,8 @@ def create_application(*, demo_mode=False, data_dir=None):
 
     # Step 7: Create HTTP application
     app = create_http_api(core)
+
+    # Step 8: Serve Danny's frontend
+    register_frontend_routes(app)
 
     return app, core
