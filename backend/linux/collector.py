@@ -4,7 +4,8 @@ import time
 
 from .constants import *
 from .models import DriveMetric, ProcessMetric, Drive
-from .os_command_api import sample_all_drive, sample_all_process
+from .drive import sample_all_drive
+from .process import sample_all_process
 
 
 class DiskIOCollector:

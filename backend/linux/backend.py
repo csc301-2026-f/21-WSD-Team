@@ -1,7 +1,8 @@
 from .models import Drive, Process, DriveMetric, ProcessMetric
 from .collector import DiskIOCollector, ProcessIOCollector
 
-from .os_command_api import get_all_drive, get_all_process
+from .process import get_all_process
+from .drive import get_all_drive
 
 
 class LinuxBackend:

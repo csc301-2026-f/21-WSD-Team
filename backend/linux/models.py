@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import IntEnum
 
 
 @dataclass(frozen=True)
@@ -199,3 +200,9 @@ class ProcessSample:
     write_bytes: int
     reads_complete: int
     writes_complete: int
+
+
+class ErrorCode(IntEnum):
+    SUCESS = 0
+    PROCESS_NOT_FOUND = 1
+    PERMSSION_DENIED = 2
