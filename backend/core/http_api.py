@@ -42,6 +42,19 @@ def create_http_api(core_service):
         response = success_response(capabilities)
         return jsonify(response)
 
+    @http_api.get("/api/v1/processes/history")
+    def get_process_history():
+        process_instance_id = request.args.get("process_instance_id")
+        start_utc = request.args.get("start_utc")
+        end_utc = request.args.get("end_utc")
+        bucket_seconds = request.args.get("bucket_seconds", type=int)
+        process_history = core_service.get_historical_process_activity([process_instance_id],
+                                                                       start_utc,
+                                                                       end_utc,
+                                                                       bucket_seconds)
+        response = success_response(process_history)
+        return jsonify(response)
+
     @http_api.errorhandler(404)
     def handle_not_found(error):
         response = fail_response("NOT_FOUND", "Endpoint Not Found")
