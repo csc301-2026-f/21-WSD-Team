@@ -621,10 +621,9 @@ The requested `get_capabilities()`, `sample_device_io()`, and `sample_file_activ
 | `dry_run_action` | **Planned** | No dry-run function |
 
 **Notes:**
-- Device and process information is represented using frozen Python dataclasses.
-- Collects events with a callback: only runs when needed with as little overhead as required.
-- Metrics are always cumulative viewed events: no history from before tracking started is available.
-- FileIO metrics are currently unavailable.
+- Both collectors sample in daemon threads at a target cadence of approximately one second; observed elapsed intervals may differ.
+- Metrics are differences between cumulative samples; collection history is in memory only.
+- File-level I/O attribution and callable capability reporting are unavailable.
 - No end-to-end integration or benchmark evidence was supplied.
   
 ---
@@ -679,13 +678,15 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
 | `process_to_device_attribution` | **Planned** | Can sort/filter DiskIO events by PID if required |
 | `file_access_metrics` | **Planned** | Tracing FileIO events, need to complete the path with drive letter. |
 | `file_level_pooling` | **Planned** | WinFsp envisioned |
+| `ssd_caching` | **Planned** | No cache/redirection implementation |
+| `file_move` | **Planned** | No file migration function |
+| `dry_run_action` | **Planned** | No dry-run function |
   
 **Notes:**
-- Both collectors sample in daemon threads at a target cadence of approximately one second; observed elapsed intervals may differ.
-- Metrics are differences between cumulative samples; collection history is in memory only.
-- File-level I/O attribution and callable capability reporting are unavailable.
-- No end-to-end integration or benchmark evidence was supplied.
-
+- Device and process information is represented using frozen Python dataclasses.
+- Collects events with a callback: only runs when needed with as little overhead as required.
+- Metrics are always cumulative viewed events: no history from before tracking started is available.
+- FileIO metrics are currently unavailable.
 ---
 
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
