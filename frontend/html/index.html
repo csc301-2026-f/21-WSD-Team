@@ -9,17 +9,29 @@
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
-    <script type="module" src="../js/ui.js"></script>
+    
 </head>
 
 <body>
-    <div>
-        <h1>Wise Storage Director</h1>
+    <div class="header-box">
+        <h1>Wise Storage Director - Main Page</h1>
     </div>
 
-    
+    <span id="navOpenButton">&#9776;</span>
 
-    <div>
+    <div id="mainSidenav" class="sidenav">
+        <a href="#" id="navCloseButton" class="closebtn">&times;</a>
+        <a href="index.html">Main Dashboard</a>
+        <a href="task_priority.html">Task Priority</a>
+        <a href="stats.html">Disk Usage Statistics</a>
+        <a href="about.html">About</a>
+        <a href="settings.html">Settings</a>
+        <a href="authors.html">Group Info</a>
+    </div>
+
+    <!-- OLD HEADER NAVIGATION MENU
+
+    <div class="header-box">
         <ul>
             <li>
                 <p><a href="index.html">Main Dashboard</a></p>
@@ -41,6 +53,7 @@
             </li>
         </ul>
     </div>
+    
 
     <div class="box-container">
         <div class="box">
@@ -55,54 +68,56 @@
             <h3>Drive Health</h3>
             <p>Moderately Healthy</p>
         </div>
+    </div> 
+    -->
+
+    
+    <div class="box-container" id="driveContainer">
+        <!-- JavaScript generates a box for each drive here -->
     </div>
 
-    <div class="box-container">
-        <div class="box">
-            <h3>C: Drive - Samsung SSD 980</h3>
-            <p>███████████████████░░░░░░░  72% used</p>
-        </div>
-    </div>
-
-    <div class="box-container">
-        <div class="box">
-            <h3>D: Drive - WD Blue HDD</h3>
-            <p>███████████████████░░░░░░░  72% used</p>
-        </div>
-    </div>
 
     <div class="box-container">
         <div class="box" id="big-start">
             <h1>Toggle On/Off WSD</h1>
             <h2>Check the statistics page for more info after launch</h2>
 
-            <input type="checkbox" id="power">
+            <input type="checkbox" id="power" checked>
             <label for="power">ON/OFF</label>
         </div>
     </div>
 
     <div class="box-container">
-        <div class="box">
-            <h3>Optimized Loading Time (Total)</h3>
+        <!-- WSD Recommendations -->
+        <section id="recommendations-section">
+            <div class="recommendations-header">
+                <div>
+                    <h2>Storage Recommendations</h2>
+                    <p>Review suggested storage optimizations.</p>
+                </div>
 
-            <h4>Before: 186,420 ms</h4>
-            <p>Games: 112,800 ms</p>
-            <p>Applications: 38,650 ms</p>
-            <p>Media & Videos: 21,470 ms</p>
-            <p>Documents: 8,900 ms</p>
-            <p>Backups: 4,600 ms</p>
+                <button id="refresh-recommendations-button" type="button">
+                    Refresh Recommendations
+                </button>
+            </div>
 
-            <h4>After: 42,780 ms</h4>
-            <p>Games: 24,300 ms</p>
-            <p>Applications: 9,850 ms</p>
-            <p>Media & Videos: 5,420 ms</p>
-            <p>Documents: 2,110 ms</p>
-            <p>Backups: 1,100 ms</p>
+            <p id="recommendations-status" role="status">
+                Loading recommendations...
+            </p>
 
-            <h4>Time Saved: 143,640 ms (77.0%)</h4>
-        </div>
+            <div class="recommendations-notice">
+                Recommendations are advisory. No files are moved automatically
+                by displaying a recommendation.
+            </div>
+
+            <div id="recommendations-container">
+                <!-- JavaScript renders recommendation cards here. -->
+            </div>
+        </section>
     </div>
 
-    
+    <script type="module" src="../js/ui.js"></script>
+    <script type="module" src="../js/main.js"></script>
+    <script type="module" src="../js/recommendations.js"></script>
 </body>
 </html>
