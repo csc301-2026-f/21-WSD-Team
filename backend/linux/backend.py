@@ -90,7 +90,7 @@ class LinuxBackend:
 
     def get_process_io(
         self, interval_seconds: int, pid: int
-    ) -> ProcessMetric | ErrorCode:
+    ) -> ProcessMetric | None:
         """
         Retrieve process I/O statistics from previously collected samples.
         Process must exist in both samples being compared.
@@ -101,9 +101,13 @@ class LinuxBackend:
                  process is unavailable, or access is denied
         """
         if not self._started:
-            return ErrorCode.BACKEND_NOT_STARTED
+            return None
 
-        return self.process_collector.get_metric(interval_seconds, pid)
+        rtn = self.process_collector.get_metric(interval_seconds, pid)
+        if isinstance(rtn, ErrorCode):
+            return None
+        else:
+            return rtn
 
 
 """    def get_all_process_io(self, interval_seconds: int) -> list[ProcessMetric]:
