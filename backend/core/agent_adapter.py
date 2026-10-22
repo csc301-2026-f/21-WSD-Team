@@ -40,7 +40,7 @@ class LinuxAgentAdapter:
     def get_devices(self) -> list[dict]:
         return normalize_linux_device(self.backend.list_devices(), self.backend.host_id)
 
-    def get_device_metrics(self, sample_window_seconds = 10) -> list[dict]:
+    def get_device_metrics(self, sample_window_seconds = 1) -> list[dict]:
         devices = self.backend.list_devices()
         device_metric = []
         for device in devices:
