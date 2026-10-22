@@ -10,19 +10,28 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
     
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@100..900&display=swap" rel="stylesheet">
 </head>
 
 <body>
-    <div>
-        <h1>Wise Storage Director</h1>
+    <div class="header-box">
+        <h1>Wise Storage Director - Statistics and Information</h1>
     </div>
 
-    
+    <span id="navOpenButton">&#9776;</span>
 
-    <div>
+    <div id="mainSidenav" class="sidenav">
+        <a href="#" id="navCloseButton" class="closebtn">&times;</a>
+        <a href="index.html">Main Dashboard</a>
+        <a href="task_priority.html">Task Priority</a>
+        <a href="stats.html">Disk Usage Statistics</a>
+        <a href="about.html">About</a>
+        <a href="settings.html">Settings</a>
+        <a href="authors.html">Group Info</a>
+    </div>
+
+    <!-- OLD HEADER NAVIGATION MENU
+     
+    <div class="header-box">
         <ul>
             <li>
                 <p><a href="index.html">Main Dashboard</a></p>
@@ -44,59 +53,103 @@
             </li>
         </ul>
     </div>
+    -->
 
     <div class="box-container">
         <div class="box">
 
             <div id="graph">
                 <h2>Disk Usage Over Time</h2>
-                <img src="../assets/img/wsd_disk_usage_over_time.png">
-            </div>
+                <div class="box-container", id="graph-container">
+                    <div class="box" id="throughput-box">
+                        <h3>Average Throughput (MB/s)</h3>
+                        <canvas id="throughputChart"></canvas>
+                    </div>
 
-            <button id="show-button">Refresh Stats</button>
+                    <div class="box" id="iops-box">
+                        <h3>Average IOPS</h3>
+                        <canvas id="iopsChart"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="box">
             <h3>Storage Performance</h3>
 
-            <p>Real-time I/O: <strong>125 MB/s</strong></p>
-            <p>Current IOPS: <strong>4,280</strong></p>
-            <p>Active Processes: <strong>8</strong></p>
-            <p>Files Accessed: <strong>342</strong></p>
+            <p>Total Throughput: <strong id="total-throughput">Waiting for data...</strong></p>
+            <p>Read Throughput: <strong id="read-throughput">Waiting for data...</strong></p>
+            <p>Write Throughput: <strong id="write-throughput">Waiting for data...</strong></p>
+            <p>Total IOPS: <strong id="current-iops">Waiting for data...</strong></p>
+            <p>Read IOPS: <strong id="read-iops">Waiting for data...</strong></p>
+            <p>Write IOPS: <strong id="write-iops">Waiting for data...</strong></p>
+            <p>Devices Reporting: <strong id="devices-reporting">Waiting for data...</strong></p>
+            <p>Last Updated: <strong id="metrics-updated">Waiting for data...</strong></p>
 
-            <h4>Optimization History</h4>
-            <p>IOPS Before: <strong>2,950</strong></p>
-            <p>IOPS After: <strong>4,280</strong></p>
-            <p>IOPS Gained: <strong>+1,330</strong></p>
-            <p>Time Saved: <strong>1.8 seconds</strong></p>
+            <h4>Average I/O Latency</h4>
+            <p>Read Latency: <strong id="read-latency">Not provided</strong></p>
+            <p>Write Latency: <strong id="write-latency">Not provided</strong></p>
         </div>
+
+    </div>
+    
+
+    <!-- US-02: Historical process I/O -->
+    <section id="process-history-section">
+        <h2>Process I/O History</h2>
+
+        <label for="history-process-select">
+            Select application:
+        </label>
+
+        <select id="history-process-select">
+            <option value="">Loading applications...</option>
+        </select>
+
+        <p id="history-status">Collecting process history...</p>
+
+        <div id="process-history-chart-container">
+            <canvas id="processHistoryChart"></canvas>
+        </div>
+    </section>
+
+
+    <div class="box-container">    
+    <!-- US-01: Real-time process I/O / US-02: Process selection -->
+        <section id="process-section">
+            <h2>Application I/O</h2>
+
+            <p id="process-status">Loading process data...</p>
+
+            <p id="selected-process">
+                Select an application to view its history.
+            </p>
+
+            <div id="process-table-wrapper">
+                <table id="process-table">
+                    <thead>
+                        <tr>
+                            <th>Application</th>
+                            <th>PID</th>
+                            <th>Read Rate</th>
+                            <th>Write Rate</th>
+                            <th>Attributed Device</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="process-table-body">
+                        <!-- JavaScript inserts process rows here -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
     </div>
 
-    <div class="box-container">
-        <div class="text-input-container">
-            <label for="process-search">Search for Process:  </label>
-            <input type="text" id="process-search" name="process-search" placeholder="Enter process name...">
-        </div>
-    </div>
-
-    <div class="box-container">
-        <div class="box">
-            <img src="../assets/img/sample_processes.png" title="The User will be able to click and edit these; akin to Task Manager.">
-        </div>
-
-        <div class="box">
-            <h3>Average Process Statistics</h3>
-
-            <p>Average CPU Usage: <strong>4.7%</strong></p>
-            <p>Average Memory Usage: <strong>182 MB</strong></p>
-            <p>Average Read Rate: <strong>18.4 MB/s</strong></p>
-            <p>Average Write Rate: <strong>7.2 MB/s</strong></p>
-            <p>Average IOPS: <strong>620</strong></p>
-            <p>Average I/O Wait: <strong>2.3 ms</strong></p>
-            <p>Average Process Runtime: <strong>14.8 min</strong></p>
-            <p>Active Processes: <strong>37</strong></p>
-        </div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="../js/ui.js"></script>
+    <script type="module" src="../js/main.js"></script>
+    <script type="module" src="../js/processes.js"></script>
+    <script type="module" src="../js/processHistory.js"></script>
+
 </body>
 </html>
