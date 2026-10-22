@@ -11,7 +11,7 @@ def main():
     parser.add_argument("--demo", action="store_true")
     parser.add_argument("--bind", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=5000)
-    parser.add_argument("-data-dir",default=None)
+    parser.add_argument("--data-dir",default=None)
 
     args = parser.parse_args()
     # Initialize the app
