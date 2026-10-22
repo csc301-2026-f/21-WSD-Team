@@ -3,8 +3,9 @@ import threading
 import time
 
 from .constants import *
-from .models import DriveMetric, ProcessMetric, Drive
-from .os_command_api import sample_all_drive, sample_all_process
+from .models import DriveMetric, ProcessMetric, Drive, ErrorCode
+from .drive import sample_all_drive
+from .process import sample_all_process
 
 
 class DiskIOCollector:
@@ -98,24 +99,24 @@ class ProcessIOCollector:
             sleep_time = max(0, next_sample - time.monotonic())
             self._stop_event.wait(sleep_time)
 
-    def get_metric(self, time_interval: int, pid: int) -> ProcessMetric | None:
+    def get_metric(self, time_interval: int, pid: int) -> ProcessMetric | ErrorCode:
 
         if time_interval <= 0:
-            return None
+            raise ValueError("time interval must be positive")
 
         with self._lock:
             if len(self._history) <= time_interval:
-                return None
+                return ErrorCode.INVALID_TIME_INTERVAL
             latest_batch = self._history[-1]
             older_batch = self._history[-(time_interval + 1)]
 
         latest = next((s for p, s in latest_batch.items() if p.pid == pid), None)
         older = next((s for p, s in older_batch.items() if p.pid == pid), None)
         if latest is None or older is None:
-            return None
+            return ErrorCode.PROCESS_NOT_FOUND
 
         if latest.process != older.process:
-            return None
+            return ErrorCode.PROCESS_PID_REUSED
 
         return ProcessMetric(
             timestamp=older.timestamp,

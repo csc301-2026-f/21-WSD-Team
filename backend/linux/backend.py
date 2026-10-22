@@ -1,7 +1,8 @@
-from .models import Drive, Process, DriveMetric, ProcessMetric
+from .models import Drive, Process, DriveMetric, ProcessMetric, ErrorCode
 from .collector import DiskIOCollector, ProcessIOCollector
 
-from .os_command_api import get_all_drive, get_all_process
+from .process import get_all_process
+from .drive import get_all_drive
 
 
 class LinuxBackend:
@@ -102,4 +103,17 @@ class LinuxBackend:
         if not self._started:
             return None
 
-        return self.process_collector.get_metric(interval_seconds, pid)
+        rtn = self.process_collector.get_metric(interval_seconds, pid)
+        if isinstance(rtn, ErrorCode):
+            return None
+        else:
+            return rtn
+
+
+"""    def get_all_process_io(self, interval_seconds: int) -> list[ProcessMetric]:
+        if not self._started:
+            return None
+
+    def get_all_drive_io(self, interval_seconds: int) -> list[DriveMetric]:
+        if not self._started:
+            return None"""
