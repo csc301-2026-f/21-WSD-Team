@@ -62,6 +62,7 @@ def collect_candidates(context, devices, warnings):
         if window is None:
             continue
         row = window["row"]
+        # read times / (read times + write times) >= 80%
         source, reads, writes = row["device_id"], row["read_ops"], row["write_ops"]
         device = devices.get(source)
         if not device or device.get("is_available") is not True:
@@ -79,4 +80,5 @@ def collect_candidates(context, devices, warnings):
             continue
         result.append({"file_id": file_id, "source": source, "size": row["file_size_bytes"],
             "read_rate": rate, "read_ops": reads, "is_mock": is_mock_source(row["source"])})
+    # Tie breaker, choose highest freq; if tie, smaller size file wins; if tie, smaller id wins
     return sorted(result, key=lambda row: (-row["read_rate"], row["size"], row["file_id"]))
