@@ -11,12 +11,10 @@ function closeNav() {
 const button = document.getElementById("show-button");
 const graph = document.getElementById("graph");
 
-button.addEventListener("click", function () {
-    graph.classList.toggle("hidden");
+document.getElementById("navOpenButton")
+    .addEventListener("click", openNav);
 
-    if (graph.classList.contains("hidden")) {
-        button.textContent = "Show Graph";
-    } else {
-        button.textContent = "Hide Graph";
-    }
-});
+document.getElementById("navCloseButton")
+    .addEventListener("click", closeNav);
+
+console.log("UI Module Loaded")

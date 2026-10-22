@@ -17,10 +17,10 @@
         <h1>Wise Storage Director - Main Page</h1>
     </div>
 
-    <span id="navOpenButton" onclick="openNav()">&#9776;</span>
+    <span id="navOpenButton">&#9776;</span>
 
     <div id="mainSidenav" class="sidenav">
-        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <a href="#" id="navCloseButton" class="closebtn">&times;</a>
         <a href="index.html">Main Dashboard</a>
         <a href="task_priority.html">Task Priority</a>
         <a href="stats.html">Disk Usage Statistics</a>
@@ -70,19 +70,11 @@
         </div>
     </div>
 
-    <div class="box-container">
-        <div class="box">
-            <h3>C: Drive - Samsung SSD 980</h3>
-            <p>███████████████████░░░░░░░  72% used</p>
-        </div>
+    
+    <div class="box-container" id="driveContainer">
+        <!-- JavaScript generates a box for each drive here -->
     </div>
 
-    <div class="box-container">
-        <div class="box">
-            <h3>D: Drive - WD Blue HDD</h3>
-            <p>███████████████████░░░░░░░  72% used</p>
-        </div>
-    </div>
 
     <div class="box-container">
         <div class="box" id="big-start">
@@ -116,6 +108,7 @@
         </div>
     </div>
 
-    <script src="../js/ui.js"></script>
+    <script type="module" src="../js/ui.js"></script>
+    <script type="module" src="../js/main.js"></script>
 </body>
 </html>
