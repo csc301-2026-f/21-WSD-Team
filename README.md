@@ -32,6 +32,10 @@ The current D1 version is an interactive prototype and does not yet include the 
 
 ## Instructions
 
+### Linux release
+
+For Ubuntu 24.04 (x86-64). See the [installation guide](packaging/linux/README.md).
+
 ### Running the current prototype
 
 The prototype can be opened locally in either of the following ways.
