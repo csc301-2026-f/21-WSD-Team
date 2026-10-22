@@ -27,3 +27,14 @@ Thumbs.db
 /backend/algorithms/docs/policy_1_jesslyn_reuse.md
 /backend/algorithms/docs/policy_1_learning.md
 /backend/algorithms/docs/policy_1_reference.md
+
+# Local application databases
+/.wsd/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Local virtual environment and test cache
+/.venv/
+.pytest_cache/
