@@ -14,7 +14,11 @@ function getProcessKey(process) {
 }
 
 function formatRate(bytesPerSecond) {
+    if (bytesPerSecond == null) {
+        return "N/A";
+    }
     const value = Number(bytesPerSecond);
+    
 
     if (!Number.isFinite(value) || value < 0) {
         return "N/A";

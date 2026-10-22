@@ -30,9 +30,8 @@ function populateProcessSelect(processes) {
 
         // Store the process identity needed by the history API.
         option.value = JSON.stringify({
-            host_id: process.host_id,
-            pid: process.pid,
-            start_time_utc: process.start_time_utc
+            process_instance_id:
+                `${process.pid}_${process.start_time_utc ?? ""}`
         });
 
         option.textContent =
@@ -57,11 +56,15 @@ function renderHistory(records) {
     );
 
     const readRates = records.map(record =>
-        Number(record.read_bytes_per_sec ?? 0) / 1_000_000
+        record.read_bytes_per_sec == null
+            ? null
+            : Number(record.read_bytes_per_sec) / 1_000_000
     );
 
     const writeRates = records.map(record =>
-        Number(record.write_bytes_per_sec ?? 0) / 1_000_000
+        record.write_bytes_per_sec == null
+            ? null
+            : Number(record.write_bytes_per_sec) / 1_000_000
     );
 
     if (!historyChart) {

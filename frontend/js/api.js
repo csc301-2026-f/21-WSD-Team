@@ -5,20 +5,47 @@ import {
     getMockProcessHistory
 } from "./mockData.js";
 
-// TRUE ONLY FOR TESTING
-const USE_MOCK_DATA = true;
+// Flask backend address from backend/main.py.
+const API_BASE_URL = "";
+
+// Keep true while testing the frontend with mock device/process data.
+// Recommendations always use the real Flask backend.
+const USE_MOCK_DATA = false;
+
+/* SHARED API REQUEST FUNCTION */
 
 async function getJson(path, options = {}) {
-    const response = await fetch(path, options);
+    const url = path.startsWith("http")
+        ? path
+        : `${API_BASE_URL}${path}`;
 
+    const response = await fetch(url, options);
+
+    // Try to extract the backend's error message if the request failed.
     if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
+        let message = `HTTP error ${response.status}`;
+
+        try {
+            const errorResult = await response.json();
+
+            if (errorResult.error) {
+                message += `: ${JSON.stringify(errorResult.error)}`;
+            }
+        } catch {
+            // The response may not contain JSON.
+        }
+
+        throw new Error(message);
     }
 
     const result = await response.json();
 
     if (result.status !== "success") {
-        throw new Error("The API returned an error");
+        const message = result.error
+            ? JSON.stringify(result.error)
+            : "The API returned an error.";
+
+        throw new Error(message);
     }
 
     return result.data;
@@ -56,30 +83,14 @@ export async function getLatestProcesses() {
 
 /* PROCESS HISTORY */
 
-
 export async function getProcessHistory({
-    host_id,
-    pid,
-    start_time_utc,
+    process_instance_id,
     start_utc,
     end_utc,
     bucket_seconds
 }) {
-    if (USE_MOCK_DATA) {
-        return getMockProcessHistory({
-            host_id,
-            pid,
-            start_time_utc,
-            start_utc,
-            end_utc,
-            bucket_seconds
-        });
-    }
-
     const params = new URLSearchParams({
-        host_id,
-        pid: String(pid),
-        start_time_utc,
+        process_instance_id,
         start_utc,
         end_utc
     });
@@ -88,10 +99,17 @@ export async function getProcessHistory({
         params.set("bucket_seconds", String(bucket_seconds));
     }
 
-    return getJson(`/api/v1/processes/history?${params.toString()}`);
+    return getJson(
+        `/api/v1/processes/history?${params.toString()}`
+    );
 }
 
 /* RECOMMENDATIONS */
+
+/*
+ * Recommendations always use Flask.
+ * They are not affected by USE_MOCK_DATA.
+ */
 
 export async function getRecommendations(mode) {
     const params = new URLSearchParams();
@@ -101,6 +119,7 @@ export async function getRecommendations(mode) {
     }
 
     const query = params.toString();
+
     const path = query
         ? `/api/v1/recommendations?${query}`
         : "/api/v1/recommendations";
@@ -110,8 +129,19 @@ export async function getRecommendations(mode) {
 
 /* REFRESH RECOMMENDATIONS */
 
+/*
+ * Calls the backend algorithm and returns its generated recommendations.
+ * This does not mean that any recommended file operation was executed.
+ */
+
 export async function refreshRecommendations() {
     return getJson("/api/v1/recommendations/refresh", {
         method: "POST"
     });
+}
+
+/* BACKEND CAPABILITIES */
+
+export async function getCapabilities() {
+    return getJson("/api/v1/capabilities");
 }
