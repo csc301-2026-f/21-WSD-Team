@@ -34,7 +34,8 @@ The current D1 version is an interactive prototype and does not yet include the 
 
 ### Linux release
 
-For Ubuntu 24.04 (x86-64). See the [installation guide](packaging/linux/README.md).
+For x86 Linux. See the [backend installation guide](packaging/linux/README.md)
+and [frontend walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md).
 
 ### Running the current prototype
 

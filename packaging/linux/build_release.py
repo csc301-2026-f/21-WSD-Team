@@ -107,6 +107,22 @@ def copy_licenses(directory):
     return versions
 
 
+def copy_release_docs(release):
+    source = ROOT / "packaging/linux"
+    shutil.copy2(source / "install.sh", release / "install.sh")
+    readme = (source / "README.md").read_text(encoding="utf-8")
+    readme = readme.replace("../../deliverables/D2/WSD_TA_Frontend_Walkthrough.md",
+                            "docs/WSD_TA_Frontend_Walkthrough.md")
+    (release / "README.md").write_text(readme, encoding="utf-8")
+    if (source / "images").is_dir():
+        shutil.copytree(source / "images", release / "images")
+    docs = release / "docs"
+    docs.mkdir()
+    upstream = ROOT / "deliverables/D2"
+    shutil.copy2(upstream / "WSD_TA_Frontend_Walkthrough.md", docs)
+    shutil.copytree(upstream / "frontend_pictures", docs / "frontend_pictures")
+
+
 def main():
     if sys.platform != "linux" or platform.machine() != "x86_64":
         raise SystemExit("Build on Ubuntu 24.04 x86-64 Linux.")
@@ -136,8 +152,7 @@ def main():
             str(ROOT / "packaging/linux/entrypoint.py"),
         ], check=True, cwd=ROOT)
         shutil.copytree(stage / "frozen/wsd", release / "app")
-        for name in ("install.sh", "README.md"):
-            shutil.copy2(ROOT / "packaging/linux" / name, release / name)
+        copy_release_docs(release)
         (release / "install.sh").chmod(0o755)
         snapshot = ROOT / "packaging/linux/source-snapshot.json"
         sources = {str(path.relative_to(ROOT)): hashlib.sha256(path.read_bytes()).hexdigest()
