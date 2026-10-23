@@ -50,3 +50,13 @@ ssh -L 5500:127.0.0.1:5000 user@host
 
 Start WSD in that SSH session. Keep the session open, then visit
 http://127.0.0.1:5500/ on your own computer.
+
+## License and source
+
+WSD's original source is licensed under GNU GPL version 3. New packages include
+`LICENSE`, `COPYRIGHT.md`, `SOURCE.md`, `source/wsd-source.tar.gz`, and third-party
+notices in `licenses/`. The installer keeps these files beside the installed
+program at `<prefix>/lib/wsd/1.0.0/` (default prefix: `~/.local`).
+
+See [third-party license and release checks](THIRD_PARTY_NOTICES.md), including
+the matching dependency sources required when distributing a binary release.

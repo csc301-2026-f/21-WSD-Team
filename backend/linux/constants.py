@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 DEFAULT_SAMPLE_INTERVAL = 1.0
 MAX_DRIVE_SAMPLE_HISTORY_LENGTH = 600
 MAX_PROCESS_SAMPLE_HISTORY_LENGTH = 10

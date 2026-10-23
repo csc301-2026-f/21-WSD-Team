@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 #data records as proposed in 02.1
 from dataclasses import dataclass
 from typing import Literal

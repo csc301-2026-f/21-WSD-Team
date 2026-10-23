@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+// SPDX-License-Identifier: GPL-3.0-only
 function openNav() {
   document.getElementById("mainSidenav").style.width = "250px";
   document.getElementById("navOpenButton").style.opacity = "0%";

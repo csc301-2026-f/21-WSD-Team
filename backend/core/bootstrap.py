@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """This file is used to wire the existing modules. Host ID will be generated here."""
 import sys
 import uuid

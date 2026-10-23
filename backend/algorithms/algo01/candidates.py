@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Select the latest usable FileActivity window; never sum overlapping history."""
 from collections import defaultdict
 from ..common.validation import is_integer, is_text, is_fresh, parse_utc, is_mock_source

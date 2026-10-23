@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """D2 recommendation-only entry using the current shared record fields.
 
 All timestamps and identities come from inputs. No OS calls, SQL, clock reads,
