@@ -419,7 +419,7 @@ PR: Pending. CORE integration has not been completed.
 - [x] **TODO · PRODUCER** — Signature and input/output schemas filled in; sample values supplied.
 - [x] **TODO · PRODUCER** — Errors, capability limits and unsupported cases documented.
 - [ ] **TODO · CONSUMER(S)** — API provides the needed fields and behavior, or a mutually agreed fallback.
-- [ ] **TODO · JUAN** — Test fixture and validation/negative-test plan available.
+- [x] **TODO · JUAN** — Test fixture and validation/negative-test plan available.
 - [ ] **TODO · PRODUCER + CONSUMER** — Agreement recorded in the PR discussion.
 - [ ] **TODO · IMPLEMENTED** — Callable implementation merged.
 - [ ] **TODO · VERIFIED** — Automated tests passed with linked evidence.
@@ -1310,8 +1310,8 @@ Each tick means **the test exists, has been run, and its results are linked**. U
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-DB-02:** Empty history / unavailable file telemetry.
   - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-ALG-01:** RAID0 algorithm contract with valid/invalid inputs.
-  - **Test path / result / CI run:** _Fill in after running._
+- [x] **TODO · JUAN** — **T-ALG-01:** RAID0 algorithm contract with valid/invalid inputs.
+  - **Test path / result / CI run:** Unit tests by John in `backend/algorithms/algo01/tests/` (41 pass); fixtures and expected outputs reviewed by Juan in #22; run automatically in CI (#23).
 - [ ] **TODO · JUAN** — **T-ALG-02:** SSD cache capacity guard.
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-ALG-03:** Policy/goal change and stable output schema.
@@ -1322,8 +1322,12 @@ Each tick means **the test exists, has been run, and its results are linked**. U
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-E2E-01:** End-to-end data IDs and recommendation flow.
   - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-ACT-01:** Preview/approval/interruption safety — LATER.
-  - **Test path / result / CI run:** _Fill in after running._
+- [x] **TODO · JUAN** — **T-ACT-01:** Preview/approval/interruption safety — LATER.
+  - **08.4 | Reproducible benchmark contract
+- [x] **TODO · JUAN** — ALGO-02 QA contract tests (mode `ssd_caching`, original never moved, capacity guard T-ALG-02) once John's ALGO-02 is ready.
+- [x] **TODO · JUAN** — T-HTTP-01 for HTTP-01m `/processes/history` once the endpoint exists.
+- [x] **TODO · JUAN** — Test duplicate/replayed ingestion (required by §04.2, not yet covered).
+- [x] **TODO · JUAN** — QA-02 benchmark plan for US-07 baselines (§04 delegates time-saved evidence to QA).
 
 ### 08.4 | Reproducible benchmark contract
 
@@ -1354,18 +1358,18 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
 > **IF YOU OWN QA/DEVOPS:** Please complete the **TODO** items with implementation details and links to test code, fixtures, runs, or PRs.
 
 
-- [ ] **TODO · JUAN** — Test framework and Python version(s)
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Test framework and Python version(s)
+  - **Answer / evidence:** `unittest` (standard library, no installs). CI runs Python 3.10 (minimum supported) and 3.12. See `.github/workflows/tests.yml` (#23). DB tests will use `pytest` once merged.
 - [x] **TODO · JUAN** — Fixtures format/schema source of truth
   - **Answer / evidence:** JSON files in `tests/fixtures/` (Juan-branch). Source of truth = §02 of this doc. Any schema change = one PR updating §02 + fixtures together. Fixtures are MOCK until producers send real payloads (§08.4.2).
-- [ ] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
+  - **Answer / evidence:** Every PR + push to `main`: automated tests on mock data only (currently ALGO-01 unit tests, #23). Manual only: benchmarks on real SSD+HDD (QA-02) and storage-action safety tests on disposable files (T-ACT-01, later).
 - [ ] **TODO · JUAN** — Mocking approach when Windows/Linux test host is unavailable
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JUAN** — Benchmark tools/commands, workload methodology, result format
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · JUAN** — CI runner/OS compatibility, commands, time budget, branch/PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — CI runner/OS compatibility, commands, time budget, branch/PR
+  - **Answer / evidence:** GitHub Actions, `ubuntu-latest` + `windows-latest` × Python 3.10/3.12 (4 jobs), 10-min timeout, runs on every PR and push to `main`. (#23)
 - [ ] **TODO · JUAN** — Add D1 Q4 traceability test plan: US-01 live process metrics; US-02 per-app history; US-03/04 action safety; US-05 recommendation; US-06 auto-mode opt-in; US-07 evidence-based estimated time saved.
   - **Answer / evidence:** _Write here, or link fixtures/tests / PR; then check the box above._
 - [ ] **TODO · JUAN** — First runnable example: validate one fixture + print pass/fail
