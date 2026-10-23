@@ -32,6 +32,11 @@ The current D1 version is an interactive prototype and does not yet include the 
 
 ## Instructions
 
+### Linux release
+
+For x86 Linux. See the [backend installation guide](packaging/linux/README.md)
+and [frontend walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md).
+
 ### Running the current prototype
 
 The prototype can be opened locally in either of the following ways.
