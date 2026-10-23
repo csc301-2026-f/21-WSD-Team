@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """QA contract tests for ALGO-01 (T-ALG-01), written from the QA side.
 
 John's unit tests (backend/algorithms/algo01/tests) check how the algorithm

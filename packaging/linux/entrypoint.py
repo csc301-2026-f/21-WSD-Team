@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Frozen Linux launcher; reuse the existing backend and keep user data separate."""
 import os
 from pathlib import Path

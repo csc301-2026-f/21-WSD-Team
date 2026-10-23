@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 from .normalization import (normalize_windows_device,
                             normalize_windows_device_metric,
                             normalize_windows_process_metric,

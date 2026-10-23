@@ -2,11 +2,15 @@
 
 Wise Storage Director (WSD) is a cross-platform storage management and optimization application designed to help users make better use of storage devices with different performance characteristics.
 
-## Partner Intro
+## Project Overview
 
-WSD is a student-proposed CSC301 project and does not have an external partner organization.
+Wise Storage Director (WSD) is a storage monitoring and optimization application designed to help users manage systems containing both SSDs and HDDs.
 
-The project is developed by Team 21 as part of CSC301 at the University of Toronto.
+Different storage devices provide different levels of performance, yet users often lack the information needed to decide which files and workloads should benefit from faster storage.
+
+Our project addresses this problem by monitoring disk and process I/O activity, presenting performance information through a web interface, and providing recommendations for storage optimization.
+
+**Partner Information:** WSD is a student-proposed CSC301 project without an external partner organization.
 
 ## Project Description
 
@@ -16,111 +20,133 @@ WSD monitors storage activity, presents information such as throughput, IOPS, la
 
 The project aims to improve storage performance while keeping storage-management decisions understandable and controllable by the user.
 
-## Key Features
+## Key Features — Deliverable 2
 
-The current prototype includes:
+Our D2 implementation focuses on three primary user stories.
 
-- A dashboard showing detected storage devices and storage usage.
-- Storage performance statistics such as IOPS and throughput.
-- Process and workload information.
-- Storage optimization recommendations.
-- Configurable workload priorities.
-- SSD caching and storage-pooling configuration mockups.
-- Support for both simplified controls and more detailed options for advanced users.
+### US-01: Real-Time Process I/O Monitoring
 
-The current D1 version is an interactive prototype and does not yet include the complete storage-management backend.
+- Identify running processes by name and PID.
+- Monitor per-process read and write activity.
+- Display updated I/O statistics through the frontend.
 
-## Instructions
+### US-02: Historical I/O Statistics
 
-### Linux release
+- Collect and store I/O measurements using SQLite.
+- Display historical process I/O activity.
+- Visualize disk throughput and IOPS over time.
 
-For x86 Linux. See the [backend installation guide](packaging/linux/README.md)
-and [frontend walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md).
+### US-05: Storage Optimization Recommendations
 
-### Running the current prototype
+- Analyze file access patterns and available storage capacity.
+- Generate file-placement recommendations using ALGO-01.
+- Display recommended source and target devices, reasons, and constraints.
 
-The prototype can be opened locally in either of the following ways.
+**D2 Limitation:** US-05 uses mock file-level activity data because real file-level monitoring is not yet integrated. Recommendations are advisory only; WSD does not automatically migrate or cache files.
 
-### Option 1: Open directly in a browser
+## Installation and Usage
 
-Open:
+### Download
 
-`frontend/html/index.html`
+The current packaged release is available for **Ubuntu 24.04 x86-64 Linux**.
 
-in a modern web browser.
+**[Download WSD v1.0.0](https://github.com/csc301-2026-f/21-WSD-Team/releases/tag/v1.0.0)**
 
-### Option 2: Run with Python
+The package includes a standalone executable and an installation script.
 
-From the repository root, run:
+For complete installation instructions, system requirements, and remote-access instructions, see the **[Linux Installation Guide](packaging/linux/README.md)**.
 
-```bash
-python backend/main.py
-```
+### Running WSD
 
-This will open the frontend prototype in the default web browser.
+After installation, choose one of the following modes.
 
-No account or login is required for the current prototype.
-
-## Development Requirements
-
-For the current D1 prototype:
-
-- Python 3
-- A modern web browser
-- Git
-- Windows or Linux
-
-The frontend currently uses:
-
-- HTML
-- CSS
-- JavaScript
-
-The backend and storage-management components are still under development. We are currently considering Python for the initial Windows and Linux backend agents.
-
-## Deployment and GitHub Workflow
-
-Project work is coordinated using GitHub and Discord.
-
-Team members work on separate Git branches and submit changes through pull requests. Pull requests are reviewed by other team members before being merged into the `main` branch.
-
-GitHub Issues are used to track important project tasks and deliverables. Discord is used for day-to-day communication, progress updates, and technical discussion.
-
-The team also holds a weekly meeting, normally on Tuesday at 7 PM, to review progress, discuss blockers, assign work, and make design decisions.
-
-## Coding Standards and Guidelines
-
-Code should be readable, modular, and clearly named. Team members should avoid unnecessary duplication and document non-obvious behaviour where appropriate.
-
-Changes should be tested before being submitted through a pull request.
-
-## Licenses
-
-WSD is a student-proposed project and the team currently intends to keep the project open source.
-
-The exact open-source license has not yet been selected and will be finalized as development progresses.
-
-## Deployed URL / Access Instructions
-
-The D1 prototype currently runs locally and is not deployed to a public server.
-
-To access it, clone the repository and either open:
-
-`frontend/html/index.html`
-
-or run:
+**Real Mode — Disk and Process Monitoring**
 
 ```bash
-python backend/main.py
+~/.local/bin/wsd
 ```
+
+Collects real disk and process I/O measurements from the Linux operating system.
+
+**Demo Mode — Storage Recommendations**
+
+```bash
+~/.local/bin/wsd --demo
+```
+
+Uses sample file-activity data to demonstrate storage placement recommendations.
+
+Once started, open:
+
+**http://127.0.0.1:5000/**
+
+Stop the current mode using `Ctrl+C` before switching modes.
+
+## Testing the Main Features
+
+| User Story | Mode | How to Test |
+|---|---|---|
+| US-01: Real-Time Process I/O | Real | Open **Disk Usage Statistics**, locate the **Application I/O** table, and observe process read/write activity. |
+| US-02: Historical I/O | Real | Open **Disk Usage Statistics**, select a process under **Process I/O History**, and observe its collected activity over time. |
+| US-05: Storage Recommendations | Demo | Open **Main Dashboard**, click **Refresh Recommendations**, and review the generated placement suggestions. |
+
+For screenshots and additional testing instructions, see the **[Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)**.
+
+## System Architecture
+
+WSD uses a modular architecture:
+
+**OS Agent → CORE → Database / Algorithms → HTTP API → Frontend**
+
+- **OS Agent:** Collects storage device information and I/O statistics.
+- **CORE:** Coordinates communication and data processing across components.
+- **Database:** Stores devices, historical I/O measurements, and recommendations using SQLite.
+- **Algorithms:** Evaluate storage activity and generate optimization recommendations.
+- **HTTP API:** Exposes monitoring data and recommendations through Flask.
+- **Frontend:** Presents device information, performance charts, process statistics, and recommendations.
+
+For detailed component interfaces and data structures, see [API Contracts](docs/api-contracts.md).
+
+## Current Limitations and Future Development
+
+The D2 release supports real I/O monitoring on Linux. Windows Agent development has also begun, but full Windows integration is not included in this release.
+
+Real file-level activity monitoring, automatic file migration, and executable SSD caching remain outside the current D2 implementation.
+
+Future iterations will focus on extending platform support, integrating additional recommendation algorithms, and improving end-to-end testing.
+
+## Development and GitHub Workflow
+
+Team development is organized using feature branches and pull requests.
+
+Changes are reviewed before being merged into `main`. GitHub Actions is used to automatically run selected unit and contract tests across supported Python versions and operating systems.
+
+Team coordination takes place through regular meetings, GitHub Issues, and Discord.
+
+## Documentation
+
+- [Linux Installation Guide](packaging/linux/README.md)
+- [D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)
+- [API Contracts](docs/api-contracts.md)
+- [D2 Iteration Review](deliverables/D2/iteration-02-review.md)
+- [Individual Contributions](deliverables/D2/Individual_Contributions_Deliverable2.md)
+- [AI Usage Disclosure](deliverables/D2/AI_usage.md)
+
+## License
+
+Wise Storage Director is licensed under the **GNU General Public License version 3 (GPLv3)**.
+
+We selected GPLv3 to keep WSD open source and ensure that redistributed derivative versions preserve the freedoms to access, modify, and share the software under the same license.
+
+See [LICENSE](LICENSE) for the complete license terms and [COPYRIGHT.md](COPYRIGHT.md) for ownership and third-party licensing.
 
 ## Team
 
-- John Deng — Coordination and Algorithm Design
-- Jesslyn — Algorithm Design
-- Mohan — Linux Backend
-- Enrique — Windows Backend
-- Shengrong — Cross-platform Backend Integration
-- Danny — Frontend
-- Sahil — Database
-- Juan — Benchmarking, Validation, QA, and DevOps
+- **John Deng:** Team Lead, Algorithm Design, and Integration
+- **Shengrong Wang:** CORE and HTTP API Integration
+- **Mohan Sun:** Linux Backend
+- **Enrique Alvarez Habegger:** Windows Backend
+- **Sahil Pathak:** Database
+- **Jesslyn Perdana:** Algorithm Design
+- **Danny Tran:** Frontend
+- **Juan Alexander:** QA, Testing, and CI

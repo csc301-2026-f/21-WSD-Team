@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 # Install this release for the current user. No network or Python is needed.
 set -eu
 prefix="$HOME/.local"
@@ -23,6 +25,12 @@ if [ "$major" -lt 2 ] || { [ "$major" -eq 2 ] && [ "$minor" -lt 39 ]; }; then
     exit 1
 fi
 source_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+for item in LICENSE COPYRIGHT.md THIRD_PARTY_NOTICES.md SOURCE.md licenses source BUILD-INFO.json build-environment.txt; do
+    if [ ! -e "$source_dir/$item" ]; then
+        echo "Incomplete release: missing $item" >&2
+        exit 1
+    fi
+done
 destination="$prefix/lib/wsd/1.0.0"
 launcher="$prefix/bin/wsd"
 if [ -e "$destination" ] || [ -e "$launcher" ] || [ -L "$launcher" ]; then
@@ -31,6 +39,9 @@ if [ -e "$destination" ] || [ -e "$launcher" ] || [ -L "$launcher" ]; then
 fi
 mkdir -p "$prefix/lib/wsd" "$prefix/bin"
 cp -R "$source_dir/app" "$destination"
+for item in LICENSE COPYRIGHT.md THIRD_PARTY_NOTICES.md SOURCE.md licenses source BUILD-INFO.json build-environment.txt; do
+    cp -R "$source_dir/$item" "$destination/"
+done
 ln -s "$destination/wsd" "$launcher"
 printf 'Installed WSD 1.0.0. Start with:\n  "%s" --demo\n  "%s"\n' "$launcher" "$launcher"
 echo 'Open http://127.0.0.1:5000/ after startup. Stop with Ctrl+C.'

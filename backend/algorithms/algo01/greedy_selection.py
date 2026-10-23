@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """D2 advice uses one SSD per evaluation; no shared-space identity is assumed."""
 from ..common.recommendations import make_recommendation
 

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """D2 capacity totals from the existing Device fields; no disk operations."""
 import math
 from .validation import is_integer, is_text
