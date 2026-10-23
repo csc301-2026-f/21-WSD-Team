@@ -22,9 +22,9 @@ This document outlines the extent of generative AI assistance used during the de
 
 ## Algorithm 2 (`backend/algorithms/algo02/`)
 
-**Tools:** TODO
+**Tools:** Gemini
 
-**Usage:** TODO
+**Usage:** AI was used as a reference for problem-solving and exploring implementation approaches when encountering difficulties. AI-generated solutions were not directly copied into the implementation.
 
 ## Backend Integration (`backend/core/bootstrap.py`, `backend/main.py`)
 
@@ -40,19 +40,19 @@ This document outlines the extent of generative AI assistance used during the de
 
 ## CORE & HTTP API (`backend/core/`)
 
-**Tools:** TODO
+**Tools:** ChatGPT
 
-**Usage:** TODO
+**Usage:** AI was used to identify and summarize changes in APIs across different components, including naming conventions and data structure differences, to assist with backend integration.
 
 ## Database (`backend/db/`)
 
-**Tools:** TODO
+**Tools:** ChatGPT
 
-**Usage:** TODO
+**Usage:** AI assisted in addressing database design challenges, including preventing process identity collisions using PID and start time, improving SQLite concurrency through Write-Ahead Logging (WAL), and designing SQL-based time bucketing for historical I/O aggregation.
 
 ## QA & Testing (`tests/`, `.github/workflows/`)
 
-**Tools:** TODO
+**Tools:** Claude
 
-**Usage:** TODO
+**Usage:** AI assisted in drafting mock JSON test fixtures based on the API contract schemas and setting up GitHub Actions workflows for automated ALGO-01 testing.
 
