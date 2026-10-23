@@ -10,9 +10,9 @@ This document outlines the extent of generative AI assistance used during the de
 
 ## Windows Backend (`backend/windows/`)
 
-**Tools:** TODO
+**Tools:** ChatGPT
 
-**Usage:** TODO
+**Usage:** AI was used to explore unfamiliar library APIs, generate initial ETW and WMI prototypes, and interpret runtime errors. The generated prototypes were subsequently reviewed, either rewritten manually or adapted and integrated into the larger implementation.
 
 ## Algorithm 1 (`backend/algorithms/algo01`)
 
