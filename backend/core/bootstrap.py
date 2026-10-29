@@ -45,17 +45,9 @@ def create_application(*, demo_mode=False, data_dir=None):
 
     else:
         if sys.platform.startswith("win32"): # must be linux for D2
-            from backend.windows.backend import WindowsBackend
-            from backend.windows.device_provider import DeviceProvider
-            from backend.windows.transport import EtwTransport
-            from backend.windows.etw_source import EtwSource, EtwDecoder
-
-            device_provider = DeviceProvider(host_id)
-            etw_transport = EtwTransport()
-            etw_decoder = EtwDecoder(device_provider)
-            etw_source = EtwSource(etw_transport, etw_decoder)
+            from backend.windows import create_backend
             active_repository = real_repository
-            windows_backend = WindowsBackend(host_id, etw_source, device_provider)
+            windows_backend = create_backend(host_id)
             agent = WindowsAgentAdapter(windows_backend)
         else:
             from backend.linux.backend import LinuxBackend
