@@ -9,8 +9,9 @@ def select_files_greedy(candidates, capacity, max_recommendations, warnings):
     """
     selected = []
     remaining_space = capacity # remaining space on SSD
+    sorted_candidates = sorted(candidates, key=lambda row: (-row["read_rate"], row["size"], row["file_id"]))
 
-    for row in candidates:
+    for row in sorted_candidates:
         if row["size"] > remaining_space:
             warnings.add("insufficient_ssd_capacity")
             continue
