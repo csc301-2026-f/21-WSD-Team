@@ -35,11 +35,12 @@ def normalize_windows_process_metric(metrics) -> list[dict]:
         normalized_process_metrics.append(process_metric_dict)
     return normalized_process_metrics
 
-#TODO Found different in Windows backend
 def normalize_windows_file_activity(activities) -> list[dict]:
     normalized_file_activity = []
     for activity in activities:
         file_activity_dict = asdict(activity)
+        if file_activity_dict["device_id"] is not None:
+            file_activity_dict["device_id"] = str(file_activity_dict["device_id"])
         normalized_file_activity.append(file_activity_dict)
     return normalized_file_activity
 
