@@ -2,6 +2,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
 
 from typing import NamedTuple
+MAX_DP_STATES = 10000
+MAX_DP_TRANSITIONS = 200_000
+
+class KnapsackBudgetExceeded(RuntimeError):
+    """Raised when Knapsack exceeds its computational budget"""
+    pass
 
 class StateKey(NamedTuple):
     used_space: int
@@ -42,11 +48,17 @@ def select_files_knapsack(candidates, capacity, max_recommendations, warnings):
         - List of selected candidate rows
     """
     states = {StateKey(used_space=0, file_count=0): StateValue(total_read_rate=0.0, selected_indices=())}
+    transition_count = 0
 
     for index, row in enumerate(candidates): #iterate thru candidates
         next_states = states.copy() # start from last time states, avoiding choosing file repeatedly
 
         for key, value in states.items(): # try add this file to every DP state
+            transition_count += 1
+
+            if transition_count > MAX_DP_TRANSITIONS:
+                raise KnapsackBudgetExceeded("DP transition budget exceeded")
+            
             new_space = key.used_space + row["size"]
             new_count = key.file_count + 1
             new_value = value.total_read_rate + row["read_rate"]
@@ -62,6 +74,9 @@ def select_files_knapsack(candidates, capacity, max_recommendations, warnings):
 
             if existing is None or new_state.total_read_rate > existing.total_read_rate: # if no same StateKey in saved States or curr read rate value is higher
                 next_states[new_key] = new_state
+
+                if len(next_states) > MAX_DP_STATES:
+                    raise KnapsackBudgetExceeded("DP state budget exceeded")
 
         states = prune_dominated_states(next_states)
 

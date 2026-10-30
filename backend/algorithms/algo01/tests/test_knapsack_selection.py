@@ -4,11 +4,15 @@
 import random
 import time
 import pytest
+import json
 import backend.algorithms.algo01.knapsack_selection as knapsack_module
+from pathlib import Path
 from unittest.mock import patch
-from backend.algorithms.algo01.knapsack_selection import select_files_knapsack
-from backend.algorithms.algo01.knapsack_selection import (StateKey, StateValue, prune_dominated_states)
 from itertools import combinations
+from backend.algorithms.algo01 import evaluate_raid0_policy
+from backend.algorithms.algo01.knapsack_selection import select_files_knapsack, KnapsackBudgetExceeded
+from backend.algorithms.algo01.knapsack_selection import (StateKey, StateValue, prune_dominated_states)
+from backend.algorithms.algo01.strategy_controller import select_files
 
 gb = 1024 ** 3
 
@@ -211,6 +215,137 @@ def benchmark_knapsack():
             f" | Total Pruned: {stats.total_pruned}"
         )
 
+# Knapsack should stop when exceeding the DP state budget
+def test_knapsack_budget_exceeded(monkeypatch):
+    monkeypatch.setattr(knapsack_module, "MAX_DP_STATES", 1)
+
+    candidates = [
+        {"file_id": "A", "size": 1 * gb, "read_rate": 10},
+        {"file_id": "B", "size": 1 * gb, "read_rate": 9},
+    ]
+
+    with pytest.raises(KnapsackBudgetExceeded):
+        select_files_knapsack(
+            candidates,
+            capacity=2 * gb,
+            max_recommendations=2,
+            warnings=set()
+        )
+
+# A case with sufficient budget
+def test_strategy_uses_knapsack():
+    candidates = [
+        {"file_id": "A", "size": 6 * gb, "read_rate": 10},
+        {"file_id": "B", "size": 5 * gb, "read_rate": 9},
+        {"file_id": "C", "size": 5 * gb, "read_rate": 9},
+    ]
+
+    selected = select_files(candidates, 10 * gb, 2, set())
+
+    assert [row["file_id"] for row in selected] == ["B", "C"]
+
+# A case with insufficient budget
+def test_strategy_falls_back_to_greedy(monkeypatch):
+    monkeypatch.setattr(knapsack_module, "MAX_DP_STATES", 1)
+
+    candidates = [
+        {"file_id": "A", "size": 6 * gb, "read_rate": 10},
+        {"file_id": "B", "size": 5 * gb, "read_rate": 9},
+        {"file_id": "C", "size": 5 * gb, "read_rate": 9},
+    ]
+
+    warnings = set()
+
+    selected = select_files(candidates, 10 * gb, 2, warnings)
+
+    assert [row["file_id"] for row in selected] == ["A"]
+    assert "knapsack_budget_exceeded" in warnings
+
+# A test avoid exceed for total state limit
+def test_knapsack_transition_budget_exceeded(monkeypatch):
+    monkeypatch.setattr(knapsack_module, "MAX_DP_TRANSITIONS", 1)
+
+    candidates = [
+        {"file_id": "A", "size": 1 * gb, "read_rate": 10},
+        {"file_id": "B", "size": 1 * gb, "read_rate": 9},
+    ]
+
+    with pytest.raises(KnapsackBudgetExceeded):
+        select_files_knapsack(
+            candidates, 2 * gb, 2, set()
+        )
+
+# A test indicate if integration really fallback
+def test_strategy_falls_back_on_transition_budget(monkeypatch):
+    monkeypatch.setattr(knapsack_module, "MAX_DP_TRANSITIONS", 1)
+
+    candidates = [
+        {"file_id": "A", "size": 6 * gb, "read_rate": 10},
+        {"file_id": "B", "size": 5 * gb, "read_rate": 9},
+        {"file_id": "C", "size": 5 * gb, "read_rate": 9},
+    ]
+
+    warnings = set()
+    selected = select_files(candidates, 10 * gb, 2, warnings)
+
+    assert [row["file_id"] for row in selected] == ["A"]
+    assert "knapsack_budget_exceeded" in warnings
+
+# An helper generate 3 files
+def make_integration_payload():
+    fixture = Path(__file__).parent / "fixtures" / "d2-temp-valid.json"
+    data = json.loads(fixture.read_text(encoding="utf-8"))
+
+    data["mode_config"] = {
+        "reserve_bytes": 0,
+        "reserve_fraction": 0,
+        "max_recommendations": 2
+    }
+
+    data["devices"][1]["free_bytes"] = 10 * gb
+
+    base = data["history"]["file_activity"][0]
+
+    files = [
+        ("A", 6, 600),
+        ("B", 5, 540),
+        ("C", 5, 540)
+    ]
+
+    data["history"]["file_activity"] = [
+        {
+            **base,
+            "file_id": file_id,
+            "path": f"/mock/hdd-1/{file_id}.dat",
+            "file_size_bytes": size * gb,
+            "read_ops": reads
+        }
+        for file_id, size, reads in files
+    ]
+
+    return data
+
+def test_policy_uses_knapsack():
+    """Test Knap enabled"""
+    data = make_integration_payload()
+
+    result = evaluate_raid0_policy(**data)
+
+    assert [row["file_id"] for row in result] == ["B", "C"]
+    assert all(row["action"] == "move" for row in result)
+    assert all(len(row) == 11 for row in result)
+
+def test_policy_falls_back_to_greedy(monkeypatch):
+    """Test fall back"""
+    monkeypatch.setattr(knapsack_module, "MAX_DP_STATES", 1)
+
+    data = make_integration_payload()
+
+    result = evaluate_raid0_policy(**data)
+
+    assert [row["file_id"] for row in result] == ["A"]
+    assert all(row["action"] == "move" for row in result)
+    assert all(len(row) == 11 for row in result)
 
 if __name__ == "__main__":
     benchmark_knapsack()

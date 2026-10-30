@@ -22,14 +22,14 @@ def select_files_greedy(candidates, capacity, max_recommendations, warnings):
             break;
     return selected
 
-def select_recommendations(candidates, budgets, context, warnings, *, execution_supported):
+def select_recommendations(candidates, budgets, context, warnings,*,execution_supported, selector=None):
     """Use one target budget, deducting whole-file sizes across the entire result."""
     if not budgets:
         return []
     # Current Device records cannot distinguish independent drives from aliases.
     # Selecting one target avoids counting the same underlying space twice.
     target = min(budgets, key=lambda key: (-budgets[key], key))
-    selected = select_files_greedy(
+    selected = (selector or select_files_greedy)(
         candidates,
         budgets[target],
         context.config["max_recommendations"],
