@@ -72,7 +72,7 @@ def normalize_linux_device_metric(metrics, host_id) -> list[dict]:
         metric_dict = {"host_id": host_id,
                        "device_id": tup[0],
                        "timestamp_utc": metric.timestamp,
-                       "sample_window_seconds": metric.duration,
+                       "sample_window_seconds": float(metric.duration),
                        "read_bytes_per_sec": metric.read_bytes / metric.duration,
                        "write_bytes_per_sec": metric.write_bytes / metric.duration,
                        "read_iops": metric.read_count / metric.duration,
@@ -94,7 +94,7 @@ def normalize_linux_process_metric(metrics, host_id) -> list[dict]:
             "start_time_utc": process.start_time_timestamp,
             "process_name": process.name,
             "timestamp_utc": metric.timestamp,
-            "sample_window_seconds": metric.duration,
+            "sample_window_seconds": float(metric.duration),
             "read_bytes_per_sec": metric.read_bytes / metric.duration,
             "write_bytes_per_sec": metric.write_bytes / metric.duration,
             "attributed_device_id": None} #TODO data not provide
