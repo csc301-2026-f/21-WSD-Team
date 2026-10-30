@@ -83,5 +83,6 @@ def select_files_knapsack(candidates, capacity, max_recommendations, warnings):
     # Select the best state: maximize read rate, then minimize used space and file count.
     _, best_state = max(states.items(), key=lambda item: (item[1].total_read_rate, -item[0].used_space, -item[0].file_count)) 
     selected = [candidates[index] for index in best_state.selected_indices]
+    selected = sorted(selected, key=lambda row: (-row["read_rate"], row["size"], row["file_id"]))
 
     return selected

@@ -107,8 +107,8 @@ def test_dominance_pruning():
 def test_knapsack_against_bruteforce(seed, capacity):
     candidates = generate_candidates(10, seed=seed)
     max_recommendations = 5
-    capacity = 1 * gb
-    max_recommendations = 5
+    # capacity = 1 * gb
+    # max_recommendations = 5
 
     # Our Knapsack DP
     selected = select_files_knapsack(
