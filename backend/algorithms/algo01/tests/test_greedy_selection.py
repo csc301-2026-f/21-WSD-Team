@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 from backend.algorithms.algo01.greedy_selection import select_files_greedy
 
 def test_greedy_sorts_candidates_independently():
