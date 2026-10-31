@@ -70,7 +70,8 @@ class EventAggregator:
 
         end_ns = now_ns if now_ns is not None else time.time_ns()
         start_ns = end_ns - int(sample_window_seconds * 1e9)
-        events = self._snapshot(start_ns, end_ns)
+        snapshot = self._snapshot(start_ns, end_ns)
+        events = [e for e in snapshot if e.source == "diskIO"]
 
         results = []
 
@@ -81,26 +82,9 @@ class EventAggregator:
             reads = [e for e in selected if e.operation == "read"]
             writes = [e for e in selected if e.operation == "write"]
             #print(f"R/W in snapshot at time {end_ns} : {len(reads)}, {len(writes)}")
-            def byte_total(items: list[RawIoEvent]) -> int | None:
-                if not items or any(
-                    e.transferred_bytes is None for e in items
-                ):
-                    return None #means unavailable, something went wrong
-                return sum(e.transferred_bytes for e in items)
 
-            def average_latency(
-                items: list[RawIoEvent],
-            ) -> float | None:
-                durations = [
-                    e.duration_ns for e in items
-                    if e.duration_ns is not None
-                ]
-                if not durations:
-                    return None
-                return sum(durations) / len(durations) / 1_000_000
-
-            read_bytes = byte_total(reads)
-            write_bytes = byte_total(writes)
+            read_bytes = self._byte_total(reads)
+            write_bytes = self._byte_total(writes)
 
             results.append(DeviceMetric(
                 host_id=self.host_id,
@@ -117,8 +101,8 @@ class EventAggregator:
                 ),
                 read_iops=len(reads) / sample_window_seconds,
                 write_iops=len(writes) / sample_window_seconds,
-                avg_read_latency_ms=average_latency(reads),
-                avg_write_latency_ms=average_latency(writes),
+                avg_read_latency_ms=self._average_latency(reads),
+                avg_write_latency_ms=self._average_latency(writes),
                 source="windows_etw",
             ))
 
@@ -136,17 +120,14 @@ class EventAggregator:
         start_ns = end_ns - int(sample_window_seconds * 1e9)
         events = self._snapshot(start_ns, end_ns)
 
-        process_keys = {
-            (e.pid, e.process_start_time_utc)
-            for e in events if e.pid is not None
-        }
+        process_keys ={e.pid for e in events if e.pid is not None}
         results = []
 
-        for pid, process_start in process_keys:
+        for pid in process_keys:
             selected = [
                 e for e in events
                 if e.pid == pid
-                and e.process_start_time_utc == process_start
+                and e.source == "fileIO"
             ]
             reads = [e for e in selected if e.operation == "read"]
             writes = [e for e in selected if e.operation == "write"]
@@ -156,19 +137,10 @@ class EventAggregator:
                 if e.device_id is not None
             }
 
-            def rate(items: list[RawIoEvent]) -> float | None:
-                if not items or any(
-                    e.transferred_bytes is None for e in items
-                ):
-                    return None #if there's a None somewhere, it's contagious
-                return sum(
-                    e.transferred_bytes for e in items
-                ) / sample_window_seconds
-
             results.append(ProcessMetric(
                 host_id=self.host_id,
                 pid=pid,
-                start_time_utc=process_start,
+                start_time_utc=None,
                 process_name=next(
                     (e.process_name for e in reversed(selected)
                      if e.process_name),
@@ -176,14 +148,15 @@ class EventAggregator:
                 ),
                 timestamp_utc=utc_timestamp(end_ns),
                 sample_window_seconds=sample_window_seconds,
-                read_bytes_per_sec=rate(reads),
-                write_bytes_per_sec=rate(writes),
+                read_bytes_per_sec=self._rate(reads,sample_window_seconds),
+                write_bytes_per_sec=self._rate(writes,sample_window_seconds),
                 attributed_device_id=(
                     next(iter(devices)) if len(devices) == 1 else None
                 ),
             ))
 
         return results
+    
     def file_activity(
             self,
             sample_window_seconds: float,
@@ -191,4 +164,72 @@ class EventAggregator:
         ) -> list[FileActivity]:
         if sample_window_seconds <= 0:
             raise ValueError("Sample window must be positive")
-        raise NotImplementedError("file attribution not yet implemented")
+        
+        end_ns = now_ns if now_ns is not None else time.time_ns()
+        start_ns = end_ns - int(sample_window_seconds * 1e9)
+        snapshot = self._snapshot(start_ns, end_ns)
+        events = [e for e in snapshot if e.source == "fileIO"]
+        results = []
+        files = dict()
+        #sort by letterless path, may lead to aliasing if two disks are set up the exact same way
+        for e in events: files.setdefault(e.path,[]).append(e)
+        if files is not None: 
+            for filepath, file_events in files.items():
+                if filepath is None: continue #malformed
+                selected = file_events #all events pertaining to a given path
+                reads = [e for e in selected if e.operation == "read"]
+                writes = [e for e in selected if e.operation == "write"]
+                file_id = next((e.file_id for e in file_events if e.file_id is not None), None)
+                disk_number = next((e.device_id for e in file_events if e.device_id is not None), None)
+                path_letter = next((e.decoded_drive_letter for e in file_events if e.decoded_drive_letter is not None), None)
+                if disk_number is None or path_letter is None: continue
+                absolute_path = path_letter + filepath
+                #print(f"file R/W in snapshot at time {end_ns} : {len(reads)}, {len(writes)}")
+                read_bytes = self._byte_total(reads)
+                write_bytes = self._byte_total(writes)
+            
+                results.append(FileActivity(
+                    host_id=self.host_id,
+                    file_id=file_id,
+                    path=absolute_path,
+                    device_id=disk_number,
+                    window_start_utc=start_ns,
+                    window_end_utc=end_ns,
+                    read_bytes=read_bytes,
+                    write_bytes=write_bytes,
+                    read_ops=len(reads) / sample_window_seconds,
+                    write_ops=len(writes) / sample_window_seconds,
+                    file_size_bytes=None,
+                    source="windows_etw",
+                    ))     
+        return results
+        
+    @staticmethod
+    def _byte_total(items: list[RawIoEvent]) -> int | None:
+        if not items or any(
+            e.transferred_bytes is None for e in items
+        ):
+            return None #means unavailable, something went wrong
+        return sum(e.transferred_bytes for e in items)
+    
+    @staticmethod
+    def _average_latency(
+        items: list[RawIoEvent],
+    ) -> float | None:
+        durations = [
+            e.duration_ns for e in items
+            if e.duration_ns is not None
+            ]
+        if not durations:
+            return None
+        return sum(durations) / len(durations) / 1_000_000
+
+    @staticmethod
+    def _rate(items: list[RawIoEvent], sample_window_seconds: float) -> float | None:
+        if not items or any(
+            e.transferred_bytes is None for e in items
+        ):
+            return None #if there's a None somewhere, it's contagious
+        return sum(
+            e.transferred_bytes for e in items
+        ) / sample_window_seconds
