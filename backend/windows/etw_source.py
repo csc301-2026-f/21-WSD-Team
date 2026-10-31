@@ -113,10 +113,12 @@ class EtwDecoder:
         # get file path from the current mapping
         file_id = self._parse_pointer(record.get("FileObject"))
         path = None
+        path_letter = None
         if file_id is not None:
             offset = self._integer(record.get("ByteOffset"))
             if offset is not None and offset > 0: #record location for fileIO
                 self._file_location_map[file_id] = (disk_number,offset) 
+                path_letter = self._get_letter(disk_number,offset)
             path = self._file_name_map.get(file_id)
         file_attribution_verified = (path is not None)
         return RawIoEvent(
@@ -130,6 +132,7 @@ class EtwDecoder:
             duration_ns=None,
             file_id=file_id,
             path=path,
+            decoded_drive_letter=path_letter,
             file_size_bytes=None,
             file_attribution_verified=file_attribution_verified,
             source="diskIO",
@@ -169,8 +172,8 @@ class EtwDecoder:
             return None
         path = self._file_name_map.get(file_id)
         disk_number,offset = self._file_location_map.get(file_id)
-        #a fileIO is only useful if the file is known
-        if path is None or disk_number is None or offset is None: 
+        #a fileIO is only useful if at least the path is known
+        if path is None: 
             return None
         path_letter = self._get_letter(disk_number,offset)
         return RawIoEvent(
@@ -184,6 +187,7 @@ class EtwDecoder:
                     duration_ns=None,
                     file_id=file_id,
                     path=path,
+                    decoded_drive_letter=path_letter,
                     file_size_bytes=None,
                     file_attribution_verified=True,
                     source="fileIO",

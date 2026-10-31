@@ -88,6 +88,7 @@ class RawIoEvent:
 
     file_id: int | None = None
     path: str | None = None
+    decoded_drive_letter: str | None = None
     file_size_bytes: int | None = None
 
     # True only when file identity/path correlation was validated.
