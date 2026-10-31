@@ -14,6 +14,7 @@ def normalize_windows_device(devices) -> list[dict]:
     normalized_devices = []
     for device in devices:
         device_dict = asdict(device)
+        device_dict["device_id"] = str(device_dict["device_id"])
         normalized_devices.append(device_dict)
     return normalized_devices
 
@@ -21,6 +22,7 @@ def normalize_windows_device_metric(metrics) -> list[dict]:
     normalized_device_metrics = []
     for metric in metrics:
         device_metric_dict = asdict(metric)
+        device_metric_dict["device_id"] = str(device_metric_dict["device_id"])
         normalized_device_metrics.append(device_metric_dict)
     return normalized_device_metrics
 
@@ -28,6 +30,8 @@ def normalize_windows_process_metric(metrics) -> list[dict]:
     normalized_process_metrics = []
     for metric in metrics:
         process_metric_dict = asdict(metric)
+        if process_metric_dict["attributed_device_id"] is not None:
+            process_metric_dict["attributed_device_id"] = str(process_metric_dict["attributed_device_id"])
         normalized_process_metrics.append(process_metric_dict)
     return normalized_process_metrics
 
@@ -35,6 +39,8 @@ def normalize_windows_file_activity(activities) -> list[dict]:
     normalized_file_activity = []
     for activity in activities:
         file_activity_dict = asdict(activity)
+        if file_activity_dict["device_id"] is not None:
+            file_activity_dict["device_id"] = str(file_activity_dict["device_id"])
         normalized_file_activity.append(file_activity_dict)
     return normalized_file_activity
 
@@ -66,7 +72,7 @@ def normalize_linux_device_metric(metrics, host_id) -> list[dict]:
         metric_dict = {"host_id": host_id,
                        "device_id": tup[0],
                        "timestamp_utc": metric.timestamp,
-                       "sample_window_seconds": metric.duration,
+                       "sample_window_seconds": float(metric.duration),
                        "read_bytes_per_sec": metric.read_bytes / metric.duration,
                        "write_bytes_per_sec": metric.write_bytes / metric.duration,
                        "read_iops": metric.read_count / metric.duration,
@@ -88,7 +94,7 @@ def normalize_linux_process_metric(metrics, host_id) -> list[dict]:
             "start_time_utc": process.start_time_timestamp,
             "process_name": process.name,
             "timestamp_utc": metric.timestamp,
-            "sample_window_seconds": metric.duration,
+            "sample_window_seconds": float(metric.duration),
             "read_bytes_per_sec": metric.read_bytes / metric.duration,
             "write_bytes_per_sec": metric.write_bytes / metric.duration,
             "attributed_device_id": None} #TODO data not provide

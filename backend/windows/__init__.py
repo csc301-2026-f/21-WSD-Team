@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 
-from .backend import WindowsBackend
 from .contracts import (
     CollectionHealth,
     Device,
@@ -9,13 +8,14 @@ from .contracts import (
     FileActivity,
     ProcessMetric,
 )
-from .device_provider import DeviceProvider
-from .etw_source import EtwDecoder, EtwSource
-from .transport import EtwTransport
 
 
-def create_backend(host_id: str) -> WindowsBackend:
+def create_backend(host_id: str) -> "WindowsBackend":
     """Returns the windows backend fully wired up."""
+    from .device_provider import DeviceProvider
+    from .etw_source import EtwDecoder, EtwSource
+    from .transport import EtwTransport
+    from .backend import WindowsBackend
     device_provider = DeviceProvider(host_id)
     decoder = EtwDecoder(device_provider=device_provider)
     transport = EtwTransport()
@@ -34,7 +34,6 @@ def create_backend(host_id: str) -> WindowsBackend:
 
 __all__ = [
     "create_backend",
-    "WindowsBackend",
     "Device",
     "DeviceMetric",
     "ProcessMetric",
