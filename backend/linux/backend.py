@@ -132,6 +132,10 @@ class LinuxBackend:
         """
         pass
 
+    def get_folder_stats(self, folder: dict[absolute_path: File | Errorcode]) -> dict[File: FileMetric | ErrorCode]:
+        """
+        Returns the relevant Metric in folder dictionary. Path that maps to Errorcode will not be included in the return.
+        """
     def untrack_file(self, file: File) -> ErrorCode | None:
         """
         Untrack a file and remove the corresponding tracker. Returns Errorcode when Error happens.
@@ -146,6 +150,7 @@ class LinuxBackend:
         Returns number of file untracked
         """
         pass
+
 
 
 
