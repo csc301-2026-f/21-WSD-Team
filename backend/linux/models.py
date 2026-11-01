@@ -204,6 +204,49 @@ class ProcessSample:
     writes_complete: int
 
 
+@dataclass(frozen=True)
+class File:
+    absolute_path: str
+    inode: int
+    device: int
+
+
+@dataclass(frozen=True)
+class FileSample:
+    file: File
+    timestamp: str
+    size_bytes: int
+    read_attempts: int
+    read_requested_bytes: int
+    read_success_ops: int
+    read_completed_bytes: int
+    read_gap_sum: int
+    read_gap_count: int
+    write_attempts: int
+    write_requested_bytes: int
+    write_success_ops: int
+    write_completed_bytes: int
+    write_gap_sum: int
+    write_gap_count: int
+
+
+@dataclass(frozen=True)
+class FileMetric:
+    file: File
+    timestamp: str
+    duration: int
+    read_attempts: int
+    read_requested_bytes: int
+    read_success_ops: int
+    read_completed_bytes: int
+    read_average_gap: float | None
+    write_attempts: int
+    write_requested_bytes: int
+    write_success_ops: int
+    write_completed_bytes: int
+    write_average_gap: float | None
+
+
 class ErrorCode(IntEnum):
     SUCESS = 0
     PROCESS_NOT_FOUND = 1

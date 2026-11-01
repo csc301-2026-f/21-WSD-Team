@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
-from .models import Drive, Process, DriveMetric, ProcessMetric, ErrorCode
+from .models import Drive, Process, DriveMetric, ProcessMetric, ErrorCode, FileMetric
 from .collector import DiskIOCollector, ProcessIOCollector
 
 from .process import get_all_process
@@ -111,6 +111,43 @@ class LinuxBackend:
         else:
             return rtn
 
+    def track_file(self, file_path: str) -> ErrorCode | File:
+        """
+        register a tracker of a single file given the absolute path to the file
+        """
+        pass
+
+    def track_folder(self, folder_path: str) -> ErrorCode | dict[absolute_path: File | Errorcode]:
+        """
+        register trackers for every file in that folder, and returns a dictionary with path being the key and File
+        object being the value
+        If a tracker failed to initialize, it's relative value will be an Errorcode
+        """
+        pass
+
+    def get_all_file_stats(self) -> dict[File, FileMetric | ErrorCode]:
+        """
+        Returns every file stats registered using track_file as a dictionary
+        Files tracked by track folder is also reported
+        """
+        pass
+
+    def untrack_file(self, file: File) -> ErrorCode | None:
+        """
+        Untrack a file and remove the corresponding tracker. Returns Errorcode when Error happens.
+        It will also untrack the file if it's tracker is initialized by calling track_folder
+        """
+        pass
+
+    def untrack_folder(self, folder: tuple[File, ...]) -> ErrorCode | int:
+        """
+        Untrack every file in the folder tuple. It should be corresponding to the dict.values() of the return dictionary
+        of track_folder. If a file that that folder is registered by track_file it will also be untracked
+        Returns number of file untracked
+        """
+        pass
+
+
 
 """    def get_all_process_io(self, interval_seconds: int) -> list[ProcessMetric]:
         if not self._started:
@@ -119,3 +156,4 @@ class LinuxBackend:
     def get_all_drive_io(self, interval_seconds: int) -> list[DriveMetric]:
         if not self._started:
             return None"""
+
