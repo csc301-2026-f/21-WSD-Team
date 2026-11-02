@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """The current contract's eleven fields only. No v2 record extensions."""
 import hashlib
 import json

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """D2 contract checks. These do not prove OS/DB/CORE/UI integration."""
 import copy
 import importlib

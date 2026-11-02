@@ -1,0 +1,32 @@
+[
+  {
+    "process_instance_id": "1420_2026-10-08T20:00:00Z",
+    "pid": 1420,
+    "process_name": "blender",
+    "timestamp_utc": "2026-10-08T20:01:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": 15728640.0,
+    "write_bytes_per_sec": 4194304.0,
+    "attributed_device_id": "nvme0n1"
+  },
+  {
+    "process_instance_id": "1420_2026-10-08T20:00:00Z",
+    "pid": 1420,
+    "process_name": "blender",
+    "timestamp_utc": "2026-10-08T20:02:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": 20971520.0,
+    "write_bytes_per_sec": 8388608.0,
+    "attributed_device_id": "nvme0n1"
+  },
+  {
+    "process_instance_id": "1420_2026-10-08T20:00:00Z",
+    "pid": 1420,
+    "process_name": "blender",
+    "timestamp_utc": "2026-10-08T20:03:00Z",
+    "sample_window_seconds": 1.0,
+    "read_bytes_per_sec": 1048576.0,
+    "write_bytes_per_sec": 524288.0,
+    "attributed_device_id": "nvme0n1"
+  }
+]

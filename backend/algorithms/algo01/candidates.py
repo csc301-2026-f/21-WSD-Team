@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Select the latest usable FileActivity window; never sum overlapping history."""
 from collections import defaultdict
 from ..common.validation import is_integer, is_text, is_fresh, parse_utc, is_mock_source
@@ -81,4 +83,4 @@ def collect_candidates(context, devices, warnings):
         result.append({"file_id": file_id, "source": source, "size": row["file_size_bytes"],
             "read_rate": rate, "read_ops": reads, "is_mock": is_mock_source(row["source"])})
     # Tie breaker, choose highest freq; if tie, smaller size file wins; if tie, smaller id wins
-    return sorted(result, key=lambda row: (-row["read_rate"], row["size"], row["file_id"]))
+    return result

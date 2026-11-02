@@ -1,0 +1,39 @@
+present: Mohan Jesslyn Shengrong Juan John Enrique
+voice call: sahil
+excused: Danny
+John: greetings, api merged into main. D2 is on October 22 and final submit is on 23. this week we are supposed to present at most a working prototype with important api's. sharing screen via zoom
+any question about technical or investigations will be discussed in hte discord for the sake of time. rn we're focusing on the important tasks at hand for D2.
+Firstly, the document was created because the project has many many parts, and they are all developed by different people with different technologies, without a common api we may end up with working components that dont communicate well and thus dont work as a whole. i.e. units being wrong or asking something that is not supported.
+everyone is welcome to suggest changes if something seems unrealistic, nbut changes must be discussed with the consumers of the pertaining api.
+the modes we're focusing on is raid0 and ssd caching. so we're looking to focus strongly into time and data measuring and file storage managing
+OS specifics collect info, and provide os tools for files that they can.
+core exposes to the frontend the available actions and applies them to the os.
+the frontend shouldn't need to know how the backend collects data.
+user stories are presented in a chart.
+Mohan: we should choose a user story to focus on for D2.
+all: oke, OS-02 for iops measuring7
+John: the user stories have assignee fields and reviewers fields.
+Groups: 
+data and algorithms John Jesslyn Sahil
+backend and measuring shengrong Mohan Enrique
+testing and gui danny juan
+John: goes through json data record template 
+the same units should work for both windows and Linux, going through forbidden values
+high process or device io does not necessarily indicate which file is hot.(?) since core handle normalization, you'll have to talk with Enrique and mohan to put up the required fail conditions across OS's
+Mohan: we should disscuss what everyone would bring to the table for D2
+John: ye later
+Mohan: we should have the feature ready by end of weekend so we can document it. coding part this week.
+John: we dont need to only focus the one user story. Juan for example can push code for tests on user stories that aren't yet implemented.
+jesslyn: :face_with_spiral_eyes:
+Mohan: Enrique do you have midterms coming up
+Enrique: ye
+Mohan: we're gonna need to make a min working app on windows as i'm drowning in midterms so Linux may be delayed.
+plus Juan may use wsl for tests (?)
+Jesslyn : wat i do
+John: i'll do algo-01 raid0 mode you'll do algo-02 normal mode
+Mohan: please read the codex
+Jesslyn,Enrique: whats codex
+Mohan,John: paid token based really cracked algorithm designer
+John: i have general api's done for most people but not posted yet.
+John: we may be done for today.
+**meeting end at 19:39 --- 7:39PM**

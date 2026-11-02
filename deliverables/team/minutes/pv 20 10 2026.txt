@@ -1,0 +1,29 @@
+present: Danny Sahil Juan John Mohan Enrique Jesslyn
+absent: Shengrong
+
+we need to get a working prototype
+Linux IO for Disk is working, so we will use it alongside the working databases and shengrong's eventual part to make the working prototype
+Mohan: you can request the IO stats for the last 10 minutes
+	the IO will be sampled every second. so The total read and write will change and that change will be recorded. maybe we can work around shengrong's api and geta basic model working. Let's prioritize disk IO monitoring.
+John: Pritish is focused more on OS05 where we look at the disks.
+Sahil: as seen in a screenshot
+Moahn: the problem with procession is that it needs to be run as root.
+Enrique: me too
+Sahil: the DB table is fully set up.
+Mohan: i will do one PR tonight and then another one for the process io
+John: as most of the core module has been completed we can probably work with what has been written.
+I strongly recommend that we share our midterm plans for D3 so we don't work separated.
+Mohan: for prototype let's say we do the Linux. Did you account for DB processes repeating their PID?
+I think ill group PID and start time to have unique PID.
+Danny: can you send me a list of what you're gonna send so i know what i gotta show
+ye
+Mohan: mine will report total capacity, usable capacity, and then we can have another portion of the screen showing IOPS, IOPS per process, etc...
+Danny: I ahve separate pages for that from D1.
+Juan: i need your api contracts and a quick part of what you want to show for the powerpoints
+John: i will include how i implemented that in my part
+Mohan: we're doing user stories 1 and 2 and 5, principally 5. Rn i don't see a way to do fileIO
+what percent of the final grade is the D2 demo
+Mohan: can you make sure you have a working demo of the windows backend by Friday
+Enrique: I will certainly try
+John: we definitely need to complete the api documentation more by Friday
+meeting end at 19:57 or 7:57 PM

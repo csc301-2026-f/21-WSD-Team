@@ -419,7 +419,7 @@ PR: Pending. CORE integration has not been completed.
 - [x] **TODO · PRODUCER** — Signature and input/output schemas filled in; sample values supplied.
 - [x] **TODO · PRODUCER** — Errors, capability limits and unsupported cases documented.
 - [ ] **TODO · CONSUMER(S)** — API provides the needed fields and behavior, or a mutually agreed fallback.
-- [ ] **TODO · JUAN** — Test fixture and validation/negative-test plan available.
+- [x] **TODO · JUAN** — Test fixture and validation/negative-test plan available.
 - [ ] **TODO · PRODUCER + CONSUMER** — Agreement recorded in the PR discussion.
 - [ ] **TODO · IMPLEMENTED** — Callable implementation merged.
 - [ ] **TODO · VERIFIED** — Automated tests passed with linked evidence.
@@ -519,8 +519,8 @@ PR: Pending. CORE integration has not been completed.
 
 | Metric | Source Type | Windows Source | Linux Source |  Windows Evidence | Linux Evidence |
 ---|---|---|---|---|---|
-| DeviceMetric | raw + derived(for Linux) | Performance Counters | /proc/diskstats | Performance counter consumer APIs(PDH.dll) | Linux kernel I/O statistics fields |
-| ProcessMetric | raw(read/write bps for Windows) + derived(for Linux) | Performance Counters + ETW | /proc/<pid>/io | Performance counter consumer APIs(PDH.dll) + ETW | Linux kernel 3.3 /proc/<pid>/io - Display the IO accounting fields |
+| DeviceMetric | raw + derived(for Linux) | ETW | /proc/diskstats | Kernel IO Tracing (ETW) | Linux kernel I/O statistics fields |
+| ProcessMetric | raw(read/write bps for Windows) + derived(for Linux) | ETW | /proc/<pid>/io | Kernel IO Tracing (ETW) | Linux kernel 3.3 /proc/<pid>/io - Display the IO accounting fields |
 
 - [ ] **TODO · SHENGRONG + SAHIL + JOHN/JESSLYN + JUAN** — Agree on required/optional fields, `null`, empty collections, and explicit `UNSUPPORTED` semantics.
   - **Decision / evidence:** 
@@ -565,6 +565,33 @@ def sample_process_io(interval_seconds: float) -> list[dict]: ...
 def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict]: ...  # OPTIONAL
 ```
 
+
+### Python signatures — Linux Backend
+
+Current implemented interface:
+
+```python
+class LinuxBackend:
+    def __init__(self, host_id: str): ...
+    def start(self) -> None: ...
+    def close(self) -> None: ...
+    def refresh_disk_collect(self) -> None: ...
+
+    def list_devices(self) -> list[Drive]: ...
+    def list_processes(self) -> list[Process]: ...
+
+    def get_device_io(
+        self, interval_seconds: int, device_name: str
+    ) -> DriveMetric | None: ...
+
+    def get_process_io(
+        self, interval_seconds: int, pid: int
+    ) -> ProcessMetric | None: ...
+```
+
+The requested `get_capabilities()`, `sample_device_io()`, and `sample_file_activity()` interfaces have not yet been implemented with their specified signatures.
+
+
 **Expected capabilities** (each owner must mark **working / planned / unsupported**):
 
 ```python
@@ -580,6 +607,87 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
     "notes": list[str],
 }
 ```
+### Expected capabilities — Linux
+
+| Capability | Status | Notes |
+|---|---|---|
+| `device_metrics` | **Implemented; verification pending** | Background sampling of `/proc/diskstats`, bounded history, interval differences |
+| `process_metrics` | **Implemented; verification pending** | Background sampling of `/proc/[pid]/io`, bounded history, interval differences; permission limits apply |
+| `process_to_device_attribution` | **Unsupported** | `/proc/[pid]/io` does not identify physical devices |
+| `file_access_metrics` | **Planned** | No per-file transfer counters or heat tracking |
+| `file_level_pooling` | **Planned** | No mergerFS integration |
+| `ssd_caching` | **Planned** | No cache/redirection implementation |
+| `file_move` | **Planned** | No file migration function |
+| `dry_run_action` | **Planned** | No dry-run function |
+
+**Notes:**
+- Both collectors sample in daemon threads at a target cadence of approximately one second; observed elapsed intervals may differ.
+- Metrics are differences between cumulative samples; collection history is in memory only.
+- File-level I/O attribution and callable capability reporting are unavailable.
+- No end-to-end integration or benchmark evidence was supplied.
+  
+---
+
+### Python signatures — Windows Backend
+
+Current access point:
+```python
+__init__.py
+     def create_backend(host_id: str) -> WindowsBackend
+```
+Current implemented interface:
+
+```python
+class WindowsBackend:
+    # don't call __init__, call create_backend instead
+    def __init__(self, host_id: str,etw_source: EtwSource,device_provider: DeviceProvider): ...
+
+    def start(self) -> None: ...
+    def close(self) -> None: ...
+
+    def get_devices(self) -> list[Device]: ...
+
+    def get_device_metrics(
+        self,
+        sample_window_seconds: float = 10.0,
+    ) -> list[DeviceMetric]: ...
+
+    def get_process_metrics(
+        self,
+        sample_window_seconds: float = 10.0,
+    ) -> list[ProcessMetric]: ...
+
+    def get_file_activity(
+        self,
+        sample_window_seconds: int,
+        now_ns: int | None = None,
+    ) -> list[FileActivity]:
+
+    def get_collection_health(self) -> CollectionHealth:
+```
+
+The coded `get_file_activity()`, and `get_collection_health` interfaces do not work as of now.
+
+
+### Expected capabilities — Windows
+
+| Capability | Status | Notes |
+|---|---|---|
+| `device_metrics` | **Implemented; verification pending** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
+| `process_metrics` | **Planned** | Already tracing every single FileIO event the kernel fires as to also catch cache hits, can order by PID |
+| `process_to_device_attribution` | **Planned** | Can sort/filter DiskIO events by PID if required |
+| `file_access_metrics` | **Planned** | Tracing FileIO events, need to complete the path with drive letter. |
+| `file_level_pooling` | **Planned** | WinFsp envisioned |
+| `ssd_caching` | **Planned** | No cache/redirection implementation |
+| `file_move` | **Planned** | No file migration function |
+| `dry_run_action` | **Planned** | No dry-run function |
+  
+**Notes:**
+- Device and process information is represented using frozen Python dataclasses.
+- Collects events with a callback: only runs when needed with as little overhead as required.
+- Metrics are always cumulative viewed events: no history from before tracking started is available.
+- FileIO metrics are currently unavailable.
+---
 
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
 
@@ -587,45 +695,207 @@ def sample_file_activity(interval_seconds: float, limit: int = 100) -> list[dict
 > **IF YOU OWN THE WINDOWS AGENT:** Please complete each **TODO** below and provide evidence. **CORE + ALGO reviewers:** Confirm the data is usable. **QA:** Define test cases.
 
 
-- [ ] **TODO · ENRIQUE** — Actual module path / language / callable signatures
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Windows data source(s) and permissions required
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Available device metrics and units / unavailable fields
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Process I/O and file-level attribution feasibility
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Sample cadence and measured overhead
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · ENRIQUE** — Actual module path / language / callable signatures
+  - **Answer / evidence:**
+  - Python 3; 
+    - `backend.py` (public API), 
+    - `contracts.py` (frozen dataclasses),
+    - `aggregation.py` (keeps all processed events and uses them to create metrics),
+    - `device_provider.py` (discovers disks and mount points with WMI), 
+    - `etw_source.py` (ETW DiskIO and FileIO events decoder),
+    - `transport.py` (Kernel tracking setup),
+    - `__init.py__` (links the modules together with create_backend),
+    - `__main__.py` (callable from the admin console with python -m),   
+    The implemented `WindowsBackend` API is listed above. `create_backend(host_id : str)` is constructed with the required argument.
+- [x] **TODO · ENRIQUE** — Windows data source(s) and permissions required
+  - **Answer / evidence:**
+    - ETW:
+      - automatically receive IO events as they are being processed
+      - admin permission required as it uses the kernel
+    - WMI:
+      - discover all disks and mount points
+      - admin permission may be required
+- [x] **TODO · ENRIQUE** — Available process/file/device IO metrics and units / unavailable fields
+
+  - **Answer / evidence:**
+ 
+| Record | Fields | Units / source |
+|---|---|---|
+| `DeviceMetric` | `host_id`, `device_id`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `read_iops`, `write_iops`, `avg_read_latency_ms`, `avg_write_latency_ms`, `source` | UTC ISO 8601; requested seconds (`float`); bytes; completed disk operations from ETW |
+| `ProcessMetric` | `host_id`, `pid`, `start_time_utc`, `process_name`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `attributed_device_id` | UTC ISO 8601; requested seconds (`float`); bytes requested by this PID, based on the I/O operations it emitted |
+| `FileActivity` | `host_id`, `file_id`, `path`, `device_id`, `window_start_utc`, `window_end_utc`, `read_bytes`, `write_bytes`, `read_ops`, `write_ops`, `file_size_bytes`, `source` | UTC ISO 8601; file path determined by `FileObject` name attribution using other `FileIo` events; drive/volume mapping determined through correlation with storage metadata and, where possible, `DiskIo` events; not yet emitted |
+| `Device` | `host_id`, `device_id`, `display_name`, `media_type`, `capacity_bytes`, `free_bytes`, `mount_points`, `is_available` | WMI; capacity reported for each disk/device |
+  
+- [x] **TODO · ENRIQUE** — Sample cadence and measured overhead
+  - **Answer / evidence:**
+  Event handling happens by callback, so cadence is as fast as events happen. Overhead not yet measured.
+
+  **Known Limitations**
+  - FileIO events are dropped if no prior DiskIO event has mapped their FileObject to a physical drive
+  - Likewise DiskIO events will not count towards a file's diskIO if no prior FileIO event has mapped it to its FileObject
+  - A FileIO event is only duplicated as DiskIO event if it misses the cache
+  - Process name may not always be obtainable
+
 - [ ] **TODO · ENRIQUE** — File-level pooling and SSD cache feasibility (WinFsp or alternative)
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:** WinFsp still considered for this
+- [x] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
+  - **Answer / evidence:**
+    - Any unavailable field will be None
+    - A metric (e.g. read IOPS) with 0 events contributing towards it (e.g. only writes) will be marked as None
+    - 
 - [ ] **TODO · ENRIQUE** — One success fixture, one unsupported fixture, relevant PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:**
+    
+    ```python
+    DeviceMetric(host_id='debug session', device_id=0, timestamp_utc='2026-10-22T10:34:00.795578Z'
+        , sample_window_seconds=1, read_bytes_per_sec=81920.0, write_bytes_per_sec=37888.0
+        , read_iops=2.0, write_iops=7.0, avg_read_latency_ms=None
+        , avg_write_latency_ms=None, source='windows_etw')
+    ```
+    Bad call:
+    ```python
+    backend.get_device_metrics(-1)
+    raises ValueError
+    ```
+Remaining Work:
+  - properly filter by FileIO or DiskIO for their respective metrics
+  - properly assign FileIO paths
+  - measure collection health and dropped events
+  - move from pid to either (start_time,pid) or process name
+  - investigate WinFsp
 
-### 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
+---
 
-> [!NOTE]
-> **IF YOU OWN THE LINUX AGENT:** Please complete each **TODO** below and document unsupported capabilities. **CORE + ALGO reviewers:** Confirm the data is usable. **QA:** Test fixtures and failures.
+**Current milestone:** The Windows backend currently implements EWT to track system-wide IO operations for disk, file, and processes alike. While only diskIO can effectively be measures as of now, the events pertaining to file and process operations are processed correctly. ssd caching, integration tests, process start time and storage actions remain to be implemented.
 
 
-- [ ] **TODO · MOHAN** — Actual module path / language / callable signatures
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — Linux data source(s), permissions and supported distributions
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — Available device/process/file metrics and units
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+## 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
+
+- [x] **TODO · MOHAN** — Actual module path / language / callable signatures
+
+  **Answer / evidence:** 
+- Python 3; 
+  - `backend.py` (public API), 
+  - `collector.py` (disk/process sampler threads), 
+  - `drive.py` (Drive related OS api)
+  - `process.py` (Process related OS api)
+  - `models.py` (frozen dataclasses), 
+  - `constants.py` (sample-history constants; not supplied for review).
+
+    The implemented `LinuxBackend` API is listed above. Both collectors receive data via background sampling. `DiskIOCollector(tuple(self.list_devices()))` is constructed with the required argument. This API does **not** implement the earlier proposed dictionary-based signatures.
+
+- [x] **TODO · MOHAN** — Linux data source(s), permissions and supported distributions
+
+  **Answer / evidence:**
+  - `/proc/diskstats`: device sector and operation counters; sampled once per batch.
+  - `/proc/[pid]/io`: per-process byte and syscall counters; access can be denied.
+  - `/proc/[pid]/comm`, `/proc` directory metadata: process name and current approximate process identity. **Known issue:** directory modification time is not the true process start time.
+  - `/sys/class/block/<device>/queue/rotational`, `lsblk`, `shutil.disk_usage()`: media type, device enumeration, partitions and filesystem space.
+  - No automatic privilege escalation. Intended for standard Linux systems with procfs, sysfs and `lsblk`; distribution validation remains pending.
+
+- [x] **TODO · MOHAN** — Available device/process/file metrics and units
+
+  **Answer / evidence:**
+
+  | Record | Fields | Units / source |
+  |---|---|---|
+  | `DriveMetric` | `timestamp`, `duration`, `read_bytes`, `write_bytes`, `read_count`, `write_count` | UTC ISO 8601; requested seconds (`int`); bytes; completed disk operations from `/proc/diskstats` |
+  | `ProcessMetric` | `timestamp`, `duration`, `read_bytes`, `write_bytes`, `reads_complete`, `writes_complete` | UTC ISO 8601; requested seconds (`int`); bytes attributed by `/proc/[pid]/io`; `syscr`/`syscw` syscall counts |
+  | `Drive` | `timestamp`, `device_id`, `model`, `serial`, `size_bytes`, `media_type`, `partitions` | Device metadata; partition `size_bytes`/`available_bytes` report filesystem usage, or zero if unavailable |
+  | `Process` | `pid`, `name`, `start_time_timestamp` | Process metadata; start-time representation is currently unreliable |
+
+  **File metrics — not implemented.**
+
+  No file-level read/write byte counters, operation counts, or process-to-file attribution are currently exposed.
+
 - [ ] **TODO · MOHAN** — Sample cadence and measured overhead
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+
+  **Answer / evidence:**
+
+  Current device sampling implementation:
+  - Dedicated background thread
+  - Target sampling cadence: 1 second
+  - Uses `time.monotonic()` for scheduling
+  - Thread-safe history protected by `threading.Lock`
+  - Maximum history length: 600 samples
+  - Nonblocking retrieval of previously collected device metrics
+
+  `get_device_io()` calculates the difference between historical samples for a requested interval.
+
+  Current process sampling:
+  - `get_process_io(pid)` takes two readings approximately one second apart.
+  - This operation is blocking.
+  - `ProcessIOCollector` has a background-thread skeleton but does not yet collect metrics.
+
+  **Measured overhead: Not available.**
+
+  CPU usage, memory consumption, sampling latency, and performance under large process counts have not been benchmarked.
+
+  **Known limitations:**
+  - The returned device duration uses the requested interval rather than measured elapsed time.
+  - The configured `DEFAULT_SAMPLE_INTERVAL` constant is not currently used by the collector loop.
+
 - [ ] **TODO · MOHAN** — mergerFS file-level placement/migration semantics and limitations
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+
+  **Answer / evidence:**
+
+  **Status: Planned; not implemented.**
+- 
 - [ ] **TODO · MOHAN** — SSD cache mechanism (FUSE/symlink/alternative), redirect + coherency
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · MOHAN** — Return shape for unsupported/error conditions
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+
+  **Answer / evidence:**
+
+  **Status: Planned; mechanism not selected.**
+- 
+- [x] **TODO · MOHAN** — Return shape for unsupported/error conditions
+
+  **Answer / evidence:**
+
+  | Operation | Current behavior |
+  |---|---|
+  | `list_devices()` | Calls discovery even if the backend is stopped; handled `lsblk`/JSON failures return `[]` |
+  | `list_processes()` | Returns `[]` while stopped; otherwise enumerates accessible processes |
+  | `get_device_io(interval_seconds, device_name)` | `None` if stopped, invalid interval, unknown drive, missing samples or missing sample entry |
+  | `get_process_io(interval_seconds, pid)` | `None` if stopped, invalid interval, insufficient history, missing PID sample, or sampled process objects do not match |
+  | `sample_process_io(process)` | `None` for handled file I/O, parsing or missing-field errors; inaccessible processes are skipped |
+  | `refresh_disk_collect()` | No-op while stopped; when running, replaces the disk collector and resets its history |
+
+  Limitations:
+  - No standardized error dictionary or status codes.
+  - `None` does not distinguish permission errors, missing processes, and other handled failures.
+  - Unsupported capability responses have not been standardized.
+  - Some subprocess or background-thread failures may propagate or terminate collection.
+
 - [ ] **TODO · MOHAN** — One success fixture, one unsupported fixture, relevant PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+
+  **Answer / evidence:** Examples below are **illustrative, not verified test results**:
+
+  ```python
+  DriveMetric(
+      timestamp="2026-10-20T09:00:00Z", duration=1,
+      read_bytes=1048576, write_bytes=524288,
+      read_count=16, write_count=8,
+  )
+  ```
+
+  This is an illustrative fixture, not a measured result.
+
+  Proposed unsupported/error fixture:
+
+  ```python
+  backend.get_device_io(1, "nonexistent")
+  # Expected: None, once backend is running
+  ```
+
+  Remaining work:
+  - Add automated tests for device collection.
+  - Test process permissions and disappearing PIDs.
+  - Validate historical sample accuracy.
+  - Attach relevant PR link when available.
+
+---
+
+**Current milestone:** The Linux backend implements device discovery, process discovery, background device/process I/O collection, and interval-based metric retrieval. Full integration tests, a reliable process start-time identity, file-level telemetry, capability API, pooling/caching operations, and safe storage actions remain outstanding.
 
 ### 03.3 | OS CONSUMERS + JUAN — Review and test checklist
 
@@ -684,10 +954,10 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 > **IF YOU OWN THE DATABASE:** Please complete each **TODO** below, including query examples. **ALGO + CORE reviewers:** Confirm that the history queries meet our needs. **QA:** Test save/query round-trips.
 
 - [x] **TODO · SAHIL** — Database engine, table/schema approach, migrations
-  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: PROPOSED).
+  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: Implemented).
 
 - [x] **TODO · SAHIL** — Concrete Python callable/module or service adapter
-  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: PROPOSED interface signature).
+  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: Implemented).
 
 - [x] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
   - **Answer / evidence:** Proposed design: Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
@@ -714,8 +984,9 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 
 - [x] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
   - **Answer / evidence:** Fixtures committed to repository branch under `tests/fixtures/`:
-    - Success: `tests/fixtures/history_sample.json`
-    - Empty: `tests/fixtures/history_empty.json`
+    - Device History Success: `tests/fixtures/history_sample.json`
+    - Empty Result: `tests/fixtures/history_empty.json`
+    - Process History (US-02): `tests/fixtures/process_history_sample.json`
     - Unsupported File Heat: `tests/fixtures/file_heat_unsupported.json`
 
 ### 04.2 | DB CONSUMERS + JUAN — Review and test checklist
@@ -1154,8 +1425,8 @@ Each tick means **the test exists, has been run, and its results are linked**. U
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-DB-02:** Empty history / unavailable file telemetry.
   - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-ALG-01:** RAID0 algorithm contract with valid/invalid inputs.
-  - **Test path / result / CI run:** _Fill in after running._
+- [x] **TODO · JUAN** — **T-ALG-01:** RAID0 algorithm contract with valid/invalid inputs.
+  - **Test path / result / CI run:** Unit tests by John in `backend/algorithms/algo01/tests/` (41 pass); fixtures and expected outputs reviewed by Juan in #22; run automatically in CI (#23).
 - [ ] **TODO · JUAN** — **T-ALG-02:** SSD cache capacity guard.
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-ALG-03:** Policy/goal change and stable output schema.
@@ -1166,8 +1437,12 @@ Each tick means **the test exists, has been run, and its results are linked**. U
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-E2E-01:** End-to-end data IDs and recommendation flow.
   - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-ACT-01:** Preview/approval/interruption safety — LATER.
-  - **Test path / result / CI run:** _Fill in after running._
+- [x] **TODO · JUAN** — **T-ACT-01:** Preview/approval/interruption safety — LATER.
+  - **08.4 | Reproducible benchmark contract
+- [x] **TODO · JUAN** — ALGO-02 QA contract tests (mode `ssd_caching`, original never moved, capacity guard T-ALG-02) once John's ALGO-02 is ready.
+- [x] **TODO · JUAN** — T-HTTP-01 for HTTP-01m `/processes/history` once the endpoint exists.
+- [x] **TODO · JUAN** — Test duplicate/replayed ingestion (required by §04.2, not yet covered).
+- [x] **TODO · JUAN** — QA-02 benchmark plan for US-07 baselines (§04 delegates time-saved evidence to QA).
 
 ### 08.4 | Reproducible benchmark contract
 
@@ -1198,18 +1473,18 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
 > **IF YOU OWN QA/DEVOPS:** Please complete the **TODO** items with implementation details and links to test code, fixtures, runs, or PRs.
 
 
-- [ ] **TODO · JUAN** — Test framework and Python version(s)
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Test framework and Python version(s)
+  - **Answer / evidence:** `unittest` (standard library, no installs). CI runs Python 3.10 (minimum supported) and 3.12. See `.github/workflows/tests.yml` (#23). DB tests will use `pytest` once merged.
 - [x] **TODO · JUAN** — Fixtures format/schema source of truth
   - **Answer / evidence:** JSON files in `tests/fixtures/` (Juan-branch). Source of truth = §02 of this doc. Any schema change = one PR updating §02 + fixtures together. Fixtures are MOCK until producers send real payloads (§08.4.2).
-- [ ] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
+  - **Answer / evidence:** Every PR + push to `main`: automated tests on mock data only (currently ALGO-01 unit tests, #23). Manual only: benchmarks on real SSD+HDD (QA-02) and storage-action safety tests on disposable files (T-ACT-01, later).
 - [ ] **TODO · JUAN** — Mocking approach when Windows/Linux test host is unavailable
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JUAN** — Benchmark tools/commands, workload methodology, result format
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · JUAN** — CI runner/OS compatibility, commands, time budget, branch/PR
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — CI runner/OS compatibility, commands, time budget, branch/PR
+  - **Answer / evidence:** GitHub Actions, `ubuntu-latest` + `windows-latest` × Python 3.10/3.12 (4 jobs), 10-min timeout, runs on every PR and push to `main`. (#23)
 - [ ] **TODO · JUAN** — Add D1 Q4 traceability test plan: US-01 live process metrics; US-02 per-app history; US-03/04 action safety; US-05 recommendation; US-06 auto-mode opt-in; US-07 evidence-based estimated time saved.
   - **Answer / evidence:** _Write here, or link fixtures/tests / PR; then check the box above._
 - [ ] **TODO · JUAN** — First runnable example: validate one fixture + print pass/fail

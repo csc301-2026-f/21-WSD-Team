@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Run invented D2 records. Never collect activity or execute a storage action."""
 import argparse
 import json
