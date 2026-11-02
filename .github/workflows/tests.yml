@@ -19,7 +19,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install pytest
+        run: python -m pip install pytest
+
       - name: Run ALGO-01 unit tests
-        run: python -B -m unittest discover -s backend/algorithms/algo01/tests -v
+        run: python -B -m pytest backend/algorithms/algo01/tests -q
       - name: Run QA contract tests
         run: python -B -m unittest discover -s tests/contract -v

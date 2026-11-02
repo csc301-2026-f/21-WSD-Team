@@ -11,6 +11,7 @@ from ..common.validation import is_mock_source
 from .inputs import PolicyInputError, validate_inputs
 from .candidates import collect_candidates
 from .greedy_selection import select_recommendations
+from .strategy_controller import select_files
 
 
 def _has_mock_activity(history):
@@ -39,6 +40,7 @@ def evaluate_raid0_policy(devices: list[dict], realtime: dict, history: dict,
         warnings.add("no_eligible_ssd")
     candidates = collect_candidates(context, device_map, warnings)
     result = select_recommendations(candidates, budgets, context, warnings,
-        execution_supported=capabilities.get("file_move") is True)
+    execution_supported=capabilities.get("file_move") is True,
+    selector=select_files)
     return result or [make_none(context.timestamp, "no_eligible_recommendation", sorted(warnings),
         is_mock=_has_mock_activity(history))]
