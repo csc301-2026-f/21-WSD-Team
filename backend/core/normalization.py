@@ -39,6 +39,8 @@ def normalize_windows_file_activity(activities) -> list[dict]:
     normalized_file_activity = []
     for activity in activities:
         file_activity_dict = asdict(activity)
+        if file_activity_dict["file_id"] is not None:
+            file_activity_dict["file_id"] = str(file_activity_dict["file_id"])
         if file_activity_dict["device_id"] is not None:
             file_activity_dict["device_id"] = str(file_activity_dict["device_id"])
         normalized_file_activity.append(file_activity_dict)

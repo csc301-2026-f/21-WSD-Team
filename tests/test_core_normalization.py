@@ -142,7 +142,7 @@ class TestNormalization(unittest.TestCase):
         activity = FileActivity(host_id = "07650027-29ab-44b6-a851-292d58017c2c",
                                 file_id = "file-001",
                                 path = "C:\\Users\\test\\example.txt",
-                                device_id = None,
+                                device_id = 0,
                                 window_start_utc = "2026-10-30T12:00:00Z",
                                 window_end_utc = "2026-10-30T12:00:00Z",
                                 read_bytes = 114514,
@@ -156,7 +156,67 @@ class TestNormalization(unittest.TestCase):
         expected = [{"host_id": "07650027-29ab-44b6-a851-292d58017c2c",
                      "file_id": "file-001",
                      "path": "C:\\Users\\test\\example.txt",
-                     "device_id": None,
+                     "device_id": "0",
+                     "window_start_utc": "2026-10-30T12:00:00Z",
+                     "window_end_utc": "2026-10-30T12:00:00Z",
+                     "read_bytes": 114514,
+                     "write_bytes": 1919,
+                     "read_ops": 10,
+                     "write_ops": 5,
+                     "file_size_bytes": 5000,
+                     "source": "window_etw"
+                     }]
+        self.assertEqual(result, expected)
+
+    def test_normalize_windows_file_activity_no_file(self):
+        activity = FileActivity(host_id = "07650027-29ab-44b6-a851-292d58017c2c",
+                                file_id = None,
+                                path = "C:\\Users\\test\\example.txt",
+                                device_id = 0,
+                                window_start_utc = "2026-10-30T12:00:00Z",
+                                window_end_utc = "2026-10-30T12:00:00Z",
+                                read_bytes = 114514,
+                                write_bytes = 1919,
+                                read_ops = 10,
+                                write_ops = 5,
+                                file_size_bytes = 5000,
+                                source = "window_etw"
+                                )
+        result = normalize_windows_file_activity([activity])
+        expected = [{"host_id": "07650027-29ab-44b6-a851-292d58017c2c",
+                     "file_id": None,
+                     "path": "C:\\Users\\test\\example.txt",
+                     "device_id": "0",
+                     "window_start_utc": "2026-10-30T12:00:00Z",
+                     "window_end_utc": "2026-10-30T12:00:00Z",
+                     "read_bytes": 114514,
+                     "write_bytes": 1919,
+                     "read_ops": 10,
+                     "write_ops": 5,
+                     "file_size_bytes": 5000,
+                     "source": "window_etw"
+                     }]
+        self.assertEqual(result, expected)
+
+    def test_normalize_windows_file_activity_int_file_id(self):
+        activity = FileActivity(host_id = "07650027-29ab-44b6-a851-292d58017c2c",
+                                file_id = 114514,
+                                path = "C:\\Users\\test\\example.txt",
+                                device_id = 0,
+                                window_start_utc = "2026-10-30T12:00:00Z",
+                                window_end_utc = "2026-10-30T12:00:00Z",
+                                read_bytes = 114514,
+                                write_bytes = 1919,
+                                read_ops = 10,
+                                write_ops = 5,
+                                file_size_bytes = 5000,
+                                source = "window_etw"
+                                )
+        result = normalize_windows_file_activity([activity])
+        expected = [{"host_id": "07650027-29ab-44b6-a851-292d58017c2c",
+                     "file_id": "114514",
+                     "path": "C:\\Users\\test\\example.txt",
+                     "device_id": "0",
                      "window_start_utc": "2026-10-30T12:00:00Z",
                      "window_end_utc": "2026-10-30T12:00:00Z",
                      "read_bytes": 114514,
