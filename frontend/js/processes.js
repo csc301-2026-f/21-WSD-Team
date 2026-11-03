@@ -1,6 +1,12 @@
 
 import { getLatestProcesses } from "./api.js";
 
+import {
+    getProcessKey,
+    formatRate,
+    filterProcesses as filterProcessList
+} from "./processUtils.js";
+
 const REFRESH_INTERVAL_MS = 2000;
 
 const tableBody = document.getElementById("process-table-body");
@@ -12,35 +18,6 @@ let selectedProcessKey = null;
 let latestProcesses = [];
 let isRefreshing = false;
 
-/* PROCESS IDENTIFICATION */
-
-function getProcessKey(process) {
-    return `${process.host_id}:${process.pid}:${process.start_time_utc ?? "unknown"}`;
-}
-
-/* FORMATTING */
-
-function formatRate(bytesPerSecond) {
-    if (bytesPerSecond == null) {
-        return "N/A";
-    }
-
-    const value = Number(bytesPerSecond);
-
-    if (!Number.isFinite(value) || value < 0) {
-        return "N/A";
-    }
-
-    if (value >= 1_000_000) {
-        return `${(value / 1_000_000).toFixed(2)} MB/s`;
-    }
-
-    if (value >= 1_000) {
-        return `${(value / 1_000).toFixed(2)} KB/s`;
-    }
-
-    return `${value.toFixed(0)} B/s`;
-}
 
 /* RENDER PROCESS TABLE */
 
@@ -69,7 +46,7 @@ function renderProcesses(processes) {
         }
 
         if (processKey === selectedProcessKey) {
-            row.classList.add("selected-process");
+            row.classList.add("selected-process-row");
         }
 
         row.addEventListener("click", () => {
@@ -114,34 +91,24 @@ function renderProcesses(processes) {
     }
 }
 
+
 /* SEARCH AND FILTERING */
 
-function getFilteredProcesses() {
-    const searchTerm = searchInput.value.trim().toLowerCase();
+function filterAndRenderProcesses() {
+    const searchTerm = searchInput.value;
 
-    return latestProcesses.filter(process => {
-        const name = String(
-            process.process_name ?? ""
-        ).toLowerCase();
-
-        const pid = String(
-            process.pid ?? ""
-        );
-
-        return name.includes(searchTerm) || pid.includes(searchTerm);
-    });
-}
-
-function filterProcesses() {
-    const filteredProcesses = getFilteredProcesses();
+    const filteredProcesses = filterProcessList(
+        latestProcesses,
+        searchTerm
+    );
 
     renderProcesses(filteredProcesses);
 
-    if (searchInput.value.trim() !== "") {
-        statusElement.textContent =
-            `Showing ${filteredProcesses.length} of ${latestProcesses.length} processes.`;
-    }
+    statusElement.textContent = searchTerm.trim() !== ""
+        ? `Showing ${filteredProcesses.length} of ${latestProcesses.length} processes.`
+        : `${latestProcesses.length} processes detected.`;
 }
+
 
 /* REFRESH PROCESS DATA */
 
@@ -161,9 +128,6 @@ async function refreshProcessTable() {
 
         latestProcesses = processes;
 
-        // Preserve the search when new data arrives.
-        filterProcesses();
-
         // Clear selection if the selected process no longer exists.
         if (
             selectedProcessKey !== null &&
@@ -175,10 +139,8 @@ async function refreshProcessTable() {
             selectedElement.textContent = "No process selected.";
         }
 
-        if (searchInput.value.trim() === "") {
-            statusElement.textContent =
-                `${latestProcesses.length} processes detected.`;
-        }
+        // Preserve the search when new data arrives.
+        filterAndRenderProcesses();
 
     } catch (error) {
         console.error("Failed to refresh process table:", error);
@@ -192,9 +154,11 @@ async function refreshProcessTable() {
     }
 }
 
+
 /* EVENT LISTENERS */
 
-searchInput.addEventListener("input", filterProcesses);
+searchInput.addEventListener("input", filterAndRenderProcesses);
+
 
 /* INITIALIZATION */
 

@@ -1,12 +1,23 @@
 
 import { getDevices, getLatestMetrics } from "./api.js";
+
 import {
     initializeCharts,
     updateMetricsCharts
 } from "./charts.js";
 
+import {
+    calculateUsedPercent,
+    formatMBps,
+    formatIops,
+    formatAverageLatency,
+    getValidMetricValues,
+    sumMetricValues
+} from "./formatting.js";
+
 // How often to refresh data (milliseconds).
 const REFRESH_INTERVAL_MS = 2000;
+
 
 // ------------------------------
 // RENDER STORAGE DRIVE BOXES
@@ -15,6 +26,8 @@ const REFRESH_INTERVAL_MS = 2000;
 function renderDrives(devices) {
     const container = document.getElementById("driveContainer");
 
+    if (!container) return;
+
     // Remove boxes from the previous refresh.
     container.replaceChildren();
 
@@ -22,18 +35,10 @@ function renderDrives(devices) {
         const capacity = device.capacity_bytes;
         const free = device.free_bytes;
 
-        const hasUsageData =
-            typeof capacity === "number" &&
-            typeof free === "number" &&
-            Number.isFinite(capacity) &&
-            Number.isFinite(free) &&
-            capacity > 0 &&
-            free >= 0 &&
-            free <= capacity;
-
-        const usedPercent = hasUsageData
-            ? ((capacity - free) / capacity) * 100
-            : null;
+        const usedPercent = calculateUsedPercent(
+            capacity,
+            free
+        );
 
         // Create the drive box.
         const box = document.createElement("div");
@@ -82,6 +87,9 @@ function renderDrives(devices) {
 }
 
 
+// ------------------------------
+// UPDATE PERFORMANCE STATISTICS
+// ------------------------------
 
 function updatePerformanceStats(metrics) {
     if (!Array.isArray(metrics) || metrics.length === 0) {
@@ -89,43 +97,58 @@ function updatePerformanceStats(metrics) {
     }
 
     // Independently collect valid values for each measurement.
-    const getValidValues = key =>
-        metrics
-            .map(metric => metric[key])
-            .filter(value =>
-                typeof value === "number" &&
-                Number.isFinite(value) &&
-                value >= 0
-            );
+    const readBytes = getValidMetricValues(
+        metrics,
+        "read_bytes_per_sec"
+    );
 
-    const readBytes = getValidValues("read_bytes_per_sec");
-    const writeBytes = getValidValues("write_bytes_per_sec");
-    const readIops = getValidValues("read_iops");
-    const writeIops = getValidValues("write_iops");
-    const readLatencies = getValidValues("avg_read_latency_ms");
-    const writeLatencies = getValidValues("avg_write_latency_ms");
+    const writeBytes = getValidMetricValues(
+        metrics,
+        "write_bytes_per_sec"
+    );
 
-    const sum = values =>
-        values.reduce((total, value) => total + value, 0);
+    const readIops = getValidMetricValues(
+        metrics,
+        "read_iops"
+    );
 
-    const average = values =>
-        values.length
-            ? `${(sum(values) / values.length).toFixed(2)} ms`
-            : "Not provided";
+    const writeIops = getValidMetricValues(
+        metrics,
+        "write_iops"
+    );
 
-    const formatMBps = value =>
-        `${(value / 1_000_000).toFixed(2)} MB/s`;
+    const readLatencies = getValidMetricValues(
+        metrics,
+        "avg_read_latency_ms"
+    );
 
-    const formatIops = value =>
-        value.toLocaleString(undefined, {
-            maximumFractionDigits: 1
-        });
+    const writeLatencies = getValidMetricValues(
+        metrics,
+        "avg_write_latency_ms"
+    );
 
-    const totalReadBytes = sum(readBytes);
-    const totalWriteBytes = sum(writeBytes);
-    const totalReadIops = sum(readIops);
-    const totalWriteIops = sum(writeIops);
+    // Calculate totals independently.
+    const totalReadBytes = sumMetricValues(
+        metrics,
+        "read_bytes_per_sec"
+    );
 
+    const totalWriteBytes = sumMetricValues(
+        metrics,
+        "write_bytes_per_sec"
+    );
+
+    const totalReadIops = sumMetricValues(
+        metrics,
+        "read_iops"
+    );
+
+    const totalWriteIops = sumMetricValues(
+        metrics,
+        "write_iops"
+    );
+
+    // Update throughput displays.
     document.getElementById("total-throughput").textContent =
         formatMBps(totalReadBytes + totalWriteBytes);
 
@@ -135,6 +158,7 @@ function updatePerformanceStats(metrics) {
     document.getElementById("write-throughput").textContent =
         formatMBps(totalWriteBytes);
 
+    // Update IOPS displays.
     document.getElementById("current-iops").textContent =
         formatIops(totalReadIops + totalWriteIops);
 
@@ -165,14 +189,16 @@ function updatePerformanceStats(metrics) {
     document.getElementById("devices-reporting").textContent =
         reportingDevices.size;
 
+    // Update timestamp.
     document.getElementById("metrics-updated").textContent =
         new Date().toLocaleTimeString();
 
+    // Update latency displays.
     document.getElementById("read-latency").textContent =
-        average(readLatencies);
+        formatAverageLatency(readLatencies);
 
     document.getElementById("write-latency").textContent =
-        average(writeLatencies);
+        formatAverageLatency(writeLatencies);
 }
 
 
@@ -183,7 +209,9 @@ function updatePerformanceStats(metrics) {
 async function refreshDrives() {
     try {
         const devices = await getDevices();
+
         console.log("Devices received:", devices);
+
         renderDrives(devices);
     } catch (error) {
         console.error("Failed to load drives:", error);
@@ -193,6 +221,7 @@ async function refreshDrives() {
     }
 }
 
+
 // ------------------------------
 // REFRESH METRICS AND CHARTS
 // ------------------------------
@@ -200,6 +229,7 @@ async function refreshDrives() {
 async function refreshMetrics() {
     try {
         const metrics = await getLatestMetrics();
+
         updateMetricsCharts(metrics);
         updatePerformanceStats(metrics);
     } catch (error) {
@@ -209,6 +239,7 @@ async function refreshMetrics() {
         setTimeout(refreshMetrics, REFRESH_INTERVAL_MS);
     }
 }
+
 
 // ------------------------------
 // START DASHBOARD
