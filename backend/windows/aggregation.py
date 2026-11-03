@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from collections import deque
 from datetime import datetime, timezone
+from genericpath import getsize
 from threading import Lock
 import time
 
@@ -124,6 +125,7 @@ class EventAggregator:
         results = []
 
         for pid in process_keys:
+            if pid == 4294967295: continue #4294967295 is 0xFFFFFFFF, invalid
             selected = [
                 e for e in events
                 if e.pid == pid
@@ -172,37 +174,41 @@ class EventAggregator:
         results = []
         files = dict()
         #sort by letterless path, may lead to aliasing if two disks are set up the exact same way
-        for e in events: files.setdefault(e.path,[]).append(e)
+        for e in events: files.setdefault(e.file_id,[]).append(e)
         if files is not None: 
-            for filepath, file_events in files.items():
-                if filepath is None: continue #malformed
-                selected = file_events #all events pertaining to a given path
+            for file_id, file_events in files.items():
+                if file_id is None: continue #malformed
+                selected = file_events #all events pertaining to a given fileKey
                 reads = [e for e in selected if e.operation == "read"]
                 writes = [e for e in selected if e.operation == "write"]
-                file_id = next((e.file_id for e in file_events if e.file_id is not None), None)
+                file_path = next((e.path for e in file_events if e.path is not None), None)
                 disk_number = next((e.device_id for e in file_events if e.device_id is not None), None)
                 path_letter = next((e.decoded_drive_letter for e in file_events if e.decoded_drive_letter is not None), None)
-                if disk_number is None or path_letter is None: continue
-                absolute_path = path_letter + filepath
-                #print(f"file R/W in snapshot at time {end_ns} : {len(reads)}, {len(writes)}")
+                if file_path is None or disk_number is None or path_letter is None: continue
+                #we need at least one occurence of successful path decoding per fileID
+                stripped_path = file_path.split('\\',3)[-1] #grab all after 3rd \
+                absolute_path = path_letter + '\\' + stripped_path
                 read_bytes = self._byte_total(reads)
                 write_bytes = self._byte_total(writes)
-            
+                try: 
+                    file_size = getsize(absolute_path)
+                except:
+                    file_size = None #e.g. file was deleted
                 results.append(FileActivity(
                     host_id=self.host_id,
                     file_id=file_id,
                     path=absolute_path,
                     device_id=disk_number,
-                    window_start_utc=start_ns,
-                    window_end_utc=end_ns,
+                    window_start_utc=utc_timestamp(start_ns),
+                    window_end_utc=utc_timestamp(end_ns),
                     read_bytes=read_bytes,
                     write_bytes=write_bytes,
-                    read_ops=len(reads) / sample_window_seconds,
-                    write_ops=len(writes) / sample_window_seconds,
-                    file_size_bytes=None,
+                    read_ops=len(reads),
+                    write_ops=len(writes),
+                    file_size_bytes=file_size,
                     source="windows_etw",
-                    ))     
-        return results
+                    ))
+        return self._combine_based_on_path(results)
         
     @staticmethod
     def _byte_total(items: list[RawIoEvent]) -> int | None:
@@ -233,3 +239,7 @@ class EventAggregator:
         return sum(
             e.transferred_bytes for e in items
         ) / sample_window_seconds
+
+    @staticmethod
+    def _combine_based_on_path(metrics: list[FileActivity] | None) -> list[FileActivity] | None:
+        return metrics
