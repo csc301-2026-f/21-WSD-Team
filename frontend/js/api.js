@@ -10,7 +10,7 @@ const API_BASE_URL = "";
 
 // Keep true while testing the frontend with mock device/process data.
 // Recommendations always use the real Flask backend.
-const USE_MOCK_DATA = false;
+const USE_MOCK_DATA = true;
 
 /* SHARED API REQUEST FUNCTION */
 
@@ -83,12 +83,24 @@ export async function getLatestProcesses() {
 
 /* PROCESS HISTORY */
 
+
+/* PROCESS HISTORY */
+
 export async function getProcessHistory({
     process_instance_id,
     start_utc,
     end_utc,
     bucket_seconds
 }) {
+    if (USE_MOCK_DATA) {
+        return getMockProcessHistory({
+            process_instance_id,
+            start_utc,
+            end_utc,
+            bucket_seconds
+        });
+    }
+
     const params = new URLSearchParams({
         process_instance_id,
         start_utc,
@@ -103,6 +115,7 @@ export async function getProcessHistory({
         `/api/v1/processes/history?${params.toString()}`
     );
 }
+
 
 /* RECOMMENDATIONS */
 

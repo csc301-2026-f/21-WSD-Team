@@ -82,56 +82,58 @@ function renderDrives(devices) {
 }
 
 
+
 function updatePerformanceStats(metrics) {
     if (!Array.isArray(metrics) || metrics.length === 0) {
         return;
     }
 
-    // Only include records with numeric measurements.
-    const validMetrics = metrics.filter(metric =>
-        Number.isFinite(metric.read_bytes_per_sec) &&
-        Number.isFinite(metric.write_bytes_per_sec) &&
-        Number.isFinite(metric.read_iops) &&
-        Number.isFinite(metric.write_iops)
-    );
+    // Independently collect valid values for each measurement.
+    const getValidValues = key =>
+        metrics
+            .map(metric => metric[key])
+            .filter(value =>
+                typeof value === "number" &&
+                Number.isFinite(value) &&
+                value >= 0
+            );
 
-    if (validMetrics.length === 0) {
-        return;
-    }
+    const readBytes = getValidValues("read_bytes_per_sec");
+    const writeBytes = getValidValues("write_bytes_per_sec");
+    const readIops = getValidValues("read_iops");
+    const writeIops = getValidValues("write_iops");
+    const readLatencies = getValidValues("avg_read_latency_ms");
+    const writeLatencies = getValidValues("avg_write_latency_ms");
 
-    const totalReadBytes = validMetrics.reduce(
-        (sum, metric) => sum + metric.read_bytes_per_sec, 0
-    );
+    const sum = values =>
+        values.reduce((total, value) => total + value, 0);
 
-    const totalWriteBytes = validMetrics.reduce(
-        (sum, metric) => sum + metric.write_bytes_per_sec, 0
-    );
+    const average = values =>
+        values.length
+            ? `${(sum(values) / values.length).toFixed(2)} ms`
+            : "Not provided";
 
-    const totalReadIops = validMetrics.reduce(
-        (sum, metric) => sum + metric.read_iops, 0
-    );
+    const formatMBps = value =>
+        `${(value / 1_000_000).toFixed(2)} MB/s`;
 
-    const totalWriteIops = validMetrics.reduce(
-        (sum, metric) => sum + metric.write_iops, 0
-    );
+    const formatIops = value =>
+        value.toLocaleString(undefined, {
+            maximumFractionDigits: 1
+        });
 
-    // Convert bytes per second to MB/s (decimal units).
-    const readMBps = totalReadBytes / 1_000_000;
-    const writeMBps = totalWriteBytes / 1_000_000;
-
-    const formatMBps = value => `${value.toFixed(2)} MB/s`;
-    const formatIops = value => value.toLocaleString(
-        undefined, { maximumFractionDigits: 1 }
-    );
+    const totalReadBytes = sum(readBytes);
+    const totalWriteBytes = sum(writeBytes);
+    const totalReadIops = sum(readIops);
+    const totalWriteIops = sum(writeIops);
 
     document.getElementById("total-throughput").textContent =
-        formatMBps(readMBps + writeMBps);
+        formatMBps(totalReadBytes + totalWriteBytes);
 
     document.getElementById("read-throughput").textContent =
-        formatMBps(readMBps);
+        formatMBps(totalReadBytes);
 
     document.getElementById("write-throughput").textContent =
-        formatMBps(writeMBps);
+        formatMBps(totalWriteBytes);
 
     document.getElementById("current-iops").textContent =
         formatIops(totalReadIops + totalWriteIops);
@@ -142,28 +144,29 @@ function updatePerformanceStats(metrics) {
     document.getElementById("write-iops").textContent =
         formatIops(totalWriteIops);
 
-    document.getElementById("devices-reporting").textContent =
-        `${validMetrics.length}`;
+    // Count devices with at least one valid measurement.
+    const reportingDevices = new Set(
+        metrics
+            .filter(metric =>
+                [
+                    metric.read_bytes_per_sec,
+                    metric.write_bytes_per_sec,
+                    metric.read_iops,
+                    metric.write_iops
+                ].some(value =>
+                    typeof value === "number" &&
+                    Number.isFinite(value) &&
+                    value >= 0
+                )
+            )
+            .map(metric => metric.device_id)
+    );
 
-    const timestamp = new Date().toLocaleTimeString();
+    document.getElementById("devices-reporting").textContent =
+        reportingDevices.size;
 
     document.getElementById("metrics-updated").textContent =
-        timestamp;
-
-    // Average latency across records that provide numeric latency values.
-    const readLatencies = validMetrics
-        .map(metric => metric.avg_read_latency_ms)
-        .filter(value => typeof value === "number" && Number.isFinite(value));
-
-    const writeLatencies = validMetrics
-        .map(metric => metric.avg_write_latency_ms)
-        .filter(value => typeof value === "number" && Number.isFinite(value));
-
-    const average = values =>
-        values.length
-            ? `${(values.reduce((sum, value) => sum + value, 0) /
-                values.length).toFixed(2)} ms`
-            : "Not provided";
+        new Date().toLocaleTimeString();
 
     document.getElementById("read-latency").textContent =
         average(readLatencies);

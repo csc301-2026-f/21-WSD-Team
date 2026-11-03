@@ -181,4 +181,19 @@ processSelect.addEventListener("change", () => {
     refreshHistory();
 });
 
+// Allow the process table to control the history graph selection.
+document.addEventListener("process-selected-for-history", event => {
+    const selectedId = event.detail.process_instance_id;
+
+    const matchingOption = [...processSelect.options].find(option => {
+        const process = JSON.parse(option.value);
+        return process.process_instance_id === selectedId;
+    });
+
+    if (matchingOption) {
+        processSelect.value = matchingOption.value;
+        refreshHistory();
+    }
+});
+
 refreshHistory();

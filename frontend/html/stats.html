@@ -60,7 +60,7 @@
 
             <div id="graph">
                 <h2>Disk Usage Over Time</h2>
-                <div class="box-container", id="graph-container">
+                <div class="box-container" id="graph-container">
                     <div class="box" id="throughput-box">
                         <h3>Average Throughput (MB/s)</h3>
                         <canvas id="throughputChart"></canvas>
@@ -124,6 +124,15 @@
             <p id="selected-process">
                 Select an application to view its history.
             </p>
+
+            <div class="process-search-container">
+                <input
+                    type="text"
+                    id="process-search"
+                    placeholder="Search processes by name or PID..."
+                    autocomplete="off"
+                >
+            </div>
 
             <div id="process-table-wrapper">
                 <table id="process-table">

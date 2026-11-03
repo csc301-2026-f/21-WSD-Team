@@ -1,4 +1,6 @@
+
 /* LIVE-SIMULATED DISK METRICS */
+
 export const mockDevices = [
     {
         host_id: "host_mock",
@@ -95,6 +97,8 @@ export function getMockMetrics() {
 }
 
 
+/* LIVE-SIMULATED PROCESS METRICS */
+
 
 /* LIVE-SIMULATED PROCESS METRICS */
 
@@ -137,15 +141,20 @@ const baseMockProcesses = [
     }
 ];
 
-// Keep the latest five minutes of generated process samples.
-// The graph can request a smaller window, such as one minute.
+// Retain five minutes of process history.
 const HISTORY_WINDOW_MS = 5 * 60 * 1000;
 const mockProcessHistoryRecords = [];
+
+// Must match the process_instance_id format used by the frontend/backend.
+function getProcessInstanceId(process) {
+    return `${process.pid}_${process.start_time_utc ?? ""}`;
+}
 
 function generateProcessSample(process, now) {
     return {
         host_id: process.host_id,
         pid: process.pid,
+        process_instance_id: getProcessInstanceId(process),
         start_time_utc: process.start_time_utc,
         process_name: process.process_name,
         timestamp_utc: now.toISOString(),
@@ -178,7 +187,7 @@ export function getMockProcesses() {
         generateProcessSample(process, now)
     );
 
-    // Save each polling sample for historical queries.
+    // Accumulate samples for historical queries.
     mockProcessHistoryRecords.push(...samples);
 
     pruneProcessHistory(now.getTime());
@@ -189,23 +198,14 @@ export function getMockProcesses() {
 /* MOCK PROCESS HISTORY */
 
 export function getMockProcessHistory({
-    host_id,
-    pid,
-    start_time_utc,
+    process_instance_id,
     start_utc,
     end_utc,
     bucket_seconds
 }) {
-    if (
-        !host_id ||
-        pid === undefined ||
-        pid === null ||
-        !start_time_utc ||
-        !start_utc ||
-        !end_utc
-    ) {
+    if (!process_instance_id || !start_utc || !end_utc) {
         throw new Error(
-            "host_id, pid, start_time_utc, start_utc and end_utc are required"
+            "process_instance_id, start_utc and end_utc are required"
         );
     }
 
@@ -225,17 +225,17 @@ export function getMockProcessHistory({
             const timestamp = Date.parse(record.timestamp_utc);
 
             return (
-                record.host_id === host_id &&
-                record.pid === Number(pid) &&
-                record.start_time_utc === start_time_utc &&
+                record.process_instance_id === process_instance_id &&
                 timestamp >= start &&
                 timestamp <= end
             );
         })
         .sort((a, b) =>
-            Date.parse(a.timestamp_utc) - Date.parse(b.timestamp_utc)
+            Date.parse(a.timestamp_utc) -
+            Date.parse(b.timestamp_utc)
         );
 
+    // Optional time-bucket aggregation.
     if (bucket_seconds !== undefined && bucket_seconds !== null) {
         const seconds = Number(bucket_seconds);
 
@@ -247,6 +247,7 @@ export function getMockProcessHistory({
 
         for (const record of records) {
             const timestamp = Date.parse(record.timestamp_utc);
+
             const bucketStart =
                 Math.floor(timestamp / (seconds * 1000)) *
                 seconds * 1000;
