@@ -1,4 +1,3 @@
-
 import { getLatestProcesses } from "./api.js";
 
 import {
@@ -6,6 +5,12 @@ import {
     formatRate,
     filterProcesses as filterProcessList
 } from "./processUtils.js";
+
+import {
+    getProcessRowValues,
+    getEmptyStateMessage,
+    getProcessStatusMessage
+} from "./processRendering.js";
 
 const REFRESH_INTERVAL_MS = 2000;
 
@@ -31,13 +36,7 @@ function renderProcesses(processes) {
 
         row.dataset.processKey = processKey;
 
-        const values = [
-            process.process_name ?? "Unknown",
-            process.pid ?? "N/A",
-            formatRate(process.read_bytes_per_sec),
-            formatRate(process.write_bytes_per_sec),
-            process.attributed_device_id ?? "Unattributed"
-        ];
+        const values = getProcessRowValues(process);
 
         for (const value of values) {
             const cell = document.createElement("td");
@@ -82,9 +81,7 @@ function renderProcesses(processes) {
         const cell = document.createElement("td");
 
         cell.colSpan = 5;
-        cell.textContent = latestProcesses.length === 0
-            ? "No processes available."
-            : "No processes match your search.";
+        cell.textContent = getEmptyStateMessage(latestProcesses);
 
         row.appendChild(cell);
         tableBody.appendChild(row);
@@ -104,9 +101,8 @@ function filterAndRenderProcesses() {
 
     renderProcesses(filteredProcesses);
 
-    statusElement.textContent = searchTerm.trim() !== ""
-        ? `Showing ${filteredProcesses.length} of ${latestProcesses.length} processes.`
-        : `${latestProcesses.length} processes detected.`;
+    statusElement.textContent =
+        getProcessStatusMessage(latestProcesses, searchTerm);
 }
 
 
