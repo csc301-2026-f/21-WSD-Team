@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
-"""D2 advice for SSD caching uses one cache target per evaluation; original files remain intact."""
+"""D3 advice for SSD caching uses one cache target per evaluation; original files remain intact."""
 from ..common.recommendations import make_recommendation
 
 
