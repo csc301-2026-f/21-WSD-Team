@@ -64,7 +64,7 @@ class LinuxAgentAdapter:
 
 
     def get_file_activity(self, sample_window_seconds = 10, now_ns = None):
-        pass
+        return []
     #TODO agent not done
 
     def close(self):
