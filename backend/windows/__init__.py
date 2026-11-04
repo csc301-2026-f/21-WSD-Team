@@ -35,7 +35,6 @@ def create_backend(host_id: str):
 
 __all__ = [
     "create_backend",
-    "WindowsBackend",
     "Device",
     "DeviceMetric",
     "ProcessMetric",
