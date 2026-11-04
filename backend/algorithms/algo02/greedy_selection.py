@@ -12,8 +12,13 @@ def select_files_greedy(candidates, capacity, max_recommendations, warnings):
     remaining_space = capacity
     sorted_candidates = sorted(
         candidates, 
-        key=lambda row: (-row["read_rate"], row["size"], row["file_id"])
+        key=lambda row: (
+            - (row["read_rate"] / max(row["size"], 1)),
+            -row["read_rate"],                          
+            row["size"],                                
+            row["file_id"]
         )
+    )
 
     for row in sorted_candidates:
         if row["size"] > remaining_space:
