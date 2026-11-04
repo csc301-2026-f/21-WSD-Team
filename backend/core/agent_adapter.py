@@ -63,7 +63,7 @@ class LinuxAgentAdapter:
         return normalize_linux_process_metric(process_metric, self.backend.host_id)
 
 
-    def get_file_activity(self):
+    def get_file_activity(self, sample_window_seconds = 10, now_ns = None):
         pass
     #TODO agent not done
 

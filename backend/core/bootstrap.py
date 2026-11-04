@@ -73,7 +73,7 @@ def create_application(*, demo_mode=False, data_dir=None):
         "device_metrics": not demo_mode,
         "process_metrics": not demo_mode,
         "process_to_device_attribution": False,
-        "file_access_metrics": demo_mode,
+        "file_access_metrics": demo_mode or sys.platform.startswith("win32"),
         "file_level_pooling": False,
         "ssd_caching": False,
         "file_move": False,
