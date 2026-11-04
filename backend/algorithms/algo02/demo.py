@@ -3,7 +3,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from .ssd_policy import evaluate_ssd_policy
+from .ssd_policy import evaluate_ssd_caching_policy
 from ..common.validation import is_mock_source
 
 
@@ -23,7 +23,7 @@ def main(argv=None):
         if any(not isinstance(row, dict) or not is_mock_source(row.get("source")) for row in payload["history"].get("file_activity", [])):
             raise ValueError("mock examples must label each FileActivity source as mock or mock:<description>")
             
-        items = evaluate_ssd_policy(**payload)
+        items = evaluate_ssd_caching_policy(**payload)
         
     except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
         print("MOCK demo input error: " + str(error), file=sys.stderr)
