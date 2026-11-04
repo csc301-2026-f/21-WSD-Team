@@ -10,7 +10,7 @@ def _has_mock_activity(history):
     rows = history.get("file_activity", []) if isinstance(history, dict) else []
     return isinstance(rows, list) and any(isinstance(row, dict) and is_mock_source(row.get("source")) for row in rows)
 
-def evaluate_ssd_policy(devices: list[dict], realtime: dict, history: dict,
+def evaluate_ssd_caching_policy(devices: list[dict], realtime: dict, history: dict,
                         mode_config: dict, capabilities: dict) -> list[dict]:
     """Evaluate SSD caching recommendations based on file read heat and cache constraints."""
     try:
