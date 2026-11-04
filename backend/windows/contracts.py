@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-MediaType = Literal["nvme", "hdd", "ssd", "unknown"]
+MediaType = Literal["nvme", "scm", "hdd", "ssd", "unknown"]
 
 
 @dataclass(frozen=True) 
