@@ -26,3 +26,5 @@ jobs:
         run: python -B -m pytest backend/algorithms/algo01/tests -q
       - name: Run QA contract tests
         run: python -B -m unittest discover -s tests/contract -v
+      - name: Run CORE normalization tests
+        run: python -B -m unittest discover -s tests -p "test_core_normalization.py" -v
