@@ -1,19 +1,18 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
-import os
+import gc
 import pytest
 from backend.db.repository import SQLiteHistoryRepository
 
-TEST_DB = "test_wsd.db"
 
 @pytest.fixture
-def repo():
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
-    repository = SQLiteHistoryRepository(db_path=TEST_DB)
+def repo(tmp_path):
+    # Each test gets its own temporary folder (cleaned up by pytest), so no
+    # test_wsd.db / -wal / -shm files are left in the repo, and nothing has to
+    # be deleted while SQLite still holds the file open (fails on Windows).
+    repository = SQLiteHistoryRepository(db_path=str(tmp_path / "test_wsd.db"))
     yield repository
-    if os.path.exists(TEST_DB):
-        os.remove(TEST_DB)
+    gc.collect()
 
 def test_empty_query_returns_empty_list(repo):
     results = repo.query_device_history(
