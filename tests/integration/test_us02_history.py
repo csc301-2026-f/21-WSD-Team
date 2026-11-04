@@ -1,8 +1,10 @@
 """US-02 integration test (QA): agent sample -> CORE -> DB -> CORE history query.
 """
 
+import gc
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -74,16 +76,20 @@ Repository = SQLiteHistoryRepository or MockRepository
 
 class US02HistoryFlowTests(unittest.TestCase):
     def setUp(self):
-        handle, self.db_path = tempfile.mkstemp(suffix=".db")
-        os.close(handle)
+        # Own temp folder per test; the DB file is created inside it.
+        self.tmp_dir = tempfile.mkdtemp()
+        self.db_path = os.path.join(self.tmp_dir, "us02_test.db")
         repo = Repository(db_path=self.db_path)
         self.processes = load("metrics_process.json")
         self.agent = FakeAgent(load("devices.json"), load("metrics_device.json"), self.processes)
         self.core = CoreService(agent=self.agent, algorithm=None, database=DataBaseAdaptor(repo))
 
     def tearDown(self):
-        if os.path.exists(self.db_path):
-            os.remove(self.db_path)
+        # The DB code leaves SQLite connections open until garbage collection.
+        # Windows cannot delete open files, so collect first and never fail cleanup.
+        self.core = None
+        gc.collect()
+        shutil.rmtree(self.tmp_dir, ignore_errors=True)
 
     def history_for(self, row):
         instance_id = f"{row['pid']}_{row['start_time_utc']}"
