@@ -39,11 +39,10 @@ class DeviceProvider:
             free_space = 0
             for partition in self._get_partitions(disk):
                 for logical_disk in self._get_logical_disks(partition):
-                    space = int(logical_disk.FreeSpace)
+                    space = logical_disk.FreeSpace
                     if space == None:
-                        print("maloc panic ^TM")
                         continue
-                    free_space += space
+                    free_space += int(space)
 
             devices.append(
                 Device(
@@ -66,10 +65,12 @@ class DeviceProvider:
     def _get_media_type(self, storage_disk) -> MediaType:
         """Find the type of a correlated storage disk"""
         try:
-            bus_type = int(storage_disk.BusType)
-            media_type = int(storage_disk.MediaType)
-        except (AttributeError, TypeError, ValueError):
-            return MediaType.UNKNOWN
+            bus_type = storage_disk.BusType
+            media_type = storage_disk.MediaType
+        except AttributeError:
+            return None
+        if bus_type is None or media_type is None:
+            return None
         if bus_type == 17:
             return "nvme"
         match media_type:
