@@ -102,7 +102,7 @@ class SSDCachingContractTests(unittest.TestCase):
     def test_existing_ssd_files_are_left_alone(self):
         data = payload()
         data['history']['file_activity'][0]['device_id'] = 'ssd-1'
-        self.none(data, 'source_outside_d3_hdd_scope')
+        self.none(data, 'source_outside_ssd_caching_scope')
 
     def test_write_heavy_and_inactive_files_are_deferred(self):
         data = payload()
@@ -138,7 +138,7 @@ class SSDCachingContractTests(unittest.TestCase):
         self.assertEqual(rows, evaluate_ssd_caching_policy(**data))
 
     def test_invalid_config_does_not_silently_activate_v2(self):
-        for config, code in (({'min_cost_confidence': 0.8}, 'invalid_config'), ({'goal': 'lifespan'}, 'goal_not_implemented_in_d3'), ({'reserve_fraction': float('nan')}, 'invalid_config'), ({'reserve_bytes': True}, 'invalid_config'), ({'max_recommendations': 0}, 'invalid_config')):
+        for config, code in (({'min_cost_confidence': 0.8}, 'invalid_config'), ({'goal': 'lifespan'}, 'goal_not_implemented_in_d2'), ({'reserve_fraction': float('nan')}, 'invalid_config'), ({'reserve_bytes': True}, 'invalid_config'), ({'max_recommendations': 0}, 'invalid_config')):
             data = payload()
             data['mode_config'] = config
             self.none(data, code)
@@ -234,7 +234,7 @@ class SSDCachingContractTests(unittest.TestCase):
         older.update(window_start_utc='2026-10-17T11:58:00Z', window_end_utc='2026-10-17T11:59:00Z')
         data['history']['file_activity'].append(older)
         data['history']['file_activity'][0]['device_id'] = 'ssd-1'
-        self.none(data, 'source_outside_d3_hdd_scope')
+        self.none(data, 'source_outside_ssd_caching_scope')
 
     def test_direct_call_marks_mock_without_cli_wrapper(self):
         for label in ('mock', 'mock:history-fixture', 'MOCK:fixture'):
