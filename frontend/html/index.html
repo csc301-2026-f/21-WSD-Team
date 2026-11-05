@@ -6,19 +6,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Monitor your computer's storage with Wise Storage Director. View connected drives, storage usage, performance metrics, and recommended optimizations from one convenient dashboard.">
 
     <title>WSD App</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
-    
+
 </head>
 
 <body>
-    <div class="header-box">
-        <h1>Wise Storage Director - Main Page</h1>
-    </div>
-
     <span id="navOpenButton">&#9776;</span>
 
     <div id="mainSidenav" class="sidenav">
@@ -55,7 +52,7 @@
             </li>
         </ul>
     </div>
-    
+
 
     <div class="box-container">
         <div class="box">
@@ -73,50 +70,54 @@
     </div> 
     -->
 
-    
-    <div class="box-container" id="driveContainer">
-        <!-- JavaScript generates a box for each drive here -->
-    </div>
-
-
-    <div class="box-container">
-        <div class="box" id="big-start">
-            <h1>Toggle On/Off WSD</h1>
-            <h2>Check the statistics page for more info after launch</h2>
-
-            <input type="checkbox" id="power" checked>
-            <label for="power">ON/OFF</label>
+    <main>
+        <div class="header-box">
+            <h1>Wise Storage Director - Main Page</h1>
         </div>
-    </div>
 
-    <div class="box-container">
-        <!-- WSD Recommendations -->
-        <section id="recommendations-section">
-            <div class="recommendations-header">
-                <div>
-                    <h2>Storage Recommendations</h2>
-                    <p>Review suggested storage optimizations.</p>
+        <div class="box-container" id="driveContainer">
+            <!-- JavaScript generates a box for each drive here -->
+        </div>
+
+        <div class="box-container">
+            <div class="box" id="big-start">
+                <h1>Toggle On/Off WSD</h1>
+                <h2>Check the statistics page for more info after launch</h2>
+
+                <input type="checkbox" id="power" checked>
+                <label for="power">ON/OFF</label>
+            </div>
+        </div>
+
+        <div class="box-container">
+            <!-- WSD Recommendations -->
+            <section id="recommendations-section">
+                <div class="recommendations-header">
+                    <div>
+                        <h2>Storage Recommendations</h2>
+                        <p>Review suggested storage optimizations.</p>
+                    </div>
+
+                    <button id="refresh-recommendations-button" type="button">
+                        Refresh Recommendations
+                    </button>
                 </div>
 
-                <button id="refresh-recommendations-button" type="button">
-                    Refresh Recommendations
-                </button>
-            </div>
+                <p id="recommendations-status" role="status">
+                    Loading recommendations...
+                </p>
 
-            <p id="recommendations-status" role="status">
-                Loading recommendations...
-            </p>
+                <div class="recommendations-notice">
+                    Recommendations are advisory. No files are moved automatically
+                    by displaying a recommendation.
+                </div>
 
-            <div class="recommendations-notice">
-                Recommendations are advisory. No files are moved automatically
-                by displaying a recommendation.
-            </div>
-
-            <div id="recommendations-container">
-                <!-- JavaScript renders recommendation cards here. -->
-            </div>
-        </section>
-    </div>
+                <div id="recommendations-container">
+                    <!-- JavaScript renders recommendation cards here. -->
+                </div>
+            </section>
+        </div>
+    </main>
 
     <script type="module" src="../js/ui.js"></script>
     <script type="module" src="../js/main.js"></script>
