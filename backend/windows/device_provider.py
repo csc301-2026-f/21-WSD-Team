@@ -132,9 +132,12 @@ class DeviceProvider:
             letter_bound_entries = []
             for partition in self._get_partitions(disk):
                 try:
-                    start = int(partition.StartingOffset)
-                    size = int(partition.Size)
-                except (TypeError, ValueError):
+                    start = partition.StartingOffset
+                    size = partition.Size
+                    if start is None or size is None: continue
+                    start = int(start)
+                    size = int(size)
+                except ValueError:
                     continue
                 end = start + size
                 for logical_disk in self._get_logical_disks(partition):

@@ -175,7 +175,11 @@ class EtwDecoder:
         if file_key is None or file_object is None:
             return None
         path = self._file_name_map.get(file_key)
-        disk_number,offset = self._file_location_map.get(file_key)
+        location = self._file_location_map.get(file_key)
+        if location: disk_number,offset = location
+        else: 
+            disk_number=None
+            offset=None
         #since the fileObject field is stable between create and close calls, path may be correlated later
         path_letter = self._get_letter(disk_number,offset)
         return RawIoEvent(
