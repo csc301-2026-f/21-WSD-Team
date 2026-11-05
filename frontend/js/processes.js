@@ -5,7 +5,7 @@ import { getLatestProcesses } from "./api.js";
 
 import {
     getProcessKey,
-    formatRate,
+    getProcessInstanceId,
     filterProcesses as filterProcessList
 } from "./processUtils.js";
 
@@ -25,7 +25,6 @@ const searchInput = document.getElementById("process-search");
 let selectedProcessKey = null;
 let latestProcesses = [];
 let isRefreshing = false;
-
 
 /* RENDER PROCESS TABLE */
 
@@ -69,7 +68,7 @@ function renderProcesses(processes) {
                 new CustomEvent("process-selected-for-history", {
                     detail: {
                         process_instance_id:
-                            `${process.pid}_${process.start_time_utc ?? ""}`
+                            getProcessInstanceId(process)
                     }
                 })
             );
@@ -90,7 +89,6 @@ function renderProcesses(processes) {
     }
 }
 
-
 /* SEARCH AND FILTERING */
 
 function filterAndRenderProcesses() {
@@ -106,7 +104,6 @@ function filterAndRenderProcesses() {
     statusElement.textContent =
         getProcessStatusMessage(latestProcesses, searchTerm);
 }
-
 
 /* REFRESH PROCESS DATA */
 
@@ -126,7 +123,8 @@ async function refreshProcessTable() {
 
         latestProcesses = processes;
 
-        // Clear selection if the selected process no longer exists.
+        // Clear selection if the selected process no longer exists
+        // in the current process activity response.
         if (
             selectedProcessKey !== null &&
             !latestProcesses.some(
@@ -148,16 +146,27 @@ async function refreshProcessTable() {
 
     } finally {
         isRefreshing = false;
-        setTimeout(refreshProcessTable, REFRESH_INTERVAL_MS);
+
+        setTimeout(
+            refreshProcessTable,
+            REFRESH_INTERVAL_MS
+        );
     }
 }
 
-
 /* EVENT LISTENERS */
 
-searchInput.addEventListener("input", filterAndRenderProcesses);
-
+searchInput.addEventListener(
+    "input",
+    filterAndRenderProcesses
+);
 
 /* INITIALIZATION */
 
-refreshProcessTable();
+if (!tableBody || !statusElement || !selectedElement || !searchInput) {
+    console.error(
+        "Process table is missing one or more required HTML elements."
+    );
+} else {
+    refreshProcessTable();
+}

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+// SPDX-License-Identifier: GPL-3.0-only
 
 /* PROCESS IDENTIFICATION */
 
@@ -5,6 +7,15 @@ export function getProcessKey(process) {
     return `${process.host_id}:${process.pid}:${process.start_time_utc ?? "unknown"}`;
 }
 
+// Must match the current SQLite repository's process_instance_id format.
+// Python converts a None start_time to the string "None" in its f-string.
+export function getProcessInstanceId(process) {
+    const startTime = process.start_time_utc === null
+        ? "None"
+        : (process.start_time_utc ?? "");
+
+    return `${process.pid}_${startTime}`;
+}
 
 /* PROCESS RATE FORMATTING */
 
@@ -29,7 +40,6 @@ export function formatRate(bytesPerSecond) {
 
     return `${value.toFixed(0)} B/s`;
 }
-
 
 /* PROCESS SEARCH AND FILTERING */
 

@@ -1,4 +1,4 @@
-
+import { getProcessInstanceId } from "../frontend/js/processUtils.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -139,4 +139,24 @@ test("search ignores surrounding whitespace", () => {
 
 test("invalid process input returns an empty array", () => {
     assert.deepEqual(filterProcesses(null, "steam"), []);
+});
+
+test("matches the backend process ID when start time is null", () => {
+    assert.equal(
+        getProcessInstanceId({
+            pid: 1234,
+            start_time_utc: null
+        }),
+        "1234_None"
+    );
+});
+
+test("includes the start time in the process instance ID", () => {
+    assert.equal(
+        getProcessInstanceId({
+            pid: 1234,
+            start_time_utc: "2026-11-04T12:00:00Z"
+        }),
+        "1234_2026-11-04T12:00:00Z"
+    );
 });
