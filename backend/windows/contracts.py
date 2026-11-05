@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 
-MediaType = Literal["nvme", "hdd", "ssd", "unknown"]
+MediaType = Literal["nvme", "scm", "hdd", "ssd", "unknown"]
 
 
 @dataclass(frozen=True) 
@@ -88,6 +88,7 @@ class RawIoEvent:
 
     file_id: int | None = None
     path: str | None = None
+    decoded_drive_letter: str | None = None
     file_size_bytes: int | None = None
 
     # True only when file identity/path correlation was validated.

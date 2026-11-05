@@ -10,7 +10,8 @@ from .contracts import (
 )
 
 
-def create_backend(host_id: str) -> "WindowsBackend":
+
+def create_backend(host_id: str):
     """Returns the windows backend fully wired up."""
     from .device_provider import DeviceProvider
     from .etw_source import EtwDecoder, EtwSource
