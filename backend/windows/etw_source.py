@@ -6,6 +6,8 @@ from typing import Any
 from uuid import UUID
 from time import time_ns
 
+import psutil
+
 
 from .contracts import CollectionHealth, RawIoEvent
 from .transport import EtwTransport
@@ -107,16 +109,18 @@ class EtwDecoder:
         if not isinstance(process_name, str) or not process_name.strip():
             process_name = record.get("ImageFileName")
         if not isinstance(process_name, str) or not process_name.strip():
-            process_name = None
+            process_name = self._get_process_name(pid)
         # This is collection time, not the original event time.
         observed_timestamp_ns = time_ns()
         # get file path from the current mapping
         file_id = self._parse_pointer(record.get("FileObject"))
         path = None
+        path_letter = None
         if file_id is not None:
             offset = self._integer(record.get("ByteOffset"))
             if offset is not None and offset > 0: #record location for fileIO
                 self._file_location_map[file_id] = (disk_number,offset) 
+                path_letter = self._get_letter(disk_number,offset)
             path = self._file_name_map.get(file_id)
         file_attribution_verified = (path is not None)
         return RawIoEvent(
@@ -130,6 +134,7 @@ class EtwDecoder:
             duration_ns=None,
             file_id=file_id,
             path=path,
+            decoded_drive_letter=path_letter,
             file_size_bytes=None,
             file_attribution_verified=file_attribution_verified,
             source="diskIO",
@@ -152,6 +157,7 @@ class EtwDecoder:
             return None
         else:  # Ignore initiation and other event types.
             return None
+        #print(f"{operation} , FileKey: {record.get("FileKey")}, FileObject: {record.get("FileObject")}, maps:{len(self._file_name_map)}, time:{observed_timestamp_ns}")
         pid = self._integer(header.get("ProcessId"))
         transferred_bytes = self._integer(record.get("IoSize"))        
         if pid is None or transferred_bytes is None:
@@ -163,15 +169,18 @@ class EtwDecoder:
         if not isinstance(process_name, str) or not process_name.strip():
             process_name = record.get("ImageFileName")
         if not isinstance(process_name, str) or not process_name.strip():
-            process_name = None
-        file_id = self._parse_pointer(record.get("FileKey")) #FileObject is a field but has a different purpose
-        if file_id is None:
+            process_name = self._get_process_name(pid)
+        file_key = self._parse_pointer(record.get("FileKey")) #determines path
+        file_object = self._parse_pointer(record.get("FileObject")) # stable ID on fileIO layer
+        if file_key is None or file_object is None:
             return None
-        path = self._file_name_map.get(file_id)
-        disk_number,offset = self._file_location_map.get(file_id)
-        #a fileIO is only useful if the file is known
-        if path is None or disk_number is None or offset is None: 
-            return None
+        path = self._file_name_map.get(file_key)
+        location = self._file_location_map.get(file_key)
+        if location: disk_number,offset = location
+        else: 
+            disk_number=None
+            offset=None
+        #since the fileObject field is stable between create and close calls, path may be correlated later
         path_letter = self._get_letter(disk_number,offset)
         return RawIoEvent(
                     timestamp_ns=observed_timestamp_ns,
@@ -182,10 +191,11 @@ class EtwDecoder:
                     device_id=disk_number,
                     transferred_bytes=transferred_bytes,
                     duration_ns=None,
-                    file_id=file_id,
+                    file_id=file_object,
                     path=path,
+                    decoded_drive_letter=path_letter,
                     file_size_bytes=None,
-                    file_attribution_verified=True,
+                    file_attribution_verified=(path is not None),
                     source="fileIO",
                 )
     
@@ -203,13 +213,11 @@ class EtwDecoder:
         return self._device_provider.resolve_drive_letter(disk_number,offset)
 
 
-    
-
-    """def _get_process_name(self,pid) #not for D2
+    def _get_process_name(self,pid):
         try:
             return psutil.Process(pid).name()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
-            return None"""
+            return None
     
 
 class EtwSource:
@@ -237,3 +245,9 @@ class EtwSource:
 
     def get_health(self) -> CollectionHealth:
         return self._transport.get_health()
+
+""" 
+pointer baton pass summary:
+    FileIO.r/w->FileKey ~ FileIO.name->FileObject ~ DiskIO.r/w->FileObject
+    FileIO.r/w->FileObject ~ stable FileID across FileIO
+"""

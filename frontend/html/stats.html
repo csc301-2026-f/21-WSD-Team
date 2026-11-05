@@ -6,19 +6,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Explore disk usage statistics with Wise Storage Director. Review storage consumption, monitor drive performance, and understand how applications use your available storage.">
 
     <title>WSD App</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
-    
+
 </head>
 
 <body>
-    <div class="header-box">
-        <h1>Wise Storage Director - Statistics and Information</h1>
-    </div>
-
     <span id="navOpenButton">&#9776;</span>
 
     <div id="mainSidenav" class="sidenav">
@@ -32,7 +29,7 @@
     </div>
 
     <!-- OLD HEADER NAVIGATION MENU
-     
+
     <div class="header-box">
         <ul>
             <li>
@@ -57,95 +54,111 @@
     </div>
     -->
 
-    <div class="box-container">
-        <div class="box">
+    <main>
+        <div class="header-box">
+            <h1>Wise Storage Director - Statistics and Information</h1>
+        </div>
 
-            <div id="graph">
-                <h2>Disk Usage Over Time</h2>
-                <div class="box-container", id="graph-container">
-                    <div class="box" id="throughput-box">
-                        <h3>Average Throughput (MB/s)</h3>
-                        <canvas id="throughputChart"></canvas>
-                    </div>
+        <div class="box-container">
+            <div class="box">
 
-                    <div class="box" id="iops-box">
-                        <h3>Average IOPS</h3>
-                        <canvas id="iopsChart"></canvas>
+                <div id="graph">
+                    <h2>Disk Usage Over Time</h2>
+                    <div class="box-container" id="graph-container">
+                        <div class="box" id="throughput-box">
+                            <h3>Average Throughput (MB/s)</h3>
+                            <canvas id="throughputChart"></canvas>
+                        </div>
+
+                        <div class="box" id="iops-box">
+                            <h3>Average IOPS</h3>
+                            <canvas id="iopsChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="box">
-            <h3>Storage Performance</h3>
+            <div class="box">
+                <h3>Storage Performance</h3>
 
-            <p>Total Throughput: <strong id="total-throughput">Waiting for data...</strong></p>
-            <p>Read Throughput: <strong id="read-throughput">Waiting for data...</strong></p>
-            <p>Write Throughput: <strong id="write-throughput">Waiting for data...</strong></p>
-            <p>Total IOPS: <strong id="current-iops">Waiting for data...</strong></p>
-            <p>Read IOPS: <strong id="read-iops">Waiting for data...</strong></p>
-            <p>Write IOPS: <strong id="write-iops">Waiting for data...</strong></p>
-            <p>Devices Reporting: <strong id="devices-reporting">Waiting for data...</strong></p>
-            <p>Last Updated: <strong id="metrics-updated">Waiting for data...</strong></p>
+                <p>Total Throughput: <strong id="total-throughput">Waiting for data...</strong></p>
+                <p>Read Throughput: <strong id="read-throughput">Waiting for data...</strong></p>
+                <p>Write Throughput: <strong id="write-throughput">Waiting for data...</strong></p>
+                <p>Total IOPS: <strong id="current-iops">Waiting for data...</strong></p>
+                <p>Read IOPS: <strong id="read-iops">Waiting for data...</strong></p>
+                <p>Write IOPS: <strong id="write-iops">Waiting for data...</strong></p>
+                <p>Devices Reporting: <strong id="devices-reporting">Waiting for data...</strong></p>
+                <p>Last Updated: <strong id="metrics-updated">Waiting for data...</strong></p>
 
-            <h4>Average I/O Latency</h4>
-            <p>Read Latency: <strong id="read-latency">Not provided</strong></p>
-            <p>Write Latency: <strong id="write-latency">Not provided</strong></p>
-        </div>
-
-    </div>
-    
-
-    <!-- US-02: Historical process I/O -->
-    <section id="process-history-section">
-        <h2>Process I/O History</h2>
-
-        <label for="history-process-select">
-            Select application:
-        </label>
-
-        <select id="history-process-select">
-            <option value="">Loading applications...</option>
-        </select>
-
-        <p id="history-status">Collecting process history...</p>
-
-        <div id="process-history-chart-container">
-            <canvas id="processHistoryChart"></canvas>
-        </div>
-    </section>
-
-
-    <div class="box-container">    
-    <!-- US-01: Real-time process I/O / US-02: Process selection -->
-        <section id="process-section">
-            <h2>Application I/O</h2>
-
-            <p id="process-status">Loading process data...</p>
-
-            <p id="selected-process">
-                Select an application to view its history.
-            </p>
-
-            <div id="process-table-wrapper">
-                <table id="process-table">
-                    <thead>
-                        <tr>
-                            <th>Application</th>
-                            <th>PID</th>
-                            <th>Read Rate</th>
-                            <th>Write Rate</th>
-                            <th>Attributed Device</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="process-table-body">
-                        <!-- JavaScript inserts process rows here -->
-                    </tbody>
-                </table>
+                <h4>Average I/O Latency</h4>
+                <p>Read Latency: <strong id="read-latency">Not provided</strong></p>
+                <p>Write Latency: <strong id="write-latency">Not provided</strong></p>
             </div>
-        </section>
-    </div>
+
+        </div>
+
+
+        <!-- US-02: Historical process I/O -->
+        <div class="box-container"> 
+            <section id="process-history-section">
+                <h2>Process I/O History</h2>
+
+                <label for="history-process-select">
+                    Select application:
+                </label>
+
+                <select id="history-process-select">
+                    <option value="">Loading applications...</option>
+                </select>
+
+                <p id="history-status">Collecting process history...</p>
+
+                <div id="process-history-chart-container">
+                    <canvas id="processHistoryChart"></canvas>
+                </div>
+            </section>
+        </div>
+
+        <div class="box-container">    
+        <!-- US-01: Real-time process I/O / US-02: Process selection -->
+            <section id="process-section">
+                <h2>Application I/O</h2>
+
+                <p id="process-status">Loading process data...</p>
+
+                <p id="selected-process">
+                    Select an application to view its history.
+                </p>
+
+                <div class="process-search-container">
+                    <input
+                        type="text"
+                        id="process-search"
+                        placeholder="Search processes by name or PID..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div id="process-table-wrapper">
+                    <table id="process-table">
+                        <thead>
+                            <tr>
+                                <th>Application</th>
+                                <th>PID</th>
+                                <th>Read Rate</th>
+                                <th>Write Rate</th>
+                                <th>Attributed Device</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="process-table-body">
+                            <!-- JavaScript inserts process rows here -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="../js/ui.js"></script>

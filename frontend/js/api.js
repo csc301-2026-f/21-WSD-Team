@@ -91,6 +91,15 @@ export async function getProcessHistory({
     end_utc,
     bucket_seconds
 }) {
+    if (USE_MOCK_DATA) {
+        return getMockProcessHistory({
+            process_instance_id,
+            start_utc,
+            end_utc,
+            bucket_seconds
+        });
+    }
+
     const params = new URLSearchParams({
         process_instance_id,
         start_utc,
