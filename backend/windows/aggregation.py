@@ -36,6 +36,14 @@ class EventAggregator:
         self._max_events = max_events
         self._received_total = 0
         self._lock = Lock()
+        self._resolved_file_events = {}
+
+    def resolve_file_events(self, resolved):
+        with self._lock:
+            for original, updated in resolved:
+                # Retain the original object until the next snapshot, so its
+                # identity cannot be reused for an unrelated event.
+                self._resolved_file_events[id(original)] = (original, updated)
 
     def add_event(self, event: RawIoEvent) -> None:
         if event.operation not in ("read", "write"): #drop events that are not our IO
@@ -55,6 +63,12 @@ class EventAggregator:
         self, start_ns: int, end_ns: int
     ) -> list[RawIoEvent]:
         with self._lock:
+            if self._resolved_file_events:
+                self._events = deque([
+                    self._resolved_file_events[id(event)][1]
+                    if id(event) in self._resolved_file_events else event
+                    for event in self._events], maxlen=self._max_events)
+                self._resolved_file_events.clear()
             self._prune_locked(time.time_ns())
             return [
                 event for event in self._events
@@ -174,21 +188,39 @@ class EventAggregator:
         events = [e for e in snapshot if e.source == "fileIO"]
         results = []
         files = dict()
-        #sort by letterless path, may lead to aliasing if two disks are set up the exact same way
-        for e in events: files.setdefault(e.file_id,[]).append(e)
+        # FileObject can be reused after close. Keep different paths/devices
+        # separate instead of assigning every request to the first known path.
+        for e in events: files.setdefault((e.file_id,e.path,e.device_id),[]).append(e)
         if files is not None: 
-            for file_id, file_events in files.items():
+            for (file_id, _, _), file_events in files.items():
                 if file_id is None: continue #malformed
                 selected = file_events #all events pertaining to a given fileKey
                 reads = [e for e in selected if e.operation == "read"]
                 writes = [e for e in selected if e.operation == "write"]
-                file_path = next((e.path for e in file_events if e.path is not None), None)
-                disk_number = next((e.device_id for e in file_events if e.device_id is not None), None)
-                path_letter = next((e.decoded_drive_letter for e in file_events if e.decoded_drive_letter is not None), None)
-                if file_path is None or disk_number is None or path_letter is None: continue
-                #we need at least one occurence of successful path decoding per fileID
-                stripped_path = file_path.split('\\',3)[-1] #grab all after 3rd \
-                absolute_path = path_letter + '\\' + stripped_path
+                # file_path = next((e.path for e in file_events if e.path is not None), None)
+                # disk_number = next((e.device_id for e in file_events if e.device_id is not None), None)
+                # path_letter = next((e.decoded_drive_letter for e in file_events if e.decoded_drive_letter is not None), None)
+                # if file_path is None or disk_number is None or path_letter is None: continue
+                # #we need at least one occurence of successful path decoding per fileID
+                # stripped_path = file_path.split('\\',3)[-1] #grab all after 3rd \
+                # absolute_path = path_letter + '\\' + stripped_path
+
+                                # The decoder already resolves the complete Windows path.
+                # Do not reconstruct it using a potentially incorrect drive letter.
+                absolute_path = next(
+                    (e.path for e in file_events if e.path is not None),
+                    None
+                )
+
+                disk_number = next(
+                    (e.device_id for e in file_events if e.device_id is not None),
+                    None
+                )
+
+                # Skip records without verified file or device attribution.
+                if absolute_path is None or disk_number is None:
+                    continue
+                
                 read_bytes = self._byte_total(reads)
                 write_bytes = self._byte_total(writes)
                 try: 
@@ -256,12 +288,16 @@ class EventAggregator:
                     if path not in file_dict:
                         file_dict[path] = metric
                     else:
-                        new_read_bytes = file_dict[path].read_bytes
-                        new_write_bytes = file_dict[path].write_bytes
-                        if new_read_bytes is not None and metric.read_bytes is not None:
-                            new_read_bytes += metric.read_bytes
-                        if new_write_bytes is not None and metric.write_bytes is not None:
-                            new_write_bytes += metric.write_bytes
+                        # A handle with no reads contributes zero reads, not an
+                        # unknown total. Unknown bytes on actual requests stay unknown.
+                        read_bytes = 0 if metric.read_ops == 0 else metric.read_bytes
+                        write_bytes = 0 if metric.write_ops == 0 else metric.write_bytes
+                        new_read_bytes = 0 if file_dict[path].read_ops == 0 else file_dict[path].read_bytes
+                        new_write_bytes = 0 if file_dict[path].write_ops == 0 else file_dict[path].write_bytes
+                        new_read_bytes = (new_read_bytes + read_bytes
+                                          if new_read_bytes is not None and read_bytes is not None else None)
+                        new_write_bytes = (new_write_bytes + write_bytes
+                                           if new_write_bytes is not None and write_bytes is not None else None)
                         new_read_ops = metric.read_ops + file_dict[path].read_ops
                         new_write_ops = metric.write_ops + file_dict[path].write_ops
                         file_dict[path] = replace(file_dict[path],

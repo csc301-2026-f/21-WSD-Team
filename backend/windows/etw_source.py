@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 #pass etw events through a decoder and hand them off
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 from uuid import UUID
 from time import time_ns
@@ -28,12 +29,26 @@ OPCODE_FILE_WRITE = 68
 OPCODE_FILE_NAME = 0
 OPCODE_FILE_CREATE = 32
 OPCODE_FILE_RUNDOWN = 36
+OPCODE_FILE_OPEN = 64
+OPCODE_FILE_CLOSE = 66
+OPCODE_FILE_DELETE = 35
 
 class EtwDecoder:
-    def __init__(self, device_provider:DeviceProvider):
+    def __init__(self, device_provider:DeviceProvider, *, resolve_open_paths=True, recover_late_names=True):
         self._file_name_map: dict[int,str] = dict()
         self._file_location_map: dict[int,(int,int)] = dict()
         self._device_provider: DeviceProvider = device_provider
+        self._open_file_name_map = dict()
+        self._pending = dict()
+        self._pending_by_key = dict()
+        self._file_generations = dict()
+        self._open_sequence = 0
+        self._resolved = []
+        self._resolve_open_paths = resolve_open_paths
+        self._recover_late_names = recover_late_names
+        self._path_diagnostics = dict(open_events=0, name_events=0,
+                                     resolved_on_read_write=0, resolved_from_openpath=0, recovered_after_mapping=0,
+                                     pending_expired_or_reused=0)
 
     def decode(
         self, record: dict[str, Any]
@@ -146,7 +161,29 @@ class EtwDecoder:
         if not isinstance(descriptor, dict):
             return None
         opcode = self._integer(descriptor.get("Opcode"))
-        if opcode == OPCODE_FILE_READ:
+        if opcode == OPCODE_FILE_OPEN:
+            self._path_diagnostics["open_events"] += 1
+            file_object = self._parse_pointer(record.get("FileObject"))
+            if file_object is not None:
+                # FileObject may be reused for a later open. Never attach its
+                # old pending requests to the new file's OpenPath.
+                self._open_file_name_map.pop(file_object, None)
+                self._open_sequence += 1
+                if len(self._file_generations) >= 65536:
+                    self._file_generations.clear()
+                    self._open_file_name_map.clear()
+                self._file_generations[file_object] = self._open_sequence
+                path = record.get("OpenPath")
+                if self._resolve_open_paths and isinstance(path, str) and path.strip():
+                    self._open_file_name_map[file_object] = path
+            return None
+        elif opcode == OPCODE_FILE_CLOSE:
+            self._open_file_name_map.pop(self._parse_pointer(record.get("FileObject")), None)
+            return None
+        elif opcode == OPCODE_FILE_DELETE:
+            self._file_name_map.pop(self._parse_pointer(record.get("FileObject")), None)
+            return None
+        elif opcode == OPCODE_FILE_READ:
             operation = "read"
         elif opcode == OPCODE_FILE_WRITE:
             operation = "write"
@@ -154,6 +191,8 @@ class EtwDecoder:
                         OPCODE_FILE_NAME, 
                         OPCODE_FILE_CREATE}:
             self._add_mapping(record)
+            self._path_diagnostics["name_events"] += 1
+            self._resolve_pending(self._parse_pointer(record.get("FileObject")))
             return None
         else:  # Ignore initiation and other event types.
             return None
@@ -174,15 +213,34 @@ class EtwDecoder:
         file_object = self._parse_pointer(record.get("FileObject")) # stable ID on fileIO layer
         if file_key is None or file_object is None:
             return None
-        path = self._file_name_map.get(file_key)
-        location = self._file_location_map.get(file_key)
-        if location: disk_number,offset = location
-        else: 
-            disk_number=None
-            offset=None
-        #since the fileObject field is stable between create and close calls, path may be correlated later
-        path_letter = self._get_letter(disk_number,offset)
-        return RawIoEvent(
+        # path = self._file_name_map.get(file_key)
+        # location = self._file_location_map.get(file_key)
+        # if location: disk_number,offset = location
+        # else: 
+        #     disk_number=None
+        #     offset=None
+        # #since the fileObject field is stable between create and close calls, path may be correlated later
+        # path_letter = self._get_letter(disk_number,offset)
+        
+        # Resolve the file directly from its NT volume path.
+        # DiskIO offsets may point to a different partition on the same disk.
+        nt_path = self._open_file_name_map.get(file_object)
+        resolved = self._device_provider.resolve_nt_file_path(nt_path)
+        if resolved is not None:
+            self._path_diagnostics["resolved_from_openpath"] += 1
+        if resolved is None:
+            resolved = self._device_provider.resolve_nt_file_path(self._file_name_map.get(file_key))
+
+        if resolved is not None:
+            path, disk_number = resolved
+            path_letter = path[:2]
+        else:
+            # Keep unknown attribution unresolved rather than reporting
+            # an incorrect drive letter.
+            path = None
+            disk_number = None
+            path_letter = None
+        event = RawIoEvent(
                     timestamp_ns=observed_timestamp_ns,
                     operation=operation,
                     pid=pid,
@@ -198,6 +256,57 @@ class EtwDecoder:
                     file_attribution_verified=(path is not None),
                     source="fileIO",
                 )
+        if path is not None:
+            self._path_diagnostics["resolved_on_read_write"] += 1
+        elif self._recover_late_names:
+            identity = id(event)
+            self._pending[identity] = (file_key, file_object, event, self._file_generations.get(file_object))
+            self._pending_by_key.setdefault(file_key, set()).add(identity)
+            # Bound unresolved metadata independently of the I/O history.
+            cutoff = observed_timestamp_ns - 60_000_000_000
+            while self._pending:
+                oldest = next(iter(self._pending))
+                if len(self._pending) <= 50000 and self._pending[oldest][2].timestamp_ns >= cutoff:
+                    break
+                self._remove_pending(oldest)
+                self._path_diagnostics["pending_expired_or_reused"] += 1
+        return event
+
+    def _remove_pending(self, identity):
+        item = self._pending.pop(identity)
+        identities = self._pending_by_key[item[0]]
+        identities.discard(identity)
+        if not identities:
+            self._pending_by_key.pop(item[0])
+        return item
+
+    def _resolve_pending(self, file_key):
+        cutoff = time_ns() - 60_000_000_000
+        # Only revisit requests affected by this name event, not every pending
+        # file on every callback. Keep the tracing thread's work bounded.
+        for identity in list(self._pending_by_key.get(file_key, ())):
+            _, file_object, event, generation = self._pending[identity]
+            if event.timestamp_ns < cutoff or generation != self._file_generations.get(file_object):
+                self._remove_pending(identity)
+                self._path_diagnostics["pending_expired_or_reused"] += 1
+                continue
+            nt_path = self._file_name_map.get(file_key)
+            resolved = self._device_provider.resolve_nt_file_path(nt_path)
+            if resolved is None:
+                continue
+            self._remove_pending(identity)
+            path, disk_number = resolved
+            self._resolved.append((event, replace(event, path=path, device_id=disk_number,
+                decoded_drive_letter=path[:2], file_attribution_verified=True)))
+            self._path_diagnostics["recovered_after_mapping"] += 1
+
+    def take_resolved_events(self):
+        resolved = self._resolved
+        self._resolved = []
+        return resolved
+
+    def get_path_diagnostics(self):
+        return {**self._path_diagnostics, "pending_paths": len(self._pending)}
     
     def _add_mapping(self,record):
         fileObject = self._parse_pointer(record.get("FileObject"))
@@ -232,11 +341,16 @@ class EtwSource:
     def start(
         self,
         on_event: Callable[[RawIoEvent], None],
+        on_resolved=None,
     ) -> None:
         def on_record(record: dict[str, Any]) -> None:
             event = self._decoder.decode(record)
             if event is not None:
                 on_event(event)
+            resolved = self._decoder.take_resolved_events()
+            if resolved and on_resolved is not None:
+                # Update attribution, not the I/O count or original timestamp.
+                on_resolved(resolved)
 
         self._transport.start(on_record)
 
