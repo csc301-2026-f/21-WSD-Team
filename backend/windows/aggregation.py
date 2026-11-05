@@ -4,6 +4,7 @@ from collections import deque
 from datetime import datetime, timezone
 from genericpath import getsize
 from threading import Lock
+from dataclasses import replace
 import time
 
 from .contracts import (
@@ -242,4 +243,30 @@ class EventAggregator:
 
     @staticmethod
     def _combine_based_on_path(metrics: list[FileActivity] | None) -> list[FileActivity] | None:
-        return metrics
+        """
+        Combine FileActivity records with the same path, keeping the first file_id.
+        Sum read_ops and write_ops, and add byte counts only when both values are not None.
+        Otherwise, keep the existing byte count(or probably None).
+        """
+        file_dict = {}
+        if metrics is not None:
+            for metric in metrics:
+                if metric.path is not None:
+                    path = metric.path
+                    if path not in file_dict:
+                        file_dict[path] = metric
+                    else:
+                        new_read_bytes = file_dict[path].read_bytes
+                        new_write_bytes = file_dict[path].write_bytes
+                        if new_read_bytes is not None and metric.read_bytes is not None:
+                            new_read_bytes += metric.read_bytes
+                        if new_write_bytes is not None and metric.write_bytes is not None:
+                            new_write_bytes += metric.write_bytes
+                        new_read_ops = metric.read_ops + file_dict[path].read_ops
+                        new_write_ops = metric.write_ops + file_dict[path].write_ops
+                        file_dict[path] = replace(file_dict[path],
+                                                  read_bytes = new_read_bytes,
+                                                  write_bytes = new_write_bytes,
+                                                  read_ops = new_read_ops,
+                                                  write_ops = new_write_ops)
+        return list(file_dict.values())
