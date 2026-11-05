@@ -97,24 +97,25 @@
     
 
     <!-- US-02: Historical process I/O -->
-    <section id="process-history-section">
-        <h2>Process I/O History</h2>
+    <div class="box-container"> 
+        <section id="process-history-section">
+            <h2>Process I/O History</h2>
 
-        <label for="history-process-select">
-            Select application:
-        </label>
+            <label for="history-process-select">
+                Select application:
+            </label>
 
-        <select id="history-process-select">
-            <option value="">Loading applications...</option>
-        </select>
+            <select id="history-process-select">
+                <option value="">Loading applications...</option>
+            </select>
 
-        <p id="history-status">Collecting process history...</p>
+            <p id="history-status">Collecting process history...</p>
 
-        <div id="process-history-chart-container">
-            <canvas id="processHistoryChart"></canvas>
-        </div>
-    </section>
-
+            <div id="process-history-chart-container">
+                <canvas id="processHistoryChart"></canvas>
+            </div>
+        </section>
+    </div>
 
     <div class="box-container">    
     <!-- US-01: Real-time process I/O / US-02: Process selection -->

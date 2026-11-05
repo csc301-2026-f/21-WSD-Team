@@ -1,12 +1,13 @@
 /* SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
  * SPDX-License-Identifier: GPL-3.0-only
  */
+
 :root {
     color-scheme: light;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     color: #1f2933;
-    background: #e3e8ed;
-    --color-page: #e3e8ed;
+    background: #535353;
+    --color-page: #535353;
     --color-surface: #ffffff;
     --color-surface-muted: #e9eef2;
     --color-border: #c5cdd5;
@@ -188,16 +189,22 @@ div#big-start {
     align-items: center;
     justify-content: center;
 
+    box-sizing: border-box;
     width: 48px;
     height: 48px;
     min-width: 48px;
     min-height: 48px;
 
+    margin: 0;
     padding: 0;
+
     border: 1px solid #123d5d;
     border-radius: 6px;
     background: #173b56;
     color: #ffffff;
+
+    font-size: 24px;
+    line-height: 1;
     text-align: center;
 }
 
@@ -479,74 +486,72 @@ div#big-start {
 #process-history-chart-container {
     position: relative;
     display: block;
+    box-sizing: border-box;
     width: 100%;
     max-width: 100%;
-    height: 320px;
+    height: 400px;
     min-width: 0;
+    margin: 16px 0;
     padding: 12px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-medium);
     background: var(--color-surface);
 }
+#process-history-chart-container #processHistoryChart {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
 
+/* WSD recommendation panel. */
 /* WSD recommendation panel. */
 #recommendations-section {
     display: block;
+    box-sizing: border-box;
+    width: calc(100vw - 48px);
+    max-width: none;
     min-width: 0;
-    margin: 24px;
+    gap: 12px;
     color: var(--color-text);
 }
+
 .recommendations-header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 16px;
+    gap: 12px 24px;
+    width: 100%;
     margin-bottom: 16px;
 }
-.recommendations-header h2 { margin-bottom: 6px; }
+
+.recommendations-header h2 {
+    margin: 0;
+}
+
 .recommendations-header p {
-    margin-top: 0;
+    margin: 20px;
     color: var(--color-text-muted);
 }
+
 #refresh-recommendations-button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     min-height: 44px;
     padding: 10px 16px;
-    border: 1px solid #123d5d;
-    border-radius: var(--radius-small);
-    background: var(--color-primary);
-    color: #ffffff;
-    cursor: pointer;
 }
-#refresh-recommendations-button:hover:not(:disabled) {
-    background: var(--color-primary-hover);
-}
-#refresh-recommendations-button:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-}
-#recommendations-status {
-    margin: 12px 0;
-    color: var(--color-text-muted);
-}
-.recommendations-notice {
-    display: block;
-    margin-bottom: 18px;
-    padding: 12px 14px;
-    border: 1px solid #d6a64b;
-    border-left: 4px solid #9a6200;
-    border-radius: var(--radius-small);
-    background: var(--color-warning-bg);
-    color: var(--color-warning-text);
-}
+
+/* Keep recommendation cards side by side. */
 #recommendations-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
-    align-items: start;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr));
+    width: 100%;
+    align-items: stretch;
     gap: 16px;
 }
+
 .recommendation-card {
     display: block;
+    width: 100%;
     min-width: 0;
     padding: 18px;
     border: 1px solid var(--color-border);
@@ -564,7 +569,17 @@ div#big-start {
     gap: 12px;
     margin-bottom: 16px;
 }
-.recommendation-title-group h3 { margin: 0 0 6px; }
+.recommendation-title-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.recommendation-title-group h3,
+.recommendation-title-group p {
+    margin: 0;
+}
 .recommendation-subtitle {
     margin: 0;
     color: var(--color-text-muted);
@@ -623,6 +638,24 @@ div#big-start {
     #process-section, #process-history-section, #recommendations-section {
         margin: 16px 12px;
     }
+    #recommendations-section {
+        width: calc(100% - 24px);
+        margin: 16px 12px;
+    }
+
+    .recommendations-header {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #refresh-recommendations-button {
+        width: 100%;
+    }
+
+    #recommendations-container {
+        grid-template-columns: 1fr;
+    }
     #graph { padding: 14px; }
     #graph-container { padding: 8px; gap: 12px; }
     #graph-container > .box {
@@ -644,73 +677,4 @@ div#big-start {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
     }
-}
-
-/* CHECKBOX STYLING */
-
-input[type="checkbox"] {
-    appearance: none;
-    -webkit-appearance: none;
-
-    position: relative;
-    display: inline-block;
-    vertical-align: middle;
-
-    box-sizing: border-box;
-    width: 20px;
-    height: 20px;
-    min-width: 20px;
-    min-height: 20px;
-
-    flex: 0 0 20px;
-    margin: 0 8px 0 0;
-    padding: 0;
-
-    border: 1.5px solid #8794a1;
-    border-radius: 5px;
-    background-color: #ffffff;
-
-    cursor: pointer;
-}
-
-/* Checked state */
-input[type="checkbox"]:checked {
-    background-color: #174a70;
-    border-color: #174a70;
-}
-
-/* Checkmark — does not affect checkbox dimensions */
-input[type="checkbox"]:checked::after {
-    content: "";
-    position: absolute;
-
-    width: 5px;
-    height: 10px;
-
-    top: 2px;
-    left: 6px;
-
-    border: solid #ffffff;
-    border-width: 0 2px 2px 0;
-
-    transform: rotate(45deg);
-}
-
-/* Hover */
-input[type="checkbox"]:hover {
-    border-color: #174a70;
-}
-
-/* Keyboard focus */
-input[type="checkbox"]:focus-visible {
-    outline: 3px solid #075fcc;
-    outline-offset: 3px;
-}
-
-/* Disabled */
-input[type="checkbox"]:disabled {
-    background-color: #e5e9ed;
-    border-color: #b8c1ca;
-    cursor: not-allowed;
-    opacity: 0.7;
 }
