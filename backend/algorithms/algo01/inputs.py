@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """Small envelope around the current Device and FileActivity records."""
 from dataclasses import dataclass
 from datetime import datetime

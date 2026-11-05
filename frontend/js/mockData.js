@@ -1,6 +1,6 @@
-
+// SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+// SPDX-License-Identifier: GPL-3.0-only
 /* LIVE-SIMULATED DISK METRICS */
-
 export const mockDevices = [
     {
         host_id: "host_mock",
@@ -95,10 +95,6 @@ export function getMockMetrics() {
         source: "mock-live"
     }));
 }
-
-
-/* LIVE-SIMULATED PROCESS METRICS */
-
 
 /* LIVE-SIMULATED PROCESS METRICS */
 
@@ -247,7 +243,6 @@ export function getMockProcessHistory({
 
         for (const record of records) {
             const timestamp = Date.parse(record.timestamp_utc);
-
             const bucketStart =
                 Math.floor(timestamp / (seconds * 1000)) *
                 seconds * 1000;

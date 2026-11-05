@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 from datetime import datetime, timezone
 from .demo_data import load_demo_input
 
@@ -100,7 +102,7 @@ class CoreService:
             realtime={
                 "host_id": host_id,
                 "evaluation_time_utc": evaluation_time_utc}
-            file_activity = None #TODO agent not done
+            file_activity = self.agent.get_file_activity(60)
             history={"file_activity": file_activity}
             mode_config= {} #Not required in D2
             capabilities = self.capabilities or {} #TODO agent not done

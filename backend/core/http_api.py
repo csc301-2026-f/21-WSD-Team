@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 from flask import Flask, jsonify, request
 from .response import success_response, fail_response
 from datetime import datetime

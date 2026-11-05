@@ -1,12 +1,15 @@
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
 """This file is used to wire the existing modules. Host ID will be generated here."""
 import sys
 import uuid
 from pathlib import Path
+from threading import activeCount
 
 from backend.algorithms.algo01 import evaluate_raid0_policy
 from backend.db.repository import SQLiteHistoryRepository
 from .frontend_routes import register_frontend_routes
-from .agent_adapter import LinuxAgentAdapter
+from .agent_adapter import LinuxAgentAdapter, WindowsAgentAdapter
 from .algo_adapter import AlgorithmAdapter
 from .db_adapter import DataBaseAdaptor
 from .http_api import create_http_api
@@ -41,16 +44,19 @@ def create_application(*, demo_mode=False, data_dir=None):
         agent = None
 
     else:
-        if not sys.platform.startswith("linux"): # must be linux for D2
-            raise RuntimeError("Real Mode is linux only for D2")
+        if sys.platform.startswith("win32"): # must be linux for D2
+            from backend.windows import create_backend
+            active_repository = real_repository
+            windows_backend = create_backend(host_id)
+            agent = WindowsAgentAdapter(windows_backend)
+        else:
+            from backend.linux.backend import LinuxBackend
 
-        from backend.linux.backend import LinuxBackend
+            active_repository = real_repository
+            linux_backend = LinuxBackend(host_id)
+            agent = LinuxAgentAdapter(linux_backend)
 
-        active_repository = real_repository
-        linux_backend = LinuxBackend(host_id)
-        agent = LinuxAgentAdapter(linux_backend)
-
-    # Record wich data mode the db belongs
+    # Record which data mode the db belongs
     mode = "demo" if demo_mode else "real"
 
     active_mode = active_repository.get_settings().get("data_mode")
@@ -59,7 +65,7 @@ def create_application(*, demo_mode=False, data_dir=None):
         raise ValueError("DB mode mismatch")
     active_repository.save_settings({"host_id":host_id, "data_mode":mode})
 
-    # Adapter initilization
+    # Adapter initialization
     database_adapter = DataBaseAdaptor(active_repository)
     algorithm_adapter = AlgorithmAdapter(evaluate_raid0_policy)
 
@@ -67,7 +73,7 @@ def create_application(*, demo_mode=False, data_dir=None):
         "device_metrics": not demo_mode,
         "process_metrics": not demo_mode,
         "process_to_device_attribution": False,
-        "file_access_metrics": demo_mode,
+        "file_access_metrics": demo_mode or sys.platform.startswith("win32"),
         "file_level_pooling": False,
         "ssd_caching": False,
         "file_move": False,

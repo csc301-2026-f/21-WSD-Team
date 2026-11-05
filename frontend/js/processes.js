@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+// SPDX-License-Identifier: GPL-3.0-only
+
 import { getLatestProcesses } from "./api.js";
 
 import {
@@ -31,7 +34,6 @@ function renderProcesses(processes) {
 
     for (const process of processes) {
         const processKey = getProcessKey(process);
-
         const row = document.createElement("tr");
 
         row.dataset.processKey = processKey;
