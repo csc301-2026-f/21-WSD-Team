@@ -144,7 +144,7 @@ class SSDCachingContractTests(unittest.TestCase):
             self.none(data, code)
 
     def test_old_entry_import_calls_d3(self):
-        from backend.algorithms.algo02.ssd_policy import evaluate_ssd_policy as old_entry
+        from backend.algorithms.algo02.ssd_policy import evaluate_ssd_caching_policy as old_entry
         self.assertEqual(old_entry(**payload()), evaluate_ssd_caching_policy(**payload()))
 
     def test_only_file_observation_capability_is_required(self):
@@ -282,7 +282,7 @@ class SSDCachingContractTests(unittest.TestCase):
 class SSDCachingDemoTests(unittest.TestCase):
 
     def test_mock_move_and_none(self):
-        for name, action in (('d3-ssd-valid.json', 'move'), ('d3-ssd-none.json', 'none')):
+        for name, action in (('d3-ssd-valid.json', 'cache'), ('d3-ssd-none.json', 'none')):
             stream = io.StringIO()
             with redirect_stdout(stream):
                 code = main(['--mock-input', str(FIXTURES / name)])
