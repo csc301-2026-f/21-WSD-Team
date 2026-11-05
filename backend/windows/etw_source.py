@@ -3,6 +3,7 @@
 #pass etw events through a decoder and hand them off
 from collections.abc import Callable
 from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 from time import time_ns
@@ -203,12 +204,13 @@ class EtwDecoder:
             return None    
         if pid < 0 or transferred_bytes < 0:
             return None    
+        process_start, observed_name = self._get_process_identity(pid, header)
         # Process name may not be in FileIO
         process_name = record.get("ProcessName")
         if not isinstance(process_name, str) or not process_name.strip():
             process_name = record.get("ImageFileName")
         if not isinstance(process_name, str) or not process_name.strip():
-            process_name = self._get_process_name(pid)
+            process_name = observed_name
         file_key = self._parse_pointer(record.get("FileKey")) #determines path
         file_object = self._parse_pointer(record.get("FileObject")) # stable ID on fileIO layer
         if file_key is None or file_object is None:
@@ -244,7 +246,7 @@ class EtwDecoder:
                     timestamp_ns=observed_timestamp_ns,
                     operation=operation,
                     pid=pid,
-                    process_start_time_utc=None,
+                    process_start_time_utc=process_start,
                     process_name=process_name,
                     device_id=disk_number,
                     transferred_bytes=transferred_bytes,
@@ -327,6 +329,29 @@ class EtwDecoder:
             return psutil.Process(pid).name()
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             return None
+
+    def _get_process_identity(self, pid, header):
+        """Do not assign a buffered event to a newer process reusing its PID."""
+        try:
+            ticks = self._integer(header.get("TimeStamp"))
+        except (TypeError, ValueError, OverflowError):
+            return None, None
+        if ticks is None or ticks < 116444736000000000:
+            return None, None
+        event_time_ns = (ticks - 116444736000000000) * 100
+        try:
+            process = psutil.Process(pid)
+            started = process.create_time()
+            # Some protected/system processes report zero, not a real start time.
+            if started <= 0 or int(started * 1_000_000_000) > event_time_ns + 1000:
+                return None, None
+            name = process.name()
+            if not process.is_running():
+                return None, None
+            timestamp = datetime.fromtimestamp(started, timezone.utc).isoformat().replace("+00:00", "Z")
+            return timestamp, name
+        except (psutil.NoSuchProcess, psutil.AccessDenied, OSError, ValueError, OverflowError):
+            return None, None
     
 
 class EtwSource:

@@ -136,14 +136,17 @@ class EventAggregator:
         start_ns = end_ns - int(sample_window_seconds * 1e9)
         events = self._snapshot(start_ns, end_ns)
 
-        process_keys ={e.pid for e in events if e.pid is not None}
+        process_keys = {(e.pid,e.process_start_time_utc) for e in events
+                        if e.source == "fileIO" and e.pid is not None
+                        and e.process_start_time_utc is not None}
         results = []
 
-        for pid in process_keys:
+        for pid, process_start in process_keys:
             if pid == 4294967295: continue #4294967295 is 0xFFFFFFFF, invalid
             selected = [
                 e for e in events
                 if e.pid == pid
+                and e.process_start_time_utc == process_start
                 and e.source == "fileIO"
             ]
             reads = [e for e in selected if e.operation == "read"]
@@ -157,7 +160,7 @@ class EventAggregator:
             results.append(ProcessMetric(
                 host_id=self.host_id,
                 pid=pid,
-                start_time_utc=None,
+                start_time_utc=process_start,
                 process_name=next(
                     (e.process_name for e in reversed(selected)
                      if e.process_name),
