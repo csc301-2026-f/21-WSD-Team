@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 // SPDX-License-Identifier: GPL-3.0-only
+
 import {
     getRecommendations,
     refreshRecommendations
@@ -12,6 +13,8 @@ const refreshButton = document.getElementById(
 );
 
 let isRefreshing = false;
+
+/* ELEMENT CREATION */
 
 function createElement(tag, className, text) {
     const element = document.createElement(tag);
@@ -33,11 +36,33 @@ function addDetail(card, label, value) {
     const content = createElement(
         "span",
         "",
-        value ?? "Not available"
+        formatValue(value)
     );
 
     row.append(heading, content);
     card.appendChild(row);
+}
+
+/* DATA FORMATTING */
+
+function formatValue(value) {
+    if (value === null || value === undefined || value === "") {
+        return "Not available";
+    }
+
+    if (Array.isArray(value)) {
+        return value.length > 0
+            ? value.map(formatValue).join(", ")
+            : "None";
+    }
+
+    if (typeof value === "object") {
+        return Object.entries(value)
+            .map(([key, item]) => `${key}: ${formatValue(item)}`)
+            .join(" | ");
+    }
+
+    return String(value);
 }
 
 function formatDate(timestamp) {
@@ -50,103 +75,152 @@ function formatDate(timestamp) {
         : date.toLocaleString();
 }
 
-function renderRecommendations(recommendations) {
-    container.replaceChildren();
+function sortRecommendations(recommendations) {
+    return [...recommendations].sort((a, b) => {
+        const dateA = Date.parse(a.created_at_utc);
+        const dateB = Date.parse(b.created_at_utc);
 
+        const validA = Number.isFinite(dateA);
+        const validB = Number.isFinite(dateB);
+
+        if (!validA && !validB) return 0;
+        if (!validA) return 1;
+        if (!validB) return -1;
+
+        return dateB - dateA;
+    });
+}
+
+/* EMPTY AND ERROR STATES */
+
+function showMessage(
+    message,
+    className = "recommendations-empty"
+) {
+    container.replaceChildren(
+        createElement("p", className, message)
+    );
+}
+
+/* RECOMMENDATION RENDERING */
+
+function renderRecommendations(recommendations) {
     if (!Array.isArray(recommendations)) {
         throw new Error("Expected a list of recommendations.");
     }
-    
-    // TEMPORARY: Display only the most recent recommendation.
-    recommendations = [...recommendations].sort(
-        (a, b) =>
-            new Date(b.created_at_utc).getTime() -
-            new Date(a.created_at_utc).getTime()
-    ).slice(0, 1);
 
-    if (recommendations.length === 0) {
-        container.appendChild(
-            createElement(
-                "p",
-                "recommendations-empty",
-                "No saved recommendations. Select Refresh Recommendations to generate them."
-            )
+    const validRecommendations = recommendations.filter(
+        recommendation =>
+            recommendation !== null &&
+            typeof recommendation === "object" &&
+            !Array.isArray(recommendation)
+    );
+
+    const sortedRecommendations =
+        sortRecommendations(validRecommendations);
+
+    container.replaceChildren();
+
+    if (sortedRecommendations.length === 0) {
+        showMessage(
+            "No recommendations are currently available."
         );
-        return;
+
+        return 0;
     }
 
-    for (const recommendation of recommendations) {
-        const card = createElement("article", "recommendation-card");
+    for (const recommendation of sortedRecommendations) {
+        const card = createElement(
+            "article",
+            "recommendation-card"
+        );
+
+        /* HEADER */
 
         const header = createElement(
             "div",
             "recommendation-card-header"
         );
 
-        const titleGroup = createElement("div", "recommendation-title-group");
+        const titleGroup = createElement(
+            "div",
+            "recommendation-title-group"
+        );
+
+        const hasFile = recommendation.file_id !== null &&
+            recommendation.file_id !== undefined &&
+            recommendation.file_id !== "";
+
+        const title = hasFile
+            ? `File ID: ${recommendation.file_id}`
+            : "Storage recommendation";
+
+        const mode = recommendation.mode ?? "Unknown mode";
+        const action = recommendation.action ?? "Unknown action";
 
         titleGroup.append(
-            createElement(
-                "h3",
-                "",
-                recommendation.file_id ?? "Storage recommendation"
-            ),
+            createElement("h3", "", title),
             createElement(
                 "p",
                 "recommendation-subtitle",
-                `${recommendation.mode ?? "Unknown mode"} · ${recommendation.action ?? "No action"}`
+                `${mode} · ${action}`
             )
         );
 
+        const approvalRequired =
+            recommendation.requires_approval === true;
+
         const approvalBadge = createElement(
             "span",
-            recommendation.requires_approval
+            approvalRequired
                 ? "recommendation-badge approval-required"
                 : "recommendation-badge",
-            recommendation.requires_approval
+            approvalRequired
                 ? "Approval required"
-                : "Approval not flagged"
+                : "No approval flagged"
         );
 
         header.append(titleGroup, approvalBadge);
         card.appendChild(header);
 
+        /* DETAILS */
+
         addDetail(card, "Reason", recommendation.reason);
         addDetail(card, "Source device", recommendation.source_device_id);
         addDetail(card, "Target device", recommendation.target_device_id);
-        addDetail(
-            card,
-            "Estimated benefit",
-            recommendation.estimated_benefit == null
-                ? "Unavailable"
-                : JSON.stringify(recommendation.estimated_benefit)
-        );
-        addDetail(
-            card,
-            "Generated",
-            formatDate(recommendation.created_at_utc)
-        );
+        addDetail(card, "Estimated benefit", recommendation.estimated_benefit);
+        addDetail(card, "Generated", formatDate(recommendation.created_at_utc));
+
+        /* CONSTRAINTS */
 
         const constraints = Array.isArray(recommendation.constraints)
             ? recommendation.constraints
             : [];
 
-        const constraintsHeading = createElement("h4", "", "Constraints");
-        card.appendChild(constraintsHeading);
+        card.appendChild(
+            createElement("h4", "", "Constraints")
+        );
 
         if (constraints.length === 0) {
             card.appendChild(
                 createElement("p", "", "No constraints provided.")
             );
         } else {
-            const list = createElement("ul", "recommendation-constraints");
+            const list = createElement(
+                "ul",
+                "recommendation-constraints"
+            );
 
             for (const constraint of constraints) {
-                list.appendChild(createElement("li", "", constraint));
+                list.appendChild(
+                    createElement("li", "", formatValue(constraint))
+                );
             }
 
             card.appendChild(list);
         }
+
+        /* IDENTIFIER */
 
         card.appendChild(
             createElement(
@@ -158,56 +232,79 @@ function renderRecommendations(recommendations) {
 
         container.appendChild(card);
     }
+
+    return sortedRecommendations.length;
 }
 
+/* LOAD SAVED RECOMMENDATIONS */
+
 async function loadRecommendations() {
-    statusElement.textContent = "Loading saved recommendations...";
+    statusElement.textContent =
+        "Loading saved recommendations...";
 
     try {
         const recommendations = await getRecommendations();
-        renderRecommendations(recommendations);
+
+        const displayedCount =
+            renderRecommendations(recommendations);
 
         statusElement.textContent =
-            `${recommendations.length} saved recommendation(s).`;
+            `${displayedCount} saved recommendation(s).`;
+
     } catch (error) {
         console.error("Failed to load recommendations:", error);
 
         statusElement.textContent =
-            "Could not load recommendations. Check that Flask is running and browser access is allowed.";
+            "Could not load recommendations. Check that Flask is running.";
 
-        container.replaceChildren();
+        showMessage(
+            "Unable to load recommendations. Please try again.",
+            "recommendations-error"
+        );
     }
 }
+
+/* REFRESH RECOMMENDATIONS */
 
 async function handleRefresh() {
     if (isRefreshing) return;
 
     isRefreshing = true;
+
     refreshButton.disabled = true;
     refreshButton.textContent = "Refreshing...";
     statusElement.textContent = "Generating recommendations...";
 
     try {
-        // POST runs the algorithm and returns the generated records.
+        // The backend generates and saves recommendations before returning.
         const generated = await refreshRecommendations();
 
         if (!Array.isArray(generated)) {
-            throw new Error("Expected the refresh response data to be an array.");
+            throw new Error(
+                "Expected the refresh response data to be an array."
+            );
         }
 
-        // Display the actual response from POST.
-        renderRecommendations(generated);
+        const generatedCount =
+            renderRecommendations(generated);
 
         statusElement.textContent =
-            `${generated.length} recommendation(s) generated and returned.`;
+            `${generatedCount} new recommendation(s) generated and saved.`;
 
-        // GET verifies and displays what was saved.
-        await loadRecommendations();
     } catch (error) {
         console.error("Failed to refresh recommendations:", error);
 
         statusElement.textContent =
-            "Could not refresh recommendations. Check the backend and try again.";
+            "Could not generate recommendations. Check the backend and try again.";
+
+        // Do not erase previously displayed recommendations on failure.
+        if (container.childElementCount === 0) {
+            showMessage(
+                "Recommendation generation failed. Please try again.",
+                "recommendations-error"
+            );
+        }
+
     } finally {
         isRefreshing = false;
         refreshButton.disabled = false;
@@ -215,6 +312,13 @@ async function handleRefresh() {
     }
 }
 
-refreshButton.addEventListener("click", handleRefresh);
+/* INITIALIZATION */
 
-loadRecommendations();
+if (!container || !statusElement || !refreshButton) {
+    console.error(
+        "Recommendations page is missing one or more required HTML elements."
+    );
+} else {
+    refreshButton.addEventListener("click", handleRefresh);
+    loadRecommendations();
+}

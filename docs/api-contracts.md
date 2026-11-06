@@ -1421,22 +1421,22 @@ Each tick means **the test exists, has been run, and its results are linked**. U
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-OS-03:** Disappearing drive / invalid sampling interval.
   - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-DB-01:** Ingestion-to-history round-trip.
-  - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-DB-02:** Empty history / unavailable file telemetry.
-  - **Test path / result / CI run:** _Fill in after running._
+- [x] **TODO · JUAN** — **T-DB-01:** Ingestion-to-history round-trip.
+  - tests/integration/test_us02_history.py (CORE → real DB → CORE) + Sahil’s tests/test_db_contract.py; in CI
+- [x] **TODO · JUAN** — **T-DB-02:** Empty history / unavailable file telemetry.
+  - tests/integration/test_us02_history.py (empty history, null≠0) + tests/test_db_contract.py (file heat unsupported → []); in CI
 - [x] **TODO · JUAN** — **T-ALG-01:** RAID0 algorithm contract with valid/invalid inputs.
   - **Test path / result / CI run:** Unit tests by John in `backend/algorithms/algo01/tests/` (41 pass); fixtures and expected outputs reviewed by Juan in #22; run automatically in CI (#23).
 - [ ] **TODO · JUAN** — **T-ALG-02:** SSD cache capacity guard.
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-ALG-03:** Policy/goal change and stable output schema.
   - **Test path / result / CI run:** _Fill in after running._
-- [ ] **TODO · JUAN** — **T-HTTP-01:** HTTP success / empty / invalid responses.
-  - **Test path / result / CI run:** _Fill in after running._
+- [x] **TODO · JUAN** — **T-HTTP-01:** HTTP success / empty / invalid responses.
+  - tests/contract/test_http_contract.py: 200 envelope, empty, 400 invalid input, 404, 500
 - [ ] **TODO · JUAN** — **T-UI-01:** Frontend missing/unsupported data state.
   - **Test path / result / CI run:** _Fill in after running._
 - [ ] **TODO · JUAN** — **T-E2E-01:** End-to-end data IDs and recommendation flow.
-  - **Test path / result / CI run:** _Fill in after running._
+  - tests/integration/test_e2e_demo.py: whole app in demo mode, device IDs consistent, DB round-trip + restart
 - [x] **TODO · JUAN** — **T-ACT-01:** Preview/approval/interruption safety — LATER.
   - **08.4 | Reproducible benchmark contract
 - [x] **TODO · JUAN** — ALGO-02 QA contract tests (mode `ssd_caching`, original never moved, capacity guard T-ALG-02) once John's ALGO-02 is ready.
@@ -1474,13 +1474,13 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
 
 
 - [x] **TODO · JUAN** — Test framework and Python version(s)
-  - **Answer / evidence:** `unittest` (standard library, no installs). CI runs Python 3.10 (minimum supported) and 3.12. See `.github/workflows/tests.yml` (#23). DB tests will use `pytest` once merged.
+  - **Answer / evidence:** `pytest` runner (also runs `unittest` files); `flask` test client for HTTP. CI on Python 3.10 (minimum) and 3.12. See `.github/workflows/tests.yml` 
 - [x] **TODO · JUAN** — Fixtures format/schema source of truth
   - **Answer / evidence:** JSON files in `tests/fixtures/` (Juan-branch). Source of truth = §02 of this doc. Any schema change = one PR updating §02 + fixtures together. Fixtures are MOCK until producers send real payloads (§08.4.2).
 - [x] **TODO · JUAN** — Exactly which test cases run on every PR vs manual hardware tests
-  - **Answer / evidence:** Every PR + push to `main`: automated tests on mock data only (currently ALGO-01 unit tests, #23). Manual only: benchmarks on real SSD+HDD (QA-02) and storage-action safety tests on disposable files (T-ACT-01, later).
-- [ ] **TODO · JUAN** — Mocking approach when Windows/Linux test host is unavailable
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+  - **Answer / evidence:** Every PR + push to `main`: everything in `tests/` (contract, HTTP, US-02 integration, end-to-end demo, DB, demo data, collector) + ALGO-01 unit tests, all on mock/demo data. Manual only: benchmarks on real SSD+HDD (QA-02) and storage-action safety tests (T-ACT-01, later).
+- [x] **TODO · JUAN** — Mocking approach when Windows/Linux test host is unavailable
+  - **Answer / evidence:** Fake agent returning `tests/fixtures/` JSON (US-02 test); fake CORE + Flask test client (HTTP tests); built-in demo mode for the whole app (end-to-end test). No real OS needed in CI. (PR #__)
 - [ ] **TODO · JUAN** — Benchmark tools/commands, workload methodology, result format
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [x] **TODO · JUAN** — CI runner/OS compatibility, commands, time budget, branch/PR
@@ -1489,8 +1489,8 @@ Benchmarks should record: **hardware + filesystem**, OS, SSD/HDD identity, basel
   - **Answer / evidence:** _Write here, or link fixtures/tests / PR; then check the box above._
 - [ ] **TODO · JUAN** — First runnable example: validate one fixture + print pass/fail
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
-- [ ] **TODO · JUAN** — Integration failure reporting / issue template and test evidence
-  - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
+- [x] **TODO · JUAN** — Integration failure reporting / issue template and test evidence
+  - **Answer / evidence:** Failures show as a red CI check on the PR. Cross-module bugs are filed as GitHub Issues assigned to the owner. Known bugs are kept visible in tests with `expectedFailure` until fixed.
 
 #### 08.4.2 | ALL PRODUCERS — Evidence Juan needs
 

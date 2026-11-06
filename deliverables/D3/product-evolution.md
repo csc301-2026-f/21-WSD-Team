@@ -1,4 +1,4 @@
-# WSD - wise storage device
+# YOUR PRODUCT/TEAM NAME
 
 > Aim for 1000-2000 words. Be concise and analytical. We care about reasoning, impact, and integration quality, not length.
 
@@ -26,9 +26,26 @@ A hash table is maintained and updated whenever a monitored file is accessed.
 The Linux backend API then retrieves and processes the collected data before reporting it to Core. 
 This separates low-level kernel monitoring from higher-level application logic.
 
+Juan: 
+- End to End test [PR#41]: Starts the whole app in demo mode and checks every endpoint's response format, that recommendations follow the contract and point at real devices and that data survives the database and an app restart.
+
+- HTTP contract tests [PR#41]: The US-02 history endpoint returns the agreed format an empty list when there is no history, `400` for invalid input without reaching the database and clean `404`/`500` errors. 
+
+- US-02 integration tests: History saved through CORE comes back unchanged from the real database, unknown values stay `null` instead of `0` and a restarted app is kept separtae. 
+
+- CI/CD pipeline (PR#41): Every PR now runs all tests on Windows and Linux and a build verification that packages the release installs it and smoke tests it in demo mode. When changes merge to `main` and all cheacks pass the package is published automatically as a GitHub Release
+- 
 ## 3. Before vs. After
 
-Show concrete improvements: workflow clarity, speed, error reduction, reliability, etc.
+The most noticeable improvement from D2 to D3 was the transition from a prototype-style interface toward a more cohesive application that could display real system information. Previously, the frontend relied more heavily on demonstration data and had a less consistent visual presentation. While the dashboard established the foundation for our intended features, it did not yet provide the same level of integration or usability expected from a functional storage-management tool.
+
+After D3, the frontend was connected to the Windows backend, allowing it to retrieve and display backend-provided system information. This made the dashboard more meaningful because users could interact with information originating from their own system rather than relying solely on static examples. The CSS overhaul also created a more consistent appearance across pages, improving readability and making the application's different sections feel like parts of the same product.
+
+Maintainability improved as well. By separating JavaScript responsibilities into modules, the frontend became easier to navigate and extend. This provides a stronger foundation for future features and reduces the difficulty of making changes as the application grows. Additionally, all frontend unit tests passed, providing confidence that the implemented changes did not introduce known regressions in the tested functionality.
+
+Accessibility saw a particularly concrete improvement. Following the changes made during D3, the pages tested achieved a Lighthouse accessibility score of 100. This reflects progress in making the interface more accessible through improved semantic structure and other accessibility-focused adjustments.
+
+Overall, the application moved beyond simply demonstrating what Wise Storage Director could look like. It became a more integrated, consistent, maintainable, and accessible interface. 
 
 ## 4. Reflection
 

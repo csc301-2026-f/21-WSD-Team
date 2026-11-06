@@ -1,26 +1,62 @@
-"""D2 advice for SSD caching uses one cache target per evaluation; original files remain intact."""
+# SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
+# SPDX-License-Identifier: GPL-3.0-only
+"""D3 advice for SSD caching uses one cache target per evaluation; original files remain intact."""
 from ..common.recommendations import make_recommendation
 
 
-def select_recommendations(candidates, budgets, context, warnings, *, execution_supported):
+def select_files_greedy(candidates, capacity, max_recommendations, warnings):
+    """Select files for SSD caching using the greedy strategy.
+       max_recommendations: the maximum number of suggestions given in one evaluation
+    """
+    selected = []
+    remaining_space = capacity
+    sorted_candidates = sorted(
+        candidates, 
+        key=lambda row: (
+            - (row["read_rate"] / max(row["size"], 1)),
+            -row["read_rate"],                          
+            row["size"],                                
+            row["file_id"]
+        )
+    )
+
+    for row in sorted_candidates:
+        if row["size"] > remaining_space:
+            warnings.add("insufficient_ssd_capacity")
+            continue
+        selected.append(row)
+        remaining_space -= row["size"]
+
+        if len(selected) >= max_recommendations:
+            break
+    return selected
+
+
+def select_recommendations(candidates, budgets, context, warnings, *, execution_supported, selector=None):
     """Use one target cache budget, deducting file sizes for cache population across the result."""
     if not budgets:
         return []
+    
     # Select one target SSD cache device based on available budget space.
     target = min(budgets, key=lambda key: (-budgets[key], key))
-    remaining = budgets[target]
+    
+    # Use the provided custom selector or fall back to the default greedy selector
+    selected = (selector or select_files_greedy)(
+        candidates,
+        budgets[target],
+        context.config["max_recommendations"],
+        warnings
+    )
+
     result = []
-    for row in candidates:
-        if row["size"] > remaining:
-            warnings.add("insufficient_ssd_capacity")
-            continue
-            
+    for row in selected:
         constraints = [
             "approval_required",
             "executor_revalidate_identity_capacity_permissions_and_path_compatibility",
             "d2_read_activity_heuristic_unbenchmarked",
             "d2_single_ssd_target_per_evaluation",
-            "cache_preserves_original_source_file"
+            "cache_preserves_original_source_file",
+            "cache_population_execution_not_confirmed",
         ]
         
         label = "MOCK: " if row["is_mock"] else ""
@@ -44,11 +80,8 @@ def select_recommendations(candidates, budgets, context, warnings, *, execution_
             file_id=row["file_id"],
             source_device_id=row["source"],
             target_device_id=target,
-            constraints=constraints
+            constraints=constraints,
+            mode="ssd_caching"  # Explicitly passes the required mode for ALGO-02
         ))
-        
-        remaining -= row["size"]
-        if len(result) >= context.config["max_recommendations"]:
-            break
             
     return result

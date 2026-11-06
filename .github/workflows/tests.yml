@@ -5,7 +5,17 @@ on:
   push:
     branches: [main]
 
+# Least privilege by default; only the deploy job may write (to Releases).
+permissions:
+  contents: read
+
+# A newer push to the same PR cancels the older run; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  # 1. Tests: Windows + Linux, Python 3.10 / 3.12
   algo01-unit-tests:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
@@ -19,7 +29,95 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Install test dependencies
+        run: python -m pip install pytest flask
+
+      - name: Install Windows collector test dependencies
+        if: runner.os == 'Windows'
+        run: python -m pip install WMI pywin32 pywintrace psutil
+
       - name: Run ALGO-01 unit tests
-        run: python -B -m unittest discover -s backend/algorithms/algo01/tests -v
-      - name: Run QA contract tests
-        run: python -B -m unittest discover -s tests/contract -v
+        run: python -B -m pytest backend/algorithms/algo01/tests -q
+      - name: Run ALGO-02 unit tests
+        run: python -B -m pytest backend/algorithms/algo02/tests -q
+      - name: Run all tests in tests/ (QA contract, HTTP, US-02 integration, DB, demo, collector)
+        run: python -B -m pytest tests -v
+
+  # 2. Quality check: lint (syntax errors, undefined names, broken comparisons)
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: python -m pip install ruff==0.8.6
+      - name: Lint Python code
+        run: ruff check . --select E9,F63,F7,F82 --output-format=github
+
+  # 3. Quality check: build verification (build the release package and smoke-test it)
+  build:
+    runs-on: ubuntu-24.04   # release target is Ubuntu 24.04 x86-64 (glibc 2.39)
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install -r packaging/linux/requirements-build.txt
+      - name: Build release package
+        run: .venv/bin/python packaging/linux/build_release.py
+      - name: Smoke test (install, start in demo mode, call the API)
+        run: |
+          prefix="$RUNNER_TEMP/wsd-smoke"
+          tar -xzf dist/linux/wsd-*.tar.gz -C "$RUNNER_TEMP"
+          sh "$RUNNER_TEMP"/wsd-*-linux-x86_64-ubuntu24.04/install.sh --prefix "$prefix"
+          "$prefix/bin/wsd" --demo > "$RUNNER_TEMP/wsd.log" 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:5000/api/v1/devices > /dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:5000/api/v1/devices | grep -q '"status":"success"'
+          curl -fsS -L -o /dev/null http://127.0.0.1:5000/
+          echo "Smoke test passed: packaged app starts and serves the API and dashboard."
+      - name: Show app log if smoke test failed
+        if: failure()
+        run: cat "$RUNNER_TEMP/wsd.log" || true
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wsd-linux-package
+          path: |
+            dist/linux/*.tar.gz
+            dist/linux/*.sha256
+          retention-days: 7
+
+  # 4. Deploy: only after a merge to main, and only if tests, lint and build all passed
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [algo01-unit-tests, lint, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write   # needed to publish the GitHub Release
+    steps:
+      - name: Download package built in this run
+        uses: actions/download-artifact@v4
+        with:
+          name: wsd-linux-package
+          path: release
+      - name: Publish a new release for this build (marked as Latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          # Unique tag per build: nothing is ever deleted, so if publishing fails
+          # the previous release stays in place and remains "Latest".
+          tag="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" release/* \
+            --target "$GITHUB_SHA" \
+            --latest \
+            --title "WSD build ${GITHUB_RUN_NUMBER} (main @ ${GITHUB_SHA::7})" \
+            --notes "Built and published automatically from main after tests, lint and build verification passed. Install guide: packaging/linux/README.md"
