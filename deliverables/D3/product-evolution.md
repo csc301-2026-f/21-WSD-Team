@@ -26,6 +26,15 @@ A hash table is maintained and updated whenever a monitored file is accessed.
 The Linux backend API then retrieves and processes the collected data before reporting it to Core. 
 This separates low-level kernel monitoring from higher-level application logic.
 
+Juan: 
+- End to End test [PR#41]: Starts the whole app in demo mode and checks every endpoint's response format, that recommendations follow the contract and point at real devices and that data survives the database and an app restart.
+
+- HTTP contract tests [PR#41]: The US-02 history endpoint returns the agreed format an empty list when there is no history, `400` for invalid input without reaching the database and clean `404`/`500` errors. 
+
+- US-02 integration tests: History saved through CORE comes back unchanged from the real database, unknown values stay `null` instead of `0` and a restarted app is kept separtae. 
+
+- CI/CD pipeline (PR#41): Every PR now runs all tests on Windows and Linux and a build verification that packages the release installs it and smoke tests it in demo mode. When changes merge to `main` and all cheacks pass the package is published automatically as a GitHub Release
+- 
 ## 3. Before vs. After
 
 The most noticeable improvement from D2 to D3 was the transition from a prototype-style interface toward a more cohesive application that could display real system information. Previously, the frontend relied more heavily on demonstration data and had a less consistent visual presentation. While the dashboard established the foundation for our intended features, it did not yet provide the same level of integration or usability expected from a functional storage-management tool.
