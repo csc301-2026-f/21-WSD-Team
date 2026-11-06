@@ -5,8 +5,19 @@
 **[Name]**, [Role]
 > [Specific contributions: features built, PRs reviewed, infrastructure set up, etc.]
 
-**[Name]**, [Role]
+**Mohan Sun**, Linux backend implementation
 > [Specific contributions]
+> Added FileIO monitoring API through kernal probe registered by BCC
+> Expanded ErrorCode for easier debugging
+> Updated documentation to match the current functionality
+> 
+> My Pull Request: 
+> - [#48] https://github.com/csc301-2026-f/21-WSD-Team/pull/48
+> - 
+> My code review: 
+> - [#53] https://github.com/csc301-2026-f/21-WSD-Team/pull/53
+> - [#49] https://github.com/csc301-2026-f/21-WSD-Team/pull/49
+> - [#44] https://github.com/csc301-2026-f/21-WSD-Team/pull/44
 
 **[Name]**, [Role]
 > [Specific contributions]
