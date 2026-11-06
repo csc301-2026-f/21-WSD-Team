@@ -6,11 +6,11 @@
 
 Identify the most important gap or limitation after D2 and how you identified it.
 
-During D2, we mainly developed our components based on the API Contract. However, some APls and methods were not implemented or made available until shortly before the demo, which left limited time for integration and testing.
+During D2, we mainly developed our components based on the API Contract. However, some APIs and methods were not implemented or made available until shortly before the demo, which left limited time for integration and testing.
 
-In D3, John introduced a development schedule with deadlines for different tasks. However, it was still difficult to strictly follow this schedule because many of us were learning unfamiliar knowledges, and some tasks turned out to be more complicated than expected. As new problems were discovered during development, some API designs and implementations needed to be changed.
+In D3, John introduced a development schedule with deadlines for different tasks. However, it was still difficult to strictly follow this schedule because many of us were learning unfamiliar technologies, and some tasks turned out to be more complicated than expected. As new problems were discovered during development, some API designs and implementations needed to be changed.
 
-Overall, this showed that maintaining APl Contract can be challenging, especially with limited development time and unfamiliar technologies. For future deliverables, we hope to improve coordination between different components and make the integration more efficient, while maintaining enough flexibility to handle unexpected technical challenges.
+Overall, this showed that maintaining API Contract can be challenging, especially with limited development time and unfamiliar technologies. For future deliverables, we hope to improve coordination between different components and make the integration more efficient, while maintaining enough flexibility to handle unexpected technical challenges.
 
 ## 2. What You Did
 
@@ -18,9 +18,9 @@ Describe what was implemented, key architectural or design changes, and integrat
 
 Most of the basic CORE and HTTP API work was already completed during D2, so my D3 work focused on improving compatibility with the updated backend implementations.
 
-In PR #38, I enabled Windows Real Mode in CORE and updated the Windows and Linux Agent adapters and normalization functions to follow the latest APls. For example, the Windows Backend used integer device IDs, while our API Contract required strings, so I added the necessary conversions. When the Windows FileActivity interface changed from start/end timestamps to a sampling window, I updated the adapter and connected FileActivity data to the CORE recommendation function, where it is passed to ALGO-01 with a 60-second window. I also updated the capability settings, fixed the Linux Adapter's unfinished FileActivity method to return an empty list instead of None, and added normalization unit tests to the Cl workflow.
+In PR #38, I enabled Windows Real Mode in CORE and updated the Windows and Linux Agent adapters and normalization functions to follow the latest APIs. For example, the Windows Backend used integer device IDs, while our API Contract required strings, so I added the necessary conversions. When the Windows FileActivity interface changed from start/end timestamps to a sampling window, I updated the adapter and connected FileActivity data to the CORE recommendation function, where it is passed to ALGO-01 with a 60-second window. I also updated the capability settings, fixed the Linux Adapter's unfinished FileActivity method to return an empty list instead of None, and added normalization unit tests to the CI workflow.
 
-Besides CORE, I implemented a Windows helper that combines FileActivity records by path (PR #42 and #45). I also reviewed Enrique's PR #39 and pointed out timestamp and operation-count type mismatches with the APl Contract. The main challenge was keeping CORE compatible while other components continued changing, which required frequent reviews and adjustments.
+Besides CORE, I implemented a Windows helper that combines FileActivity records by path (PR #42 and #45). I also reviewed Enrique's PR #39 and pointed out timestamp and operation-count type mismatches with the API Contract. The main challenge was keeping CORE compatible while other components continued changing, which required frequent reviews and adjustments.
 
 ## 3. Before vs. After
 
