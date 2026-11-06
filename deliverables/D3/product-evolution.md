@@ -4,7 +4,10 @@
 
 ## 1. What Needed to Improve
 
-Identify the most important gap or limitation after D2 and how you identified it.
+**ALGO-01 and Windows Integration:**
+After D2, one limitation of ALGO-01 was that it mainly relied on a Greedy strategy to select files based on their access frequency. Although this was simple and efficient, it did not always make the best use of limited storage capacity. We wanted to improve the selection process without making the algorithm too computationally expensive.
+
+Another important limitation was the integration of real file I/O monitoring on Windows. In D2, our recommendation system still relied on mock file activity, and the Windows Agent was not fully integrated with CORE. During D3 integration and code reviews, we found several issues with ETW event attribution. File paths were sometimes missing, and using nearby DiskIO events to identify a file's physical device could produce incorrect results, especially on systems with multiple disks. These problems affected the reliability of the data passed to our recommendation algorithms. But thankfully we fixed that in the end.
 
 During D2, we mainly developed our components based on the API Contract. However, some APIs and methods were not implemented or made available until shortly before the demo, which left limited time for integration and testing.
 
@@ -50,6 +53,14 @@ In PR #38, I enabled Windows Real Mode in CORE and updated the Windows and Linux
 
 Besides CORE, I implemented a Windows helper that combines FileActivity records by path (PR #42 and #45). I also reviewed Enrique's PR #39 and pointed out timestamp and operation-count type mismatches with the API Contract. The main challenge was keeping CORE compatible while other components continued changing, which required frequent reviews and adjustments.
 
+
+ALGO-01 and Windows Integration:
+
+For ALGO-01, we introduced a Knapsack-based selection strategy using dynamic programming and state pruning. Instead of selecting files only through Greedy decisions, the new strategy considers different combinations of files under a limited storage budget. Since DP can become expensive when the number of candidates grows, we also added computational limits and a fallback to the original Greedy strategy. This allowed us to improve the selection process while keeping the algorithm practical for larger workloads. We also added unit tests and benchmarks to verify its correctness and performance.
+
+For Windows integration, we worked on fixing the communication between the Windows Agent, CORE, and the recommendation system. One of the main changes was improving how ETW events are mapped to file paths and physical devices. Instead of relying on nearby DiskIO events, the updated implementation resolves NT volume paths directly and temporarily keeps unresolved FileIO events until their file information becomes available. We also improved file activity aggregation to avoid mixing events from different files, even when Windows reuses the same file identifiers.
+
+Additionally, we fixed process identity tracking to distinguish processes that reuse the same PID, corrected the timing of recommendation evaluation, and added NVMe support to the storage capacity calculation. Regression tests were added to cover these cases. Together, these changes allowed the Windows backend to provide real file activity to CORE and generate recommendations based on actual workloads rather than only mock data.
 
 ## 3. Before vs. After
 
