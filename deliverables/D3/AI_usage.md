@@ -18,3 +18,9 @@
 **Tools:** Codex
 
 **Usage:** Codex implemented the Windows launcher and EXE packaging, including supporting tests and usage documentation. John reviewed the changes and performed testing on a physical Windows machine.
+
+## FileIO event generation
+
+**Tools:** ChatGPT
+
+**Usage:** ChatGPT was used to generate an executable Python script that would make the system read and write to a file on a predetermined path, thus generating consistent DiskIO and FileIO events on command that could then be used to test the reactivity and correctness of the metrics.
