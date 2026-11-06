@@ -20,15 +20,16 @@ WSD monitors storage activity, presents information such as throughput, IOPS, la
 
 The project aims to improve storage performance while keeping storage-management decisions understandable and controllable by the user.
 
-## Key Features — Deliverable 2
+## Current Features
 
-Our D2 implementation focuses on three primary user stories.
+The development version supports real disk and process I/O monitoring on Linux and Windows.
 
 ### US-01: Real-Time Process I/O Monitoring
 
 - Identify running processes by name and PID.
 - Monitor per-process read and write activity.
 - Display updated I/O statistics through the frontend.
+- Search processes by name or PID, and select a process to view its historical I/O activity.
 
 ### US-02: Historical I/O Statistics
 
@@ -40,15 +41,22 @@ Our D2 implementation focuses on three primary user stories.
 
 - Analyze file access patterns and available storage capacity.
 - Generate file-placement recommendations using ALGO-01.
+- ALGO-01 now uses a Knapsack-based selection algorithm with dynamic programming and state pruning, falling back to Greedy when computational limits are exceeded.
+- ALGO-02 implements a Greedy-based SSD caching recommendation algorithm.
 - Display recommended source and target devices, reasons, and constraints.
+- On Windows, evaluate real file activity for eligible HDD-to-SSD/NVMe placement recommendations.
 
-**D2 Limitation:** US-05 uses mock file-level activity data because real file-level monitoring is not yet integrated. Recommendations are advisory only; WSD does not automatically migrate or cache files.
+ALGO-02 is implemented at the algorithm level but is not yet integrated into CORE's recommendation refresh workflow.
+
+Demo mode uses clearly marked sample file activity. Real recommendations depend on qualifying read-heavy HDD files and available SSD/NVMe capacity; WSD may return no suggestion.
+
+Recommendations are advisory only. WSD does not automatically move or cache files.
 
 ## Installation and Usage
 
-### Download
+### Linux Release (D2)
 
-The current packaged release is available for **Ubuntu 24.04 x86-64 Linux**.
+The D2 package targets **Ubuntu 24.04 x86-64 Linux** and predates the Windows support described below.
 
 **[Download WSD v1.0.0](https://github.com/csc301-2026-f/21-WSD-Team/releases/tag/v1.0.0)**
 
@@ -56,7 +64,11 @@ The package includes a standalone executable and an installation script.
 
 For complete installation instructions, system requirements, and remote-access instructions, see the **[Linux Installation Guide](packaging/linux/README.md)**.
 
-### Running WSD
+### Windows
+
+See the **[Windows Setup Guide](packaging/windows/README.md)** for the desktop launcher, source setup, portable builds, and screenshots. Choose **Start Monitoring** for real activity or **Start Demo** for sample data. Real monitoring requests Administrator access.
+
+### Running WSD on Linux
 
 After installation, choose one of the following modes.
 
@@ -86,11 +98,12 @@ Stop the current mode using `Ctrl+C` before switching modes.
 
 | User Story | Mode | How to Test |
 |---|---|---|
-| US-01: Real-Time Process I/O | Real | Open **Disk Usage Statistics**, locate the **Application I/O** table, and observe process read/write activity. |
-| US-02: Historical I/O | Real | Open **Disk Usage Statistics**, select a process under **Process I/O History**, and observe its collected activity over time. |
-| US-05: Storage Recommendations | Demo | Open **Main Dashboard**, click **Refresh Recommendations**, and review the generated placement suggestions. |
+| US-01: Real-Time Process I/O | Real | Open **Disk Usage Statistics**, locate the **Application I/O** table, search by process name or PID, and observe read/write activity. |
+| US-02: Historical I/O | Real | Select a process in **Application I/O** or under **Process I/O History**, and observe its historical activity. |
+| US-05: Storage Recommendations | Demo | Open **Main Dashboard**, click **Refresh Recommendations**, and review the generated sample-data recommendations. |
+| US-05: Storage Recommendations | Windows Real | Run WSD with Administrator access, generate file read activity on an HDD, and click **Refresh Recommendations**. A recommendation requires qualifying activity and available SSD/NVMe capacity. |
 
-For screenshots and additional testing instructions, see the **[Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)**.
+See the **[Windows Setup Guide](packaging/windows/README.md)** for startup screenshots. The **[D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)** documents the earlier D2 interface.
 
 ## System Architecture
 
@@ -107,31 +120,46 @@ WSD uses a modular architecture:
 
 For detailed component interfaces and data structures, see [API Contracts](docs/api-contracts.md).
 
-## Current Limitations and Future Development
+## Current Limitations
 
-The D2 release supports real I/O monitoring on Linux. Windows Agent development has also begun, but full Windows integration is not included in this release.
+Windows ETW monitoring, process history, and file-level activity collection are integrated with CORE. However, real recommendations depend on complete file activity data, reliable source-device identification, qualifying read-heavy workloads, and sufficient SSD/NVMe capacity.
 
-Real file-level activity monitoring, automatic file migration, and executable SSD caching remain outside the current D2 implementation.
+Linux supports real disk and process I/O monitoring. Kernel-level file I/O monitoring has been implemented in [PR #48](https://github.com/csc301-2026-f/21-WSD-Team/pull/48)and is awaiting merge. However, integration with the CORE recommendation workflow is not yet complete.
 
-Future iterations will focus on extending platform support, integrating additional recommendation algorithms, and improving end-to-end testing.
+ALGO-02 supports SSD caching recommendations at the algorithm level, but its integration into CORE and the frontend remains incomplete.
+
+Automatic file migration, physical RAID creation, and executable SSD caching are not implemented.
+
+The published D2 Linux package does not include the later D3 Windows integration or launcher.
+
+## Development and GitHub Workflow
 
 ## Development and GitHub Workflow
 
 Team development is organized using feature branches and pull requests.
 
-Changes are reviewed before being merged into `main`. GitHub Actions is used to automatically run selected unit and contract tests across supported Python versions and operating systems.
+Changes are reviewed before being merged into `main`. GitHub Actions runs automated Python tests on Windows and Linux using Python 3.10 and 3.12. These include ALGO-01 and ALGO-02 unit tests, HTTP and database contract tests, and integration tests.
+
+Frontend JavaScript unit tests can also be run using `npm test`.
+
+The D3 frontend improvements include better accessibility, semantic HTML, keyboard navigation, improved color contrast, and process search functionality. The tested frontend pages achieved a Lighthouse accessibility score of 100.
+
+Automated deployment has been implemented in [PR #49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49) and is awaiting merge into `main`. The CI/CD pipeline includes automated testing, linting, and build verification. Once merged, successful checks on pushes to `main` will automatically publish the Linux package as a GitHub Release tagged `latest`.
 
 Team coordination takes place through regular meetings, GitHub Issues, and Discord.
 
 ## Documentation
 
 - [Linux Installation Guide](packaging/linux/README.md)
+- [Windows Setup Guide](packaging/windows/README.md)
 - [D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)
 - [API Contracts](docs/api-contracts.md)
 - [D2 Iteration Review](deliverables/D2/iteration-02-review.md)
 - [Individual Contributions](deliverables/D2/Individual_Contributions_Deliverable2.md)
-- [AI Usage Disclosure](deliverables/D2/AI_usage.md)
-
+- [D2 AI Usage Disclosure](deliverables/D2/AI_usage.md)
+- [D3 Product Evolution Report](deliverables/D3/product-evolution.md)
+- [D3 Individual Contributions](deliverables/D3/Individual_Contributions_Deliverable3.md)
+- [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
 ## License
 
 Wise Storage Director is licensed under the **GNU General Public License version 3 (GPLv3)**.

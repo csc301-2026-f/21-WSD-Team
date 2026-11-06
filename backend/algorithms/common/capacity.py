@@ -27,7 +27,7 @@ def build_ssd_budgets(devices, reserve_bytes, reserve_fraction):
     budgets = {}
     for key, row in devices.items():
         capacity, free = row.get("capacity_bytes"), row.get("free_bytes")
-        if (row.get("media_type") == "ssd" and row.get("is_available") is True
+        if (row.get("media_type") in ("ssd", "nvme") and row.get("is_available") is True
                 and is_integer(capacity, 1) and is_integer(free) and free <= capacity):
             reserve = max(reserve_bytes, math.ceil(capacity * reserve_fraction))
             budgets[key] = max(0, free - reserve)

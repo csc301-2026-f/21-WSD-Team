@@ -1,4 +1,4 @@
-# YOUR PRODUCT/TEAM NAME
+# WSD - wise storage device
 
 > Aim for 1000-2000 words. Be concise and analytical. We care about reasoning, impact, and integration quality, not length.
 
@@ -14,13 +14,42 @@ Overall, this showed that maintaining API Contract can be challenging, especiall
 
 ## 2. What You Did
 
-Describe what was implemented, key architectural or design changes, and integration challenges.
+Backend - Linux:
+
+Several improvements were made to the Linux backend after D2, focusing on error handling, testing, and new functionality.
+
+First, we improved error handling by returning specific error codes instead of None when an operation fails. 
+This allows Core to identify failures and handle them appropriately.
+
+Second, we added test scripts to verify backend functionality. 
+Since the backend interacts directly with operating system interfaces, 
+some behaviours are environment-dependent and cannot be reliably tested through conventional CI pipelines. 
+These scripts allow developers to validate functionality locally before integration.
+
+Finally, we implemented a new File I/O tracking feature. 
+This uses a kernel probe to monitor read and write operations on subscribed files. 
+A hash table is maintained and updated whenever a monitored file is accessed. 
+The Linux backend API then retrieves and processes the collected data before reporting it to Core. 
+This separates low-level kernel monitoring from higher-level application logic.
+
+Juan: 
+- End to End test [PR#41]: Starts the whole app in demo mode and checks every endpoint's response format, that recommendations follow the contract and point at real devices and that data survives the database and an app restart.
+
+- HTTP contract tests [PR#41]: The US-02 history endpoint returns the agreed format an empty list when there is no history, `400` for invalid input without reaching the database and clean `404`/`500` errors. 
+
+- US-02 integration tests: History saved through CORE comes back unchanged from the real database, unknown values stay `null` instead of `0` and a restarted app is kept separtae. 
+
+- CI/CD pipeline (PR#41): Every PR now runs all tests on Windows and Linux and a build verification that packages the release installs it and smoke tests it in demo mode. When changes merge to `main` and all cheacks pass the package is published automatically as a GitHub Release
+- 
+
+CORE:
 
 Most of the basic CORE and HTTP API work was already completed during D2, so my D3 work focused on improving compatibility with the updated backend implementations.
 
 In PR #38, I enabled Windows Real Mode in CORE and updated the Windows and Linux Agent adapters and normalization functions to follow the latest APIs. For example, the Windows Backend used integer device IDs, while our API Contract required strings, so I added the necessary conversions. When the Windows FileActivity interface changed from start/end timestamps to a sampling window, I updated the adapter and connected FileActivity data to the CORE recommendation function, where it is passed to ALGO-01 with a 60-second window. I also updated the capability settings, fixed the Linux Adapter's unfinished FileActivity method to return an empty list instead of None, and added normalization unit tests to the CI workflow.
 
 Besides CORE, I implemented a Windows helper that combines FileActivity records by path (PR #42 and #45). I also reviewed Enrique's PR #39 and pointed out timestamp and operation-count type mismatches with the API Contract. The main challenge was keeping CORE compatible while other components continued changing, which required frequent reviews and adjustments.
+
 
 ## 3. Before vs. After
 
@@ -42,4 +71,17 @@ Furthermore, Windows File Activity has been integrated into ALGO-01, and normali
 
 ## 4. Reflection
 
-What worked well, what was harder than expected, and how this affects your path to D4.
+Linux backend:
+
+One of the biggest challenges was interacting directly with the Linux kernel. 
+This was significantly harder than expected, 
+especially because it required switching from Python to C and learning unfamiliar kernel interfaces, data structures, and debugging techniques. 
+Working with kernel probes also required a deeper understanding of how information is transferred between kernel space and user space.
+
+At the same time, Core has been essential to the success of the project. 
+By providing a common interface between different backend components and the application, 
+Core allows team members to develop their features independently without needing to understand every implementation detail. 
+This separation of responsibilities was key to bringing the different parts of the project together.
+
+
+Moving toward D4, we will focus on testing and cooperation with the CORE team and ensuring smooth integration with Core.

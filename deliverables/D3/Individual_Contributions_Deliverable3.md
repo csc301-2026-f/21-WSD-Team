@@ -16,22 +16,33 @@ From the user's perspective, WSD has gone from a collection of prototype pages i
 **[Name]**, [Role]
 > [Specific contributions]
 
-**[Name]**, [Role]
-> [Specific contributions]
-
-**[Name]**, [Role]
-> [Specific contributions]
-
 **[Shengrong Wang]**, [CORE]
-During D2, I completed most of the basic CORE implementation based on our API Contract. 
+During D2, I completed most of the basic CORE implementation based on our API Contract.
 Therefore, my main responsibilities in D3 were improving the existing implementation, fixing API compatibility issues, and ensuring CORE could work with the latest updates from other team members.
 
-In PR #38, I enabled Windows Real Mode support in CORE and updated the Agent adapters and normalization functions to match the latest Windows and Linux Backend APIs. 
-This included converting Windows device and file IDs into the string format required by the API Contract, updating the FileActivity interface to use sampling windows, and fixing Linux sampling duration data types. 
-I also connected FileActivity data to ALGO-01 through the CORE recommendation function, updated the capability settings, and fixed compatibility issues in the Linux Adapter. 
+In PR #38, I enabled Windows Real Mode support in CORE and updated the Agent adapters and normalization functions to match the latest Windows and Linux Backend APIs.
+This included converting Windows device and file IDs into the string format required by the API Contract, updating the FileActivity interface to use sampling windows, and fixing Linux sampling duration data types.
+I also connected FileActivity data to ALGO-01 through the CORE recommendation function, updated the capability settings, and fixed compatibility issues in the Linux Adapter.
 In addition, I added unit tests for Windows and Linux normalization and included them in the CI workflow.
 
-I also contributed to the Windows Backend by implementing a helper function that combines FileActivity records with the same file path, summing their read/write operations and byte counts. 
+I also contributed to the Windows Backend by implementing a helper function that combines FileActivity records with the same file path, summing their read/write operations and byte counts.
 This change was submitted through PR #42 and later PR #45. Besides writing code, I reviewed Enrique's Windows Backend PR #39 and identified differences between its data types and the API Contract.
 [PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/38) (https://github.com/csc301-2026-f/21-WSD-Team/pull/42) (https://github.com/csc301-2026-f/21-WSD-Team/pull/45)
 [Code Review] (https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
+
+**[Name]**, [Role]
+> [Specific contributions]
+
+
+**[John Deng]**, [Team Lead, ALGO-01 Development & Integration]
+My role in D3 was mainly leading the team in coordination and doing cross-component integration. I created multiple tables to let group members sign up for their midterm dates, trying to set adaptive deadlines for everyone, continuously tracking people's progress, reviewing pull requests whenever anyone requested it, and fixing bugs between the Windows Agent, CORE, and recommendation algorithms.
+
+As for my algorithm part (ALGO-01), I implemented a Knapsack-based file selection strategy with dynamic programming, state pruning, and a Greedy fallback when computational limits are exceeded. I preserved the existing API, refactored the selection logic, and added meaningful unit tests and benchmarks to see if pruning really works well.
+
+I also worked on D3 integration, just like in D2. I fixed Windows ETW file path attribution, delayed event recovery, file activity aggregation, and process identity tracking. I also corrected recommendation evaluation timing, temporarily treated NVMe as SSD, and introduced regression tests for Windows data collection and process history.
+
+Besides, I actively reviewed teammates' pull requests, including CORE integration (PR #38), Windows Agent and File I/O monitoring (PR #39), ALGO-02 compatibility (PR #40), ALGO-02 tests and implementation (PR #43), and frontend improvements (PR #46). I pointed out bugs and API inconsistencies, gave possible solutions (in Discord channels or direct messages), and approved PRs after bugs fixed.
+
+[John's PR Links] [#37](https://github.com/csc301-2026-f/21-WSD-Team/pull/37), [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
+
+[John's Code Reviews] [#38](https://github.com/csc301-2026-f/21-WSD-Team/pull/38), [#39](https://github.com/csc301-2026-f/21-WSD-Team/pull/39), [#40](https://github.com/csc301-2026-f/21-WSD-Team/pull/40), [#43](https://github.com/csc301-2026-f/21-WSD-Team/pull/43), [#46](https://github.com/csc301-2026-f/21-WSD-Team/pull/46), [#44](https://github.com/csc301-2026-f/21-WSD-Team/pull/44), [#52](https://github.com/csc301-2026-f/21-WSD-Team/pull/52)
