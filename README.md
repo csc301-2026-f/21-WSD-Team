@@ -56,7 +56,11 @@ The package includes a standalone executable and an installation script.
 
 For complete installation instructions, system requirements, and remote-access instructions, see the **[Linux Installation Guide](packaging/linux/README.md)**.
 
-### Running WSD
+### Windows (from source)
+
+See the **[Windows Setup Guide](packaging/windows/README.md)** for the desktop launcher, source setup, and screenshots. The launcher provides buttons for real monitoring and demo mode.
+
+### Running WSD on Linux
 
 After installation, choose one of the following modes.
 
@@ -126,6 +130,7 @@ Team coordination takes place through regular meetings, GitHub Issues, and Disco
 ## Documentation
 
 - [Linux Installation Guide](packaging/linux/README.md)
+- [Windows Setup Guide](packaging/windows/README.md)
 - [D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)
 - [API Contracts](docs/api-contracts.md)
 - [D2 Iteration Review](deliverables/D2/iteration-02-review.md)
