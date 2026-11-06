@@ -7,6 +7,12 @@
 
 **Usage:** John designed and implemented the new knapsack algorithm independently. ChatGPT was used only to help write a small number of tests for this addition.
 
+## ALGO-02 (`backend/algorithms/algo02/`)
+
+**Tools:** Gemini
+
+**Usage:** AI was used as a reference for problem-solving and exploring implementation approaches when encountering difficulties. AI-generated solutions were not directly copied into the implementation. Failures encountered during unit tests are solved with the help of the terminal and without the use of AI.
+
 ## D3 Integration Debugging
 
 **Tools:** ChatGPT
@@ -24,3 +30,16 @@
 **Tools:** ChatGPT
 
 **Usage:** ChatGPT was used to generate an executable Python script that would make the system read and write to a file on a predetermined path, thus generating consistent DiskIO and FileIO events on command that could then be used to test the reactivity and correctness of the metrics.
+
+## D3 CORE Integration
+
+**Tools:** ChatGPT
+
+**Usage:** Shengrong Wang primarily use Chatgpt to review PRs submitted by other team members, helping to identify changes or differences, particularly those API interfaces and data structures. This reduces the time spent manually comparing different implementations.
+I also used ChatGPT to understand unfamiliar Python concepts and techniques, such as lazy imports, which I had not encountered in my previous coursework.
+
+## D3 CI and Database Testing
+
+**Tools:** ChatGPT
+
+**Usage:** Sahil used ChatGPT to help debug the CI pipeline, ensuring that it properly loads tests across the entire backend suite and doesn't give false negatives for database tests.

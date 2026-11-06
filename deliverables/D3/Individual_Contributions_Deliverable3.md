@@ -26,12 +26,28 @@ I also validated John's implementation of NT volume mapping (PR #47), a feature 
 
 [Enrique's Review] [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
 
+**[Sahil Pathak]**, [Database]
+One of the biggest limitations after D2 was a lack of CI testing and additional safety features for our databases, this let errors like AttributeError from the database passing onto core causin unpredicatable behavior, potential crashes and wrong predictions. So I focused on improving our testing coverage and making our database more fault tolerant.
+Implemented comprehensive unit and contract tests for the database repository, covering cold-start queries, device/process metrics ingestion, UTC timestamp formatting, dynamic time-bucketing, and recommendation upserts. Diagnosed and resolved a CI pipeline failure where missing flask in the test runner environment prevented HTTP and DB integration test suites from loading. Hardened the SQLiteHistoryRepository against interface mismatches by adding safe no-op handling for file activity and preventing stale state during recommendation collisions. Reviewed backend PRs for Core adapter integration.
 
-**[Name]**, [Role]
+**[Jesslyn Perdana]**, [Algorithm II Design]
 > [Specific contributions]
+For D3, I upgraded the recommendation system to be able to take SSD caching as its second mode, and made it compatible with Algorithm 2 while maintaining compatibility with John's Algorithm 1, though it is currently not yet integrated into the CORE. I also refactored its greedy selection algorithm, and made it more personalized and distinguished compared to John's by making it prioritize compact, high-read-frequency files to optimize cache performance and to avoid it from acting like a 'hungry wolf' that swallowed massive files. With all 7 main files of Algorithm 2 implemented, I could add unit tests for the greedy selection algorithm and the SSD caching policy to ensure the features are working as intended, and created standard D3 mock input/output fixtures under the module's test directory. With the main unit tests and JSON fixtures implemented, in the team's GitHub Actions workflow, I configured the CI pipeline to automatically execute all the algorithm's unit tests and contract validations across Ubuntu and Windows with Python 3.10 and 3.12 on every push and pull request, ensuring zero regressions and successful tests before merging into main. Alongside the completion of the algorithm's 7 main files, these improvements could set up the foundation for the integration of Algorithm 2 into the CORE and focusing on expanding on other features or functionalities that could be of great use for Algorithm 2 in D4. 
+[Jesslyn's PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/43)
 
-**[Name]**, [Role]
-> [Specific contributions]
+**[Shengrong Wang]**, [CORE]
+During D2, I completed most of the basic CORE implementation based on our API Contract.
+Therefore, my main responsibilities in D3 were improving the existing implementation, fixing API compatibility issues, and ensuring CORE could work with the latest updates from other team members.
+
+In PR #38, I enabled Windows Real Mode support in CORE and updated the Agent adapters and normalization functions to match the latest Windows and Linux Backend APIs.
+This included converting Windows device and file IDs into the string format required by the API Contract, updating the FileActivity interface to use sampling windows, and fixing Linux sampling duration data types.
+I also connected FileActivity data to ALGO-01 through the CORE recommendation function, updated the capability settings, and fixed compatibility issues in the Linux Adapter.
+In addition, I added unit tests for Windows and Linux normalization and included them in the CI workflow.
+
+I also contributed to the Windows Backend by implementing a helper function that combines FileActivity records with the same file path, summing their read/write operations and byte counts.
+This change was submitted through PR #42 and later PR #45. Besides writing code, I reviewed Enrique's Windows Backend PR #39 and identified differences between its data types and the API Contract.
+[PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/38) (https://github.com/csc301-2026-f/21-WSD-Team/pull/42) (https://github.com/csc301-2026-f/21-WSD-Team/pull/45)
+[Code Review] (https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
 
 **[John Deng]**, [Team Lead, ALGO-01 Development & Integration]
 My role in D3 was mainly leading the team in coordination and doing cross-component integration. I created multiple tables to let group members sign up for their midterm dates, trying to set adaptive deadlines for everyone, continuously tracking people's progress, reviewing pull requests whenever anyone requested it, and fixing bugs between the Windows Agent, CORE, and recommendation algorithms.
