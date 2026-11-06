@@ -6,6 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Customize Wise Storage Director to suit your needs. Manage application preferences and configure available storage monitoring and optimization settings.">
 
     <title>WSD App</title>
 
@@ -14,10 +15,6 @@
 </head>
 
 <body>
-    <div class="header-box">
-        <h1>Wise Storage Director - Settings</h1>
-    </div>
-
     <span id="navOpenButton">&#9776;</span>
 
     <div id="mainSidenav" class="sidenav">
@@ -31,7 +28,7 @@
     </div>
 
     <!-- OLD HEADER NAVIGATION MENU
-     
+
     <div class="header-box">
         <ul>
             <li>
@@ -56,85 +53,91 @@
     </div>
     -->
 
-    <div class="box-container">
-        <div class="box">
-            <h2>Optimize "Auto-Mode" Settings For Me</h2>
-            <p title="Chooses user-safe default settings.">(?)</p>
-
-            <input type="checkbox" id="auto-settings">
-            <label for="auto-settings">Auto-Mode</label>
+    <main>
+        <div class="header-box">
+            <h1>Wise Storage Director - Settings</h1>
         </div>
-    </div>
 
-    <div class="box-container">
+        <div class="box-container">
+            <div class="box">
+                <h2>Optimize "Auto-Mode" Settings For Me</h2>
+                <p title="Chooses user-safe default settings.">(?)</p>
 
-        <!-- SETTINGS BOX 1 -->
-        <div class="box" id="settings">
-
-            <h2>SSD Caching</h2>
-            <p title="SSD Caching Mode is recommended primarily for default users.">(?)</p>
-            <ul>
-                <li>
-                    <input type="checkbox" id="enable-cache" checked>
-                    <label for="enable-cache">Enable SSD caching</label>
-                </li>
-
-                <li>
-                    <input type="checkbox" id="cache-read">
-                    <label for="cache-read">Cache frequently read data</label>
-                </li>
-
-                <li>
-                    <input type="checkbox" id="cache-write">
-                    <label for="cache-write">Cache frequently written data</label>
-                </li>
-
-                <li>
-                    <input type="checkbox" id="auto-cache">
-                    <label for="auto-cache">Automatically manage cached data</label>
-                </li>
-
-                <li>
-                    <input type="checkbox" id="clear-cache">
-                    <label for="clear-cache">Clear cache before operation</label>
-                </li>
-            </ul>
+                <input type="checkbox" id="auto-settings">
+                <label for="auto-settings">Auto-Mode</label>
+            </div>
         </div>
-        
-        <!-- SETTINGS BOX 2 -->
-        <div class="box" id="settings">
 
-            <h2>RAID 0 Mode</h2>
-            <p title="RAID 0 Mode is an experimental mode. In the context of WSD, RAID 0 refers to the usage of performance-oriented file-level storage pooling, not traditional block-level striping.">(?)</p>
-            <ul>
-                <li>
-                    <input type="checkbox" id="enable-raid">
-                    <label for="enable-raid">Enable RAID 0</label>
-                </li>
+        <div class="box-container">
 
-                <li>
-                    <input type="checkbox" id="auto-select-drives">
-                    <label for="auto-select-drives">Automatically select drives</label>
-                </li>
+            <!-- SETTINGS BOX 1 -->
+            <div class="box" id="settings">
 
-                <li>
-                    <input type="checkbox" id="balance-drives">
-                    <label for="balance-drives">Balance data across drives</label>
-                </li>
+                <h2>SSD Caching</h2>
+                <p title="SSD Caching Mode is recommended primarily for default users.">(?)</p>
+                <ul>
+                    <li>
+                        <input type="checkbox" id="enable-cache" checked>
+                        <label for="enable-cache">Enable SSD caching</label>
+                    </li>
 
-                <li>
-                    <input type="checkbox" id="performance-mode">
-                    <label for="performance-mode">Prioritize performance</label>
-                </li>
+                    <li>
+                        <input type="checkbox" id="cache-read">
+                        <label for="cache-read">Cache frequently read data</label>
+                    </li>
 
-                <li>
-                    <input type="checkbox" id="monitor-raid">
-                    <label for="monitor-raid">Monitor RAID status</label>
-                </li>
-            </ul>
+                    <li>
+                        <input type="checkbox" id="cache-write">
+                        <label for="cache-write">Cache frequently written data</label>
+                    </li>
+
+                    <li>
+                        <input type="checkbox" id="auto-cache">
+                        <label for="auto-cache">Automatically manage cached data</label>
+                    </li>
+
+                    <li>
+                        <input type="checkbox" id="clear-cache">
+                        <label for="clear-cache">Clear cache before operation</label>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- SETTINGS BOX 2 -->
+            <div class="box" id="settings">
+
+                <h2>RAID 0 Mode</h2>
+                <p title="RAID 0 Mode is an experimental mode. In the context of WSD, RAID 0 refers to the usage of performance-oriented file-level storage pooling, not traditional block-level striping.">(?)</p>
+                <ul>
+                    <li>
+                        <input type="checkbox" id="enable-raid">
+                        <label for="enable-raid">Enable RAID 0</label>
+                    </li>
+
+                    <li>
+                        <input type="checkbox" id="auto-select-drives">
+                        <label for="auto-select-drives">Automatically select drives</label>
+                    </li>
+
+                    <li>
+                        <input type="checkbox" id="balance-drives">
+                        <label for="balance-drives">Balance data across drives</label>
+                    </li>
+
+                    <li>
+                        <input type="checkbox" id="performance-mode">
+                        <label for="performance-mode">Prioritize performance</label>
+                    </li>
+
+                    <li>
+                        <input type="checkbox" id="monitor-raid">
+                        <label for="monitor-raid">Monitor RAID status</label>
+                    </li>
+                </ul>
+            </div>
+
         </div>
-        
-    </div>
+    </main>
 
     <script type="module" src="../js/ui.js"></script>
 </body>

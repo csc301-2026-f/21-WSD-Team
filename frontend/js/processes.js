@@ -1,41 +1,32 @@
 // SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 // SPDX-License-Identifier: GPL-3.0-only
+
 import { getLatestProcesses } from "./api.js";
+
+import {
+    getProcessKey,
+    getProcessInstanceId,
+    filterProcesses as filterProcessList
+} from "./processUtils.js";
+
+import {
+    getProcessRowValues,
+    getEmptyStateMessage,
+    getProcessStatusMessage
+} from "./processRendering.js";
 
 const REFRESH_INTERVAL_MS = 2000;
 
 const tableBody = document.getElementById("process-table-body");
 const statusElement = document.getElementById("process-status");
 const selectedElement = document.getElementById("selected-process");
+const searchInput = document.getElementById("process-search");
 
 let selectedProcessKey = null;
+let latestProcesses = [];
 let isRefreshing = false;
 
-function getProcessKey(process) {
-    return `${process.host_id}:${process.pid}:${process.start_time_utc ?? "unknown"}`;
-}
-
-function formatRate(bytesPerSecond) {
-    if (bytesPerSecond == null) {
-        return "N/A";
-    }
-    const value = Number(bytesPerSecond);
-    
-
-    if (!Number.isFinite(value) || value < 0) {
-        return "N/A";
-    }
-
-    if (value >= 1_000_000) {
-        return `${(value / 1_000_000).toFixed(2)} MB/s`;
-    }
-
-    if (value >= 1_000) {
-        return `${(value / 1_000).toFixed(2)} KB/s`;
-    }
-
-    return `${value.toFixed(0)} B/s`;
-}
+/* RENDER PROCESS TABLE */
 
 function renderProcesses(processes) {
     tableBody.replaceChildren();
@@ -46,17 +37,11 @@ function renderProcesses(processes) {
 
         row.dataset.processKey = processKey;
 
-        const values = [
-            process.process_name ?? "Unknown",
-            process.pid ?? "N/A",
-            formatRate(process.read_bytes_per_sec),
-            formatRate(process.write_bytes_per_sec),
-            process.attributed_device_id ?? "Unattributed"
-        ];
+        const values = getProcessRowValues(process);
 
         for (const value of values) {
             const cell = document.createElement("td");
-            cell.textContent = String(value);
+            cell.textContent = value;
             row.appendChild(cell);
         }
 
@@ -77,14 +62,55 @@ function renderProcesses(processes) {
                     existingRow.dataset.processKey === selectedProcessKey
                 );
             }
+
+            // Tell the history graph which process was selected.
+            document.dispatchEvent(
+                new CustomEvent("process-selected-for-history", {
+                    detail: {
+                        process_instance_id:
+                            getProcessInstanceId(process)
+                    }
+                })
+            );
         });
 
         tableBody.appendChild(row);
     }
+
+    if (processes.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+
+        cell.colSpan = 5;
+        cell.textContent = getEmptyStateMessage(latestProcesses);
+
+        row.appendChild(cell);
+        tableBody.appendChild(row);
+    }
 }
 
+/* SEARCH AND FILTERING */
+
+function filterAndRenderProcesses() {
+    const searchTerm = searchInput.value;
+
+    const filteredProcesses = filterProcessList(
+        latestProcesses,
+        searchTerm
+    );
+
+    renderProcesses(filteredProcesses);
+
+    statusElement.textContent =
+        getProcessStatusMessage(latestProcesses, searchTerm);
+}
+
+/* REFRESH PROCESS DATA */
+
 async function refreshProcessTable() {
-    if (isRefreshing) return;
+    if (isRefreshing) {
+        return;
+    }
 
     isRefreshing = true;
 
@@ -95,19 +121,52 @@ async function refreshProcessTable() {
             throw new Error("Expected an array of process records.");
         }
 
-        renderProcesses(processes);
+        latestProcesses = processes;
+
+        // Clear selection if the selected process no longer exists
+        // in the current process activity response.
+        if (
+            selectedProcessKey !== null &&
+            !latestProcesses.some(
+                process => getProcessKey(process) === selectedProcessKey
+            )
+        ) {
+            selectedProcessKey = null;
+            selectedElement.textContent = "No process selected.";
+        }
+
+        // Preserve the search when new data arrives.
+        filterAndRenderProcesses();
+
+    } catch (error) {
+        console.error("Failed to refresh process table:", error);
 
         statusElement.textContent =
-            `${processes.length} processes · Last updated ` +
-            new Date().toLocaleTimeString();
-    } catch (error) {
-        console.error("Failed to load process data:", error);
-        statusElement.textContent =
-            "Unable to load process data. Retrying...";
+            "Unable to load processes. Retrying...";
+
     } finally {
         isRefreshing = false;
-        setTimeout(refreshProcessTable, REFRESH_INTERVAL_MS);
+
+        setTimeout(
+            refreshProcessTable,
+            REFRESH_INTERVAL_MS
+        );
     }
 }
 
-refreshProcessTable();
+/* EVENT LISTENERS */
+
+searchInput.addEventListener(
+    "input",
+    filterAndRenderProcesses
+);
+
+/* INITIALIZATION */
+
+if (!tableBody || !statusElement || !selectedElement || !searchInput) {
+    console.error(
+        "Process table is missing one or more required HTML elements."
+    );
+} else {
+    refreshProcessTable();
+}
