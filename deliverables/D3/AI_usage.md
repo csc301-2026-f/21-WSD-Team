@@ -7,6 +7,12 @@
 
 **Usage:** John designed and implemented the new knapsack algorithm independently. ChatGPT was used only to help write a small number of tests for this addition.
 
+## ALGO-02 (`backend/algorithms/algo02/`)
+
+**Tools:** Gemini
+
+**Usage:** AI was used as a reference for problem-solving and exploring implementation approaches when encountering difficulties. AI-generated solutions were not directly copied into the implementation. Failures encountered during unit tests are solved with the help of the terminal and without the use of AI.
+
 ## D3 Integration Debugging
 
 **Tools:** ChatGPT
