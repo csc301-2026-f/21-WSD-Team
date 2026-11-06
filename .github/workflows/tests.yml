@@ -28,5 +28,7 @@ jobs:
 
       - name: Run ALGO-01 unit tests
         run: python -B -m pytest backend/algorithms/algo01/tests -q
+      - name: Run ALGO-02 unit tests
+        run: python -B -m pytest backend/algorithms/algo02/tests -q
       - name: Run all tests in tests/ (QA contract, HTTP, US-02 integration, DB, demo, collector)
         run: python -B -m pytest tests -v

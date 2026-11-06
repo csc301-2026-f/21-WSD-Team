@@ -6,6 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage storage optimization priorities with Wise Storage Director. Review and adjust which applications and storage tasks receive priority to better organize system resources.">
 
     <title>WSD App</title>
 
@@ -14,10 +15,6 @@
 </head>
 
 <body>
-    <div class="header-box">
-        <h1>Wise Storage Director - Task Priority Settings</h1>
-    </div>
-
     <span id="navOpenButton">&#9776;</span>
 
     <div id="mainSidenav" class="sidenav">
@@ -31,7 +28,7 @@
     </div>
 
     <!-- OLD HEADER NAVIGATION MENU
-     
+
     <div class="header-box">
         <ul>
             <li>
@@ -56,90 +53,96 @@
     </div>
     -->
 
-    <div class="box-container">
-        <div class="box priority-box" id="games-box">
-            <label for="games">Priority:</label>
-
-            <select name="games" id="games">
-                <option value="Highest">Highest</option>
-                <option value="High">High</option>
-                <option value="Default" selected>Default</option>
-                <option value="Low">Low</option>
-                <option value="Lowest">Lowest</option>
-            </select>
-
-            <h3>{ Games }</h3>
-            <p>███████████████████░░░░░░░ 75%</p>
+    <main>
+        <div class="header-box">
+            <h1>Wise Storage Director - Task Priority Settings</h1>
         </div>
-    </div>
 
-    <div class="box-container">
-        <div class="box priority-box" id="applications-box">
-            <label for="applications">Priority:</label>
+        <div class="box-container">
+            <div class="box priority-box" id="games-box">
+                <label for="games">Priority:</label>
 
-            <select name="applications" id="applications">
-                <option value="Highest">Highest</option>
-                <option value="High">High</option>
-                <option value="Default" selected>Default</option>
-                <option value="Low">Low</option>
-                <option value="Lowest">Lowest</option>
-            </select>
+                <select name="games" id="games">
+                    <option value="Highest">Highest</option>
+                    <option value="High">High</option>
+                    <option value="Default" selected>Default</option>
+                    <option value="Low">Low</option>
+                    <option value="Lowest">Lowest</option>
+                </select>
 
-            <h3>{ Applications }</h3>
-            <p>███░░░░░░░░░░░░░░░░░░░░░ 10%</p>
+                <h3>{ Games }</h3>
+                <p>███████████████████░░░░░░░ 75%</p>
+            </div>
         </div>
-    </div>
 
-    <div class="box-container">
-        <div class="box priority-box" id="media-box">
-            <label for="media">Priority:</label>
+        <div class="box-container">
+            <div class="box priority-box" id="applications-box">
+                <label for="applications">Priority:</label>
 
-            <select name="media" id="media">
-                <option value="Highest">Highest</option>
-                <option value="High">High</option>
-                <option value="Default" selected>Default</option>
-                <option value="Low">Low</option>
-                <option value="Lowest">Lowest</option>
-            </select>
+                <select name="applications" id="applications">
+                    <option value="Highest">Highest</option>
+                    <option value="High">High</option>
+                    <option value="Default" selected>Default</option>
+                    <option value="Low">Low</option>
+                    <option value="Lowest">Lowest</option>
+                </select>
 
-            <h3>{ Media & Videos }</h3>
-            <p>██░░░░░░░░░░░░░░░░░░░░░░ 7%</p>
+                <h3>{ Applications }</h3>
+                <p>███░░░░░░░░░░░░░░░░░░░░░ 10%</p>
+            </div>
         </div>
-    </div>
 
-    <div class="box-container">
-        <div class="box priority-box" id="documents-box">
-            <label for="documents">Priority:</label>
+        <div class="box-container">
+            <div class="box priority-box" id="media-box">
+                <label for="media">Priority:</label>
 
-            <select name="documents" id="documents">
-                <option value="Highest">Highest</option>
-                <option value="High">High</option>
-                <option value="Default" selected>Default</option>
-                <option value="Low">Low</option>
-                <option value="Lowest">Lowest</option>
-            </select>
+                <select name="media" id="media">
+                    <option value="Highest">Highest</option>
+                    <option value="High">High</option>
+                    <option value="Default" selected>Default</option>
+                    <option value="Low">Low</option>
+                    <option value="Lowest">Lowest</option>
+                </select>
 
-            <h3>{ Documents }</h3>
-            <p>█░░░░░░░░░░░░░░░░░░░░░░░ 5%</p>
+                <h3>{ Media & Videos }</h3>
+                <p>██░░░░░░░░░░░░░░░░░░░░░░ 7%</p>
+            </div>
         </div>
-    </div>
 
-    <div class="box-container">
-        <div class="box priority-box" id="backups-box">
-            <label for="backups">Priority:</label>
+        <div class="box-container">
+            <div class="box priority-box" id="documents-box">
+                <label for="documents">Priority:</label>
 
-            <select name="backups" id="backups">
-                <option value="Highest">Highest</option>
-                <option value="High">High</option>
-                <option value="Default" selected>Default</option>
-                <option value="Low">Low</option>
-                <option value="Lowest">Lowest</option>
-            </select>
+                <select name="documents" id="documents">
+                    <option value="Highest">Highest</option>
+                    <option value="High">High</option>
+                    <option value="Default" selected>Default</option>
+                    <option value="Low">Low</option>
+                    <option value="Lowest">Lowest</option>
+                </select>
 
-            <h3>{ Backups }</h3>
-            <p>█░░░░░░░░░░░░░░░░░░░░░░░ 3%</p>
+                <h3>{ Documents }</h3>
+                <p>█░░░░░░░░░░░░░░░░░░░░░░░ 5%</p>
+            </div>
         </div>
-    </div>
+
+        <div class="box-container">
+            <div class="box priority-box" id="backups-box">
+                <label for="backups">Priority:</label>
+
+                <select name="backups" id="backups">
+                    <option value="Highest">Highest</option>
+                    <option value="High">High</option>
+                    <option value="Default" selected>Default</option>
+                    <option value="Low">Low</option>
+                    <option value="Lowest">Lowest</option>
+                </select>
+
+                <h3>{ Backups }</h3>
+                <p>█░░░░░░░░░░░░░░░░░░░░░░░ 3%</p>
+            </div>
+        </div>
+    </main>
 
     <script type="module" src="../js/ui.js"></script>
 </body>
