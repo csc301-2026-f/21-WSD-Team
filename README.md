@@ -124,7 +124,7 @@ For detailed component interfaces and data structures, see [API Contracts](docs/
 
 Windows ETW monitoring, process history, and file-level activity collection are integrated with CORE. However, real recommendations depend on complete file activity data, reliable source-device identification, qualifying read-heavy workloads, and sufficient SSD/NVMe capacity.
 
-Linux supports real disk and process I/O monitoring. Kernel-level file I/O monitoring is under development [PR #48](https://github.com/csc301-2026-f/21-WSD-Team/pull/48), but it is not yet integrated into the CORE recommendation workflow. Linux recommendations currently use sample file activity.
+Linux supports real disk and process I/O monitoring. Kernel-level file I/O monitoring has been implemented in [PR #48](https://github.com/csc301-2026-f/21-WSD-Team/pull/48)and is awaiting merge. However, integration with the CORE recommendation workflow is not yet complete.
 
 ALGO-02 supports SSD caching recommendations at the algorithm level, but its integration into CORE and the frontend remains incomplete.
 
