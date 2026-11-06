@@ -31,3 +31,5 @@ Overall, the application moved beyond simply demonstrating what Wise Storage Dir
 ## 4. Reflection
 
 What worked well, what was harder than expected, and how this affects your path to D4.
+
+Contract-first design made writing deterministic unit tests straightforward once interfaces were locked down. However, diagnosing pipeline failures highlighted how brittle CI environments can be when new web dependencies are introduced across branches. For D4, maintaining automated contract testing on every PR will be essential as the algorithms and frontend integrate directly with live telemetry.
