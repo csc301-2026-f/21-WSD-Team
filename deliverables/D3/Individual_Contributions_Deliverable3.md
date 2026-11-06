@@ -13,6 +13,10 @@ For D3, I connected the frontend to the Windows backend, allowing storage metric
 From the user's perspective, WSD has gone from a collection of prototype pages into a functional dashboard that presents live system information in a clear, consistent and much more accessible way. The biggest challenge was bringing the frontend and backend together while maintaining reliability. These improvements give us a much stronger foundation for D4, where we can focus on expanding functionality rather than rebuilding the fundamentals.
 [Danny's PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/46)
 
+**[Sahil Pathak]**, [Database]
+One of the biggest limitations after D2 was a lack of CI testing and additional safety features for our databases, this let errors like AttributeError from the database passing onto core causin unpredicatable behavior, potential crashes and wrong predictions. So I focused on improving our testing coverage and making our database more fault tolerant.
+Implemented comprehensive unit and contract tests for the database repository, covering cold-start queries, device/process metrics ingestion, UTC timestamp formatting, dynamic time-bucketing, and recommendation upserts. Diagnosed and resolved a CI pipeline failure where missing flask in the test runner environment prevented HTTP and DB integration test suites from loading. Hardened the SQLiteHistoryRepository against interface mismatches by adding safe no-op handling for file activity and preventing stale state during recommendation collisions. Reviewed backend PRs for Core adapter integration.
+
 **[Jesslyn Perdana]**, [Algorithm II Design]
 > [Specific contributions]
 For D3, I upgraded the recommendation system to be able to take SSD caching as its second mode, and made it compatible with Algorithm 2 while maintaining compatibility with John's Algorithm 1, though it is currently not yet integrated into the CORE. I also refactored its greedy selection algorithm, and made it more personalized and distinguished compared to John's by making it prioritize compact, high-read-frequency files to optimize cache performance and to avoid it from acting like a 'hungry wolf' that swallowed massive files. With all 7 main files of Algorithm 2 implemented, I could add unit tests for the greedy selection algorithm and the SSD caching policy to ensure the features are working as intended, and created standard D3 mock input/output fixtures under the module's test directory. With the main unit tests and JSON fixtures implemented, in the team's GitHub Actions workflow, I configured the CI pipeline to automatically execute all the algorithm's unit tests and contract validations across Ubuntu and Windows with Python 3.10 and 3.12 on every push and pull request, ensuring zero regressions and successful tests before merging into main. Alongside the completion of the algorithm's 7 main files, these improvements could set up the foundation for the integration of Algorithm 2 into the CORE and focusing on expanding on other features or functionalities that could be of great use for Algorithm 2 in D4. 
@@ -31,10 +35,6 @@ I also contributed to the Windows Backend by implementing a helper function that
 This change was submitted through PR #42 and later PR #45. Besides writing code, I reviewed Enrique's Windows Backend PR #39 and identified differences between its data types and the API Contract.
 [PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/38) (https://github.com/csc301-2026-f/21-WSD-Team/pull/42) (https://github.com/csc301-2026-f/21-WSD-Team/pull/45)
 [Code Review] (https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
-
-**[Name]**, [Role]
-> [Specific contributions]
-
 
 **[John Deng]**, [Team Lead, ALGO-01 Development & Integration]
 My role in D3 was mainly leading the team in coordination and doing cross-component integration. I created multiple tables to let group members sign up for their midterm dates, trying to set adaptive deadlines for everyone, continuously tracking people's progress, reviewing pull requests whenever anyone requested it, and fixing bugs between the Windows Agent, CORE, and recommendation algorithms.

@@ -25,3 +25,9 @@
 
 **Usage:** Shengrong Wang primarily use Chatgpt to review PRs submitted by other team members, helping to identify changes or differences, particularly those API interfaces and data structures. This reduces the time spent manually comparing different implementations.
 I also used ChatGPT to understand unfamiliar Python concepts and techniques, such as lazy imports, which I had not encountered in my previous coursework.
+
+## D3 CI and Database Testing
+
+**Tools:** ChatGPT
+
+**Usage:** Sahil used ChatGPT to help debug the CI pipeline, ensuring that it properly loads tests across the entire backend suite and doesn't give false negatives for database tests.

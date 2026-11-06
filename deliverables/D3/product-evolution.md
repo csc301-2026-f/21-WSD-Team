@@ -15,6 +15,8 @@ In D3, John introduced a development schedule with deadlines for different tasks
 
 Overall, this showed that maintaining API Contract can be challenging, especially with limited development time and unfamiliar technologies. For future deliverables, we hope to improve coordination between different components and make the integration more efficient, while maintaining enough flexibility to handle unexpected technical challenges.
 
+After D2, integration revealed two core issues: missing automated test suites in CI for the database repository, and broken integration test runs. The test runner failed on newly merged HTTP/integration tests because flask was omitted from the CI installation step. Furthermore, while D2 established the database schema, the repository lacked end-to-end unit tests verifying downsampling edge cases, recommendation updates, and graceful handling of unsupported OS features.
+
 ## 2. What You Did
 
 Backend - Linux:
@@ -64,7 +66,11 @@ Additionally, we fixed process identity tracking to distinguish processes that r
 
 Jesslyn: I successfully implemented the SSD Caching Policy, the recommendation system now accepted SSD caching as its second mode, though it is still not integrated into the CORE, and my greedy selection algorithm now prioritized compact, high-read-frequency files. I also added unit tests to ensure the features of the policy and the algorithm are functioning as intended along with JSON text features. After that, I configured Algorithm 2's CI pipeline to GitHub Actions workflow, so it can automatically execute the algorithm's unit tests and contract validations across Ubuntu nd Windows with Python 3.10 and 3.12 on every commits and pull requests, ensuring there are no issues before merging into main. Challenges I encountered included unit test failures commonly caused by misnamed parameters, constraints, functions, etc, that are resolved by using the terminal to figure out the causes, and a conflict when adding Algorithm 2's CI to the GitHub workflow that is resolved by raising the issue to my teammates, and accepting incoming changes.
 
+Fixed the CI pipeline by adding the missing flask dependency to unblock test loading across the entire backend suite. Authored automated unit tests verifying the contract against SQLite. Validated UTC timestamp adherence (YYYY-MM-DDTHH:MM:SSZ), aggregation logic across bucket_seconds, and ON CONFLICT updates for recommendation approvals. Also added a safe no-op for ingest_file_activity() to prevent runtime errors during Core ingestion calls.
+
 ## 3. Before vs. After
+
+Before, CI was failing to load backend integration tests due to the missing environment dependency, after, all unit and contract tests execute cleanly in automated checks. Before, database behavior relied on ad-hoc verification, after, regression tests run on every pull request to ensure schema and query contract compliance. Ingestion mismatches that previously caused AttributeError failures in Core now resolve silently and safely.
 
 The most noticeable improvement from D2 to D3 was the transition from a prototype-style interface toward a more cohesive application that could display real system information. Previously, the frontend relied more heavily on demonstration data and had a less consistent visual presentation. While the dashboard established the foundation for our intended features, it did not yet provide the same level of integration or usability expected from a functional storage-management tool.
 
@@ -83,6 +89,11 @@ Following PR #38, CORE supports Windows Real Mode, with updates to adapters and 
 Furthermore, Windows File Activity has been integrated into ALGO-01, and normalization tests have been added to the CI pipeline.
 
 ## 4. Reflection
+
+Database: 
+
+What worked well, what was harder than expected, and how this affects your path to D4.
+Contract-first design made writing deterministic unit tests straightforward once interfaces were locked down. However, diagnosing pipeline failures highlighted how brittle CI environments can be when new web dependencies are introduced across branches. For D4, maintaining automated contract testing on every PR will be essential as the algorithms and frontend integrate directly with live telemetry.
 
 Linux backend:
 
