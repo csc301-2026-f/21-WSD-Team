@@ -34,6 +34,12 @@ Accessibility saw a particularly concrete improvement. Following the changes mad
 
 Overall, the application moved beyond simply demonstrating what Wise Storage Director could look like. It became a more integrated, consistent, maintainable, and accessible interface. 
 
+CORE↓
+
+Before D3, CORE supported only Linux Real Mode, and Windows File Activity had not yet been integrated into the recommended workflow.
+Following PR #38, CORE supports Windows Real Mode, with updates to adapters and normalization functions to ensure compliance with API contract requirements. 
+Furthermore, Windows File Activity has been integrated into ALGO-01, and normalization tests have been added to the CI pipeline.
+
 ## 4. Reflection
 
 What worked well, what was harder than expected, and how this affects your path to D4.
