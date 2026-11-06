@@ -21,3 +21,17 @@ From the user's perspective, WSD has gone from a collection of prototype pages i
 
 **[Name]**, [Role]
 > [Specific contributions]
+
+**[Shengrong Wang]**, [CORE]
+During D2, I completed most of the basic CORE implementation based on our API Contract. 
+Therefore, my main responsibilities in D3 were improving the existing implementation, fixing API compatibility issues, and ensuring CORE could work with the latest updates from other team members.
+
+In PR #38, I enabled Windows Real Mode support in CORE and updated the Agent adapters and normalization functions to match the latest Windows and Linux Backend APls. 
+This included converting Windows device and file IDs into the string format required by the API Contract, updating the FileActivity interface to use sampling windows, and fixing Linux sampling duration data types. 
+I also connected FileActivity data to ALGO-01 through the CORE recommendation function, updated the capability settings, and fixed compatibility issues in the Linux Adapter. 
+In addition, I added unit tests for Windows and Linux normalization and included them in the Cl workflow.
+
+I also contributed to the Windows Backend by implementing a helper function that combines FileActivity records with the same file path, summing their read/write operations and byte counts. 
+This change was submitted through PR #42 and later PR #45. Besides writing code, I reviewed Enrique's Windows Backend PR #39 and identified differences between its data types and the API Contract.
+[PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/38) (https://github.com/csc301-2026-f/21-WSD-Team/pull/42) (https://github.com/csc301-2026-f/21-WSD-Team/pull/45)
+[Code Review] (https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
