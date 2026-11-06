@@ -102,14 +102,16 @@ jobs:
         with:
           name: wsd-linux-package
           path: release
-      - name: Publish "latest" release (replaces the previous one)
+      - name: Publish a new release for this build (marked as Latest)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest release/* \
+          # Unique tag per build: nothing is ever deleted, so if publishing fails
+          # the previous release stays in place and remains "Latest".
+          tag="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" release/* \
             --target "$GITHUB_SHA" \
-            --prerelease \
-            --title "WSD latest build (main @ ${GITHUB_SHA::7})" \
+            --latest \
+            --title "WSD build ${GITHUB_RUN_NUMBER} (main @ ${GITHUB_SHA::7})" \
             --notes "Built and published automatically from main after tests, lint and build verification passed. Install guide: packaging/linux/README.md"
