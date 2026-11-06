@@ -29,6 +29,7 @@ The development version supports real disk and process I/O monitoring on Linux a
 - Identify running processes by name and PID.
 - Monitor per-process read and write activity.
 - Display updated I/O statistics through the frontend.
+- Search processes by name or PID, and select a process to view its historical I/O activity.
 
 ### US-02: Historical I/O Statistics
 
@@ -40,10 +41,16 @@ The development version supports real disk and process I/O monitoring on Linux a
 
 - Analyze file access patterns and available storage capacity.
 - Generate file-placement recommendations using ALGO-01.
+- ALGO-01 now uses a Knapsack-based selection algorithm with dynamic programming and state pruning, falling back to Greedy when computational limits are exceeded.
+- ALGO-02 implements a Greedy-based SSD caching recommendation algorithm.
 - Display recommended source and target devices, reasons, and constraints.
-- On Windows, evaluate real file activity for eligible HDD-to-SSD moves.
+- On Windows, evaluate real file activity for eligible HDD-to-SSD/NVMe placement recommendations.
 
-Demo mode uses clearly marked sample file activity. Real recommendations depend on suitable files and available SSD space; WSD may return no suggestion. Recommendations are advisory only; WSD does not automatically migrate or cache files.
+ALGO-02 is implemented at the algorithm level but is not yet integrated into CORE's recommendation refresh workflow.
+
+Demo mode uses clearly marked sample file activity. Real recommendations depend on qualifying read-heavy HDD files and available SSD/NVMe capacity; WSD may return no suggestion.
+
+Recommendations are advisory only. WSD does not automatically move or cache files.
 
 ## Installation and Usage
 
@@ -91,11 +98,10 @@ Stop the current mode using `Ctrl+C` before switching modes.
 
 | User Story | Mode | How to Test |
 |---|---|---|
-| US-01: Real-Time Process I/O | Real | Open **Disk Usage Statistics**, locate the **Application I/O** table, and observe process read/write activity. |
-| US-02: Historical I/O | Real | Open **Disk Usage Statistics**, select a process under **Process I/O History**, and observe its collected activity over time. |
-| US-05: Storage Recommendations | Demo | Open **Main Dashboard**, click **Refresh Recommendations**, and review the generated placement suggestions. |
-
-On Windows, the same recommendation button also evaluates real file activity in monitoring mode. A suggestion requires eligible HDD files and available SSD space.
+| US-01: Real-Time Process I/O | Real | Open **Disk Usage Statistics**, locate the **Application I/O** table, search by process name or PID, and observe read/write activity. |
+| US-02: Historical I/O | Real | Select a process in **Application I/O** or under **Process I/O History**, and observe its historical activity. |
+| US-05: Storage Recommendations | Demo | Open **Main Dashboard**, click **Refresh Recommendations**, and review the generated sample-data recommendations. |
+| US-05: Storage Recommendations | Windows Real | Run WSD with Administrator access, generate file read activity on an HDD, and click **Refresh Recommendations**. A recommendation requires qualifying activity and available SSD/NVMe capacity. |
 
 See the **[Windows Setup Guide](packaging/windows/README.md)** for startup screenshots. The **[D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)** documents the earlier D2 interface.
 
@@ -116,17 +122,29 @@ For detailed component interfaces and data structures, see [API Contracts](docs/
 
 ## Current Limitations
 
-Windows monitoring, process history, and file-level collection are connected to CORE and the web interface. Recommendations still depend on sufficient file data, reliable source-device identification, and available target capacity.
+Windows ETW monitoring, process history, and file-level activity collection are integrated with CORE. However, real recommendations depend on complete file activity data, reliable source-device identification, qualifying read-heavy workloads, and sufficient SSD/NVMe capacity.
 
-Linux recommendation demonstrations currently use sample file activity. Automatic file migration and executable SSD caching are not implemented.
+Linux supports real disk and process I/O monitoring. Kernel-level file I/O monitoring has been implemented in [PR #48](https://github.com/csc301-2026-f/21-WSD-Team/pull/48)and is awaiting merge. However, integration with the CORE recommendation workflow is not yet complete.
 
-The published D2 Linux package does not include the later Windows integration or launcher.
+ALGO-02 supports SSD caching recommendations at the algorithm level, but its integration into CORE and the frontend remains incomplete.
+
+Automatic file migration, physical RAID creation, and executable SSD caching are not implemented.
+
+The published D2 Linux package does not include the later D3 Windows integration or launcher.
+
+## Development and GitHub Workflow
 
 ## Development and GitHub Workflow
 
 Team development is organized using feature branches and pull requests.
 
-Changes are reviewed before being merged into `main`. GitHub Actions is used to automatically run selected unit and contract tests across supported Python versions and operating systems.
+Changes are reviewed before being merged into `main`. GitHub Actions runs automated Python tests on Windows and Linux using Python 3.10 and 3.12. These include ALGO-01 and ALGO-02 unit tests, HTTP and database contract tests, and integration tests.
+
+Frontend JavaScript unit tests can also be run using `npm test`.
+
+The D3 frontend improvements include better accessibility, semantic HTML, keyboard navigation, improved color contrast, and process search functionality. The tested frontend pages achieved a Lighthouse accessibility score of 100.
+
+Automated deployment has been implemented in [PR #49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49) and is awaiting merge into `main`. The CI/CD pipeline includes automated testing, linting, and build verification. Once merged, successful checks on pushes to `main` will automatically publish the Linux package as a GitHub Release tagged `latest`.
 
 Team coordination takes place through regular meetings, GitHub Issues, and Discord.
 
@@ -138,8 +156,10 @@ Team coordination takes place through regular meetings, GitHub Issues, and Disco
 - [API Contracts](docs/api-contracts.md)
 - [D2 Iteration Review](deliverables/D2/iteration-02-review.md)
 - [Individual Contributions](deliverables/D2/Individual_Contributions_Deliverable2.md)
-- [AI Usage Disclosure](deliverables/D2/AI_usage.md)
-
+- [D2 AI Usage Disclosure](deliverables/D2/AI_usage.md)
+- [D3 Product Evolution Report](deliverables/D3/product-evolution.md)
+- [D3 Individual Contributions](deliverables/D3/Individual_Contributions_Deliverable3.md)
+- [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
 ## License
 
 Wise Storage Director is licensed under the **GNU General Public License version 3 (GPLv3)**.
