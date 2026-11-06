@@ -9,6 +9,12 @@ After D2, one limitation of ALGO-01 was that it mainly relied on a Greedy strate
 
 Another important limitation was the integration of real file I/O monitoring on Windows. In D2, our recommendation system still relied on mock file activity, and the Windows Agent was not fully integrated with CORE. During D3 integration and code reviews, we found several issues with ETW event attribution. File paths were sometimes missing, and using nearby DiskIO events to identify a file's physical device could produce incorrect results, especially on systems with multiple disks. These problems affected the reliability of the data passed to our recommendation algorithms. But thankfully we fixed that in the end.
 
+During D2, we mainly developed our components based on the API Contract. However, some APIs and methods were not implemented or made available until shortly before the demo, which left limited time for integration and testing.
+
+In D3, John introduced a development schedule with deadlines for different tasks. However, it was still difficult to strictly follow this schedule because many of us were learning unfamiliar technologies, and some tasks turned out to be more complicated than expected. As new problems were discovered during development, some API designs and implementations needed to be changed.
+
+Overall, this showed that maintaining API Contract can be challenging, especially with limited development time and unfamiliar technologies. For future deliverables, we hope to improve coordination between different components and make the integration more efficient, while maintaining enough flexibility to handle unexpected technical challenges.
+
 ## 2. What You Did
 
 Backend - Linux:
@@ -37,8 +43,18 @@ Juan:
 - US-02 integration tests: History saved through CORE comes back unchanged from the real database, unknown values stay `null` instead of `0` and a restarted app is kept separtae. 
 
 - CI/CD pipeline (PR#41): Every PR now runs all tests on Windows and Linux and a build verification that packages the release installs it and smoke tests it in demo mode. When changes merge to `main` and all cheacks pass the package is published automatically as a GitHub Release
+- 
 
-**ALGO-01 and Windows Integration:**
+CORE:
+
+Most of the basic CORE and HTTP API work was already completed during D2, so my D3 work focused on improving compatibility with the updated backend implementations.
+
+In PR #38, I enabled Windows Real Mode in CORE and updated the Windows and Linux Agent adapters and normalization functions to follow the latest APIs. For example, the Windows Backend used integer device IDs, while our API Contract required strings, so I added the necessary conversions. When the Windows FileActivity interface changed from start/end timestamps to a sampling window, I updated the adapter and connected FileActivity data to the CORE recommendation function, where it is passed to ALGO-01 with a 60-second window. I also updated the capability settings, fixed the Linux Adapter's unfinished FileActivity method to return an empty list instead of None, and added normalization unit tests to the CI workflow.
+
+Besides CORE, I implemented a Windows helper that combines FileActivity records by path (PR #42 and #45). I also reviewed Enrique's PR #39 and pointed out timestamp and operation-count type mismatches with the API Contract. The main challenge was keeping CORE compatible while other components continued changing, which required frequent reviews and adjustments.
+
+
+ALGO-01 and Windows Integration:
 
 For ALGO-01, we introduced a Knapsack-based selection strategy using dynamic programming and state pruning. Instead of selecting files only through Greedy decisions, the new strategy considers different combinations of files under a limited storage budget. Since DP can become expensive when the number of candidates grows, we also added computational limits and a fallback to the original Greedy strategy. This allowed us to improve the selection process while keeping the algorithm practical for larger workloads. We also added unit tests and benchmarks to verify its correctness and performance.
 
@@ -59,6 +75,12 @@ Maintainability improved as well. By separating JavaScript responsibilities into
 Accessibility saw a particularly concrete improvement. Following the changes made during D3, the pages tested achieved a Lighthouse accessibility score of 100. This reflects progress in making the interface more accessible through improved semantic structure and other accessibility-focused adjustments.
 
 Overall, the application moved beyond simply demonstrating what Wise Storage Director could look like. It became a more integrated, consistent, maintainable, and accessible interface. 
+
+CORE↓
+
+Before D3, CORE supported only Linux Real Mode, and Windows File Activity had not yet been integrated into the recommended workflow.
+Following PR #38, CORE supports Windows Real Mode, with updates to adapters and normalization functions to ensure compliance with API contract requirements. 
+Furthermore, Windows File Activity has been integrated into ALGO-01, and normalization tests have been added to the CI pipeline.
 
 ## 4. Reflection
 

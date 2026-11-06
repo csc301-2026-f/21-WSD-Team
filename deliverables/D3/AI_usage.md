@@ -18,3 +18,10 @@
 **Tools:** Codex
 
 **Usage:** Codex implemented the Windows launcher and EXE packaging, including supporting tests and usage documentation. John reviewed the changes and performed testing on a physical Windows machine.
+
+## D3 CORE Integration
+
+**Tools:** ChatGPT
+
+**Usage:** Shengrong Wang primarily use Chatgpt to review PRs submitted by other team members, helping to identify changes or differences, particularly those API interfaces and data structures. This reduces the time spent manually comparing different implementations.
+I also used ChatGPT to understand unfamiliar Python concepts and techniques, such as lazy imports, which I had not encountered in my previous coursework.
