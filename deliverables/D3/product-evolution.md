@@ -10,6 +10,8 @@ Identify the most important gap or limitation after D2 and how you identified it
 
 Describe what was implemented, key architectural or design changes, and integration challenges.
 
+Jesslyn: I successfully implemented the SSD Caching Policy, the recommendation system now accepted SSD caching as its second mode, and my greedy selection algorithm now prioritized compact, high-read-frequency files. I also added unit tests to ensure the features of the policy and the algorithm are functioning as intended along with JSON text features. After that, I configured Algorithm 2's CI pipeline to GitHub Actions workflow, so it can automatically execute the algorithm's unit tests and contract validations across Ubuntu nd Windows with Python 3.10 and 3.12 on every commits and pull requests, ensuring there are no issues before merging into main. Challenges I encountered included unit test failures commonly caused by misnamed parameters, constraints, functions, etc, that are resolved by using the terminal to figure out the causes, and a conflict when adding Algorithm 2's CI to the GitHub workflow that is resolved by raising the issue to my teammates, and accepting incoming changes.
+
 ## 3. Before vs. After
 
 The most noticeable improvement from D2 to D3 was the transition from a prototype-style interface toward a more cohesive application that could display real system information. Previously, the frontend relied more heavily on demonstration data and had a less consistent visual presentation. While the dashboard established the foundation for our intended features, it did not yet provide the same level of integration or usability expected from a functional storage-management tool.
