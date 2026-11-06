@@ -6,11 +6,17 @@
 
 Identify the most important gap or limitation after D2 and how you identified it.
 
+After D2, integration revealed two core issues: missing automated test suites in CI for the database repository, and broken integration test runs. The test runner failed on newly merged HTTP/integration tests because flask was omitted from the CI installation step. Furthermore, while D2 established the database schema, the repository lacked end-to-end unit tests verifying downsampling edge cases, recommendation updates, and graceful handling of unsupported OS features.
+
 ## 2. What You Did
 
 Describe what was implemented, key architectural or design changes, and integration challenges.
 
+Fixed the CI pipeline by adding the missing flask dependency to unblock test loading across the entire backend suite. Authored automated unit tests verifying the contract against SQLite. Validated UTC timestamp adherence (YYYY-MM-DDTHH:MM:SSZ), aggregation logic across bucket_seconds, and ON CONFLICT updates for recommendation approvals. Also added a safe no-op for ingest_file_activity() to prevent runtime errors during Core ingestion calls.
+
 ## 3. Before vs. After
+
+Before, CI was failing to load backend integration tests due to the missing environment dependency, after, all unit and contract tests execute cleanly in automated checks. Before, database behavior relied on ad-hoc verification, after, regression tests run on every pull request to ensure schema and query contract compliance. Ingestion mismatches that previously caused AttributeError failures in Core now resolve silently and safely.
 
 The most noticeable improvement from D2 to D3 was the transition from a prototype-style interface toward a more cohesive application that could display real system information. Previously, the frontend relied more heavily on demonstration data and had a less consistent visual presentation. While the dashboard established the foundation for our intended features, it did not yet provide the same level of integration or usability expected from a functional storage-management tool.
 
