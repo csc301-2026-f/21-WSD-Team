@@ -1,4 +1,4 @@
-# YOUR PRODUCT/TEAM NAME
+# WSD - wise storage device
 
 > Aim for 1000-2000 words. Be concise and analytical. We care about reasoning, impact, and integration quality, not length.
 
