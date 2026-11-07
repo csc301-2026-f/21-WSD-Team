@@ -52,3 +52,7 @@ I also used ChatGPT to understand unfamiliar Python concepts and techniques, suc
 **Tools:** ChatGPT
 
 **Usage:** Sahil used ChatGPT to help debug the CI pipeline, ensuring that it properly loads tests across the entire backend suite and doesn't give false negatives for database tests.
+
+**Tools:** Claude
+
+**Usage:** Juan used Claude to help review the end-to-end, HTTP contract and the debug CI failures. Juan used Claude to draft the GitHub Actions CI/CD workflow (lint, build verification and automatic releases).
