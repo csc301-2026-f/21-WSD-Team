@@ -17,6 +17,10 @@ Overall, this showed that maintaining API Contract can be challenging, especiall
 
 After D2, integration revealed two core issues: missing automated test suites in CI for the database repository, and broken integration test runs. The test runner failed on newly merged HTTP/integration tests because flask was omitted from the CI installation step. Furthermore, while D2 established the database schema, the repository lacked end-to-end unit tests verifying downsampling edge cases, recommendation updates, and graceful handling of unsupported OS features.
 
+Backend - Windows:
+
+The most important gap after D2 was the lack of file and process IO metrics; as, at the end of D2, most of the important architecture necessary to successfully implement them was missing.
+
 ## 2. What You Did
 
 Backend - Linux:
@@ -36,6 +40,14 @@ This uses a kernel probe to monitor read and write operations on subscribed file
 A hash table is maintained and updated whenever a monitored file is accessed. 
 The Linux backend API then retrieves and processes the collected data before reporting it to Core. 
 This separates low-level kernel monitoring from higher-level application logic.
+
+Backend - Windows:
+
+The improvements to the Windows Backend focus on also catching file IO events and processing all collected events such that we could return the required metrics to the frontend. This is done using the same ETW architecture used for disk IO in D2.
+
+Firstly, all relevant system storage information is cached at startup in order to reduce overhead when polled.
+
+Then, since the caught file IO events do not contain disk location information, a hash table is maintained and updated with all known disk information pertaining to files. The entries are made from the disk IO information that we were already catching. This disk information is then correlated with the cached system storage information in order to determine the files' absolute path.
 
 Juan: 
 - End to End test [PR#41]: Starts the whole app in demo mode and checks every endpoint's response format, that recommendations follow the contract and point at real devices and that data survives the database and an app restart.
@@ -96,6 +108,12 @@ Database:
 
 What worked well, what was harder than expected, and how this affects your path to D4.
 Contract-first design made writing deterministic unit tests straightforward once interfaces were locked down. However, diagnosing pipeline failures highlighted how brittle CI environments can be when new web dependencies are introduced across branches. For D4, maintaining automated contract testing on every PR will be essential as the algorithms and frontend integrate directly with live telemetry.
+
+Windows backend:
+
+Since the ETW events output partial paths and system-specific data such as disk indices and offsets, but the ETW library itself has no API for directly translating those into complete absolute paths, other libraries had to be used to successfully use this data.
+
+Thus, the main challenge was using libraries with each other and making sure the data was in the correct format for each.
 
 Linux backend:
 

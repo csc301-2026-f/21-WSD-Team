@@ -13,6 +13,19 @@ For D3, I connected the frontend to the Windows backend, allowing storage metric
 From the user's perspective, WSD has gone from a collection of prototype pages into a functional dashboard that presents live system information in a clear, consistent and much more accessible way. The biggest challenge was bringing the frontend and backend together while maintaining reliability. These improvements give us a much stronger foundation for D4, where we can focus on expanding functionality rather than rebuilding the fundamentals.
 [Danny's PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/46)
 
+**[Enrique Alvarez Habegger]**, [Windows Backend Development]
+Following D2, my main role was expanding upon the codebase I had already developed in order to accurately process IO events, while mainly focusing on getting File Metrics and Process Metrics successfully implemented, as well as integrating libraries necessary to complement the data the Windows Backend was already providing, such as specific process and file information that do not appear in IO events.
+
+Since file-specific IO events contain a file path without the drive letter, additional code had to be implemented in order to accurately give an absolute path. This was done in part by creating an inner map of file identifiers to disk location with help from Microsoft's documentation on event fields and their usage, and filling the map with information acquired from disk-specific IO events. This disk location then had to be mapped to an accurate drive letter, thus requiring polling of the system's relevant storage information. Which is now cached at startup in order to retrieve it with little overhead.
+
+With integration from the other parts, WSD can now display near real-time IO metrics on Windows for disks, processes, and files. The metrics are consistent with other related metrics, and contain the information asked of the Windows Backend.
+
+I also validated John's implementation of NT volume mapping (PR #47), a feature I could not properly test myself from my machine, as it requires multiple logical disks. Being familiar with the codebase, I verified its implementation and soundness.
+
+[Enrique's PR Link] [#39](https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
+
+[Enrique's Review] [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
+
 **[Mohan Sun]**, [Linux backend implementation]
 > [Specific contributions]
 > Added FileIO monitoring API through kernal probe registered by BCC
