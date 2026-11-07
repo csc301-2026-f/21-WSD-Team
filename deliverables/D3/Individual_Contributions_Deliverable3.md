@@ -75,3 +75,14 @@ Besides, I actively reviewed teammates' pull requests, including CORE integratio
 [John's PR Links] [#37](https://github.com/csc301-2026-f/21-WSD-Team/pull/37), [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
 
 [John's Code Reviews] [#38](https://github.com/csc301-2026-f/21-WSD-Team/pull/38), [#39](https://github.com/csc301-2026-f/21-WSD-Team/pull/39), [#40](https://github.com/csc301-2026-f/21-WSD-Team/pull/40), [#43](https://github.com/csc301-2026-f/21-WSD-Team/pull/43), [#46](https://github.com/csc301-2026-f/21-WSD-Team/pull/46), [#44](https://github.com/csc301-2026-f/21-WSD-Team/pull/44), [#52](https://github.com/csc301-2026-f/21-WSD-Team/pull/52)
+
+**[Juan Sebastian Alexander]**, [QA, Testing & CI/CD]
+After D2, our tests only covered individual components, and CI ran just the algorithm tests. Nothing checked that the full app worked end to end that the HTTP API matched our contract or that the product could actually be built and installed. For D3 I focused on closing those gaps.
+
+I wrote end-to-end tests that run the whole app in demo mode, HTTP contract tests for every API endpoint, and integration tests for US-02 (process history). These tests exposed a bug where refreshing creates duplicate recommendations, which is now tracked by an expected-failure test. I also fixed a Windows-only CI failure (WinError 32) caused by database files that stayed locked during cleanup.
+
+I then extended the GitHub Actions workflow into a full CI/CD pipeline. It runs every test on Ubuntu and Windows with Python 3.10 and 3.12, adds a lint check (ruff) and verifies the Linux build by packaging, installing and smoke-testing the app. After every merge to main, it automatically publishes a new GitHub Release with the installable package. Every change is now tested, built and released before it reaches users. 
+
+[Juan's PR Links] [#41](https://github.com/csc301-2026-f/21-WSD-Team/pull/41), [#49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49)
+
+[Juan's Code Reviews] [#58](https://github.com/csc301-2026-f/21-WSD-Team/pull/58)
