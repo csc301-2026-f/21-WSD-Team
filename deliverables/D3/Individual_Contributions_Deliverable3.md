@@ -1,4 +1,4 @@
-# YOUR PRODUCT/TEAM NAME - Individual Contributions (D3)
+# WSD - Wise Storage Director - Individual Contributions (D3)
 
 > For each team member: name, role, and specific contributions. Be precise about what you did, not how much you wrote.
 
@@ -25,6 +25,20 @@ I also validated John's implementation of NT volume mapping (PR #47), a feature 
 [Enrique's PR Link] [#39](https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
 
 [Enrique's Review] [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
+
+**[Mohan Sun]**, [Linux backend implementation]
+> [Specific contributions]
+> Added FileIO monitoring API through kernal probe registered by BCC
+> Expanded ErrorCode for easier debugging
+> Updated documentation to match the current functionality
+> 
+> My Pull Request: 
+> - [#48] https://github.com/csc301-2026-f/21-WSD-Team/pull/48
+> - 
+> My code review: 
+> - [#53] https://github.com/csc301-2026-f/21-WSD-Team/pull/53
+> - [#49] https://github.com/csc301-2026-f/21-WSD-Team/pull/49
+> - [#44] https://github.com/csc301-2026-f/21-WSD-Team/pull/44
 
 **[Sahil Pathak]**, [Database]
 One of the biggest limitations after D2 was a lack of CI testing and additional safety features for our databases, this let errors like AttributeError from the database passing onto core causin unpredicatable behavior, potential crashes and wrong predictions. So I focused on improving our testing coverage and making our database more fault tolerant.
