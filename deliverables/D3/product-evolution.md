@@ -15,6 +15,12 @@ In D3, John introduced a development schedule with deadlines for different tasks
 
 Overall, this showed that maintaining API Contract can be challenging, especially with limited development time and unfamiliar technologies. For future deliverables, we hope to improve coordination between different components and make the integration more efficient, while maintaining enough flexibility to handle unexpected technical challenges.
 
+After D2, integration revealed two core issues: missing automated test suites in CI for the database repository, and broken integration test runs. The test runner failed on newly merged HTTP/integration tests because flask was omitted from the CI installation step. Furthermore, while D2 established the database schema, the repository lacked end-to-end unit tests verifying downsampling edge cases, recommendation updates, and graceful handling of unsupported OS features.
+
+Backend - Windows:
+
+The most important gap after D2 was the lack of file and process IO metrics; as, at the end of D2, most of the important architecture necessary to successfully implement them was missing.
+
 ## 2. What You Did
 
 Backend - Linux:
@@ -34,6 +40,14 @@ This uses a kernel probe to monitor read and write operations on subscribed file
 A hash table is maintained and updated whenever a monitored file is accessed. 
 The Linux backend API then retrieves and processes the collected data before reporting it to Core. 
 This separates low-level kernel monitoring from higher-level application logic.
+
+Backend - Windows:
+
+The improvements to the Windows Backend focus on also catching file IO events and processing all collected events such that we could return the required metrics to the frontend. This is done using the same ETW architecture used for disk IO in D2.
+
+Firstly, all relevant system storage information is cached at startup in order to reduce overhead when polled.
+
+Then, since the caught file IO events do not contain disk location information, a hash table is maintained and updated with all known disk information pertaining to files. The entries are made from the disk IO information that we were already catching. This disk information is then correlated with the cached system storage information in order to determine the files' absolute path.
 
 Juan: 
 - End to End test [PR#41]: Starts the whole app in demo mode and checks every endpoint's response format, that recommendations follow the contract and point at real devices and that data survives the database and an app restart.
@@ -62,11 +76,11 @@ For Windows integration, we worked on fixing the communication between the Windo
 
 Additionally, we fixed process identity tracking to distinguish processes that reuse the same PID, corrected the timing of recommendation evaluation, and added NVMe support to the storage capacity calculation. Regression tests were added to cover these cases. Together, these changes allowed the Windows backend to provide real file activity to CORE and generate recommendations based on actual workloads rather than only mock data.
 
-Jesslyn: 
-
-I successfully implemented the SSD Caching Policy, the recommendation system now accepted SSD caching as its second mode, though it is still not integrated into the CORE, and my greedy selection algorithm now prioritized compact, high-read-frequency files. I also added unit tests to ensure the features of the policy and the algorithm are functioning as intended along with JSON text features. After that, I configured Algorithm 2's CI pipeline to GitHub Actions workflow, so it can automatically execute the algorithm's unit tests and contract validations across Ubuntu nd Windows with Python 3.10 and 3.12 on every commits and pull requests, ensuring there are no issues before merging into main. Challenges I encountered included unit test failures commonly caused by misnamed parameters, constraints, functions, etc, that are resolved by using the terminal to figure out the causes, and a conflict when adding Algorithm 2's CI to the GitHub workflow that is resolved by raising the issue to my teammates, and accepting incoming changes.
+Jesslyn: I successfully implemented the SSD Caching Policy, the recommendation system now accepted SSD caching as its second mode, though it is still not integrated into the CORE, and my greedy selection algorithm now prioritized compact, high-read-frequency files. I also added unit tests to ensure the features of the policy and the algorithm are functioning as intended along with JSON text features. After that, I configured Algorithm 2's CI pipeline to GitHub Actions workflow, so it can automatically execute the algorithm's unit tests and contract validations across Ubuntu nd Windows with Python 3.10 and 3.12 on every commits and pull requests, ensuring there are no issues before merging into main. Challenges I encountered included unit test failures commonly caused by misnamed parameters, constraints, functions, etc, that are resolved by using the terminal to figure out the causes, and a conflict when adding Algorithm 2's CI to the GitHub workflow that is resolved by raising the issue to my teammates, and accepting incoming changes.
 
 ## 3. Before vs. After
+
+Before, CI was failing to load backend integration tests due to the missing environment dependency, after, all unit and contract tests execute cleanly in automated checks. Before, database behavior relied on ad-hoc verification, after, regression tests run on every pull request to ensure schema and query contract compliance. Ingestion mismatches that previously caused AttributeError failures in Core now resolve silently and safely.
 
 The most noticeable improvement from D2 to D3 was the transition from a prototype-style interface toward a more cohesive application that could display real system information. Previously, the frontend relied more heavily on demonstration data and had a less consistent visual presentation. While the dashboard established the foundation for our intended features, it did not yet provide the same level of integration or usability expected from a functional storage-management tool.
 
@@ -85,6 +99,17 @@ Following PR #38, CORE supports Windows Real Mode, with updates to adapters and 
 Furthermore, Windows File Activity has been integrated into ALGO-01, and normalization tests have been added to the CI pipeline.
 
 ## 4. Reflection
+
+Database: 
+
+What worked well, what was harder than expected, and how this affects your path to D4.
+Contract-first design made writing deterministic unit tests straightforward once interfaces were locked down. However, diagnosing pipeline failures highlighted how brittle CI environments can be when new web dependencies are introduced across branches. For D4, maintaining automated contract testing on every PR will be essential as the algorithms and frontend integrate directly with live telemetry.
+
+Windows backend:
+
+Since the ETW events output partial paths and system-specific data such as disk indices and offsets, but the ETW library itself has no API for directly translating those into complete absolute paths, other libraries had to be used to successfully use this data.
+
+Thus, the main challenge was using libraries with each other and making sure the data was in the correct format for each.
 
 Linux backend:
 

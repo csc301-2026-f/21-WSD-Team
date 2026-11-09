@@ -1,4 +1,4 @@
-# YOUR PRODUCT/TEAM NAME - Individual Contributions (D3)
+# WSD - Wise Storage Director - Individual Contributions (D3)
 
 > For each team member: name, role, and specific contributions. Be precise about what you did, not how much you wrote.
 
@@ -12,6 +12,37 @@ For D3, I connected the frontend to the Windows backend, allowing storage metric
 
 From the user's perspective, WSD has gone from a collection of prototype pages into a functional dashboard that presents live system information in a clear, consistent and much more accessible way. The biggest challenge was bringing the frontend and backend together while maintaining reliability. These improvements give us a much stronger foundation for D4, where we can focus on expanding functionality rather than rebuilding the fundamentals.
 [Danny's PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/46)
+
+**[Enrique Alvarez Habegger]**, [Windows Backend Development]
+Following D2, my main role was expanding upon the codebase I had already developed in order to accurately process IO events, while mainly focusing on getting File Metrics and Process Metrics successfully implemented, as well as integrating libraries necessary to complement the data the Windows Backend was already providing, such as specific process and file information that do not appear in IO events.
+
+Since file-specific IO events contain a file path without the drive letter, additional code had to be implemented in order to accurately give an absolute path. This was done in part by creating an inner map of file identifiers to disk location with help from Microsoft's documentation on event fields and their usage, and filling the map with information acquired from disk-specific IO events. This disk location then had to be mapped to an accurate drive letter, thus requiring polling of the system's relevant storage information. Which is now cached at startup in order to retrieve it with little overhead.
+
+With integration from the other parts, WSD can now display near real-time IO metrics on Windows for disks, processes, and files. The metrics are consistent with other related metrics, and contain the information asked of the Windows Backend.
+
+I also validated John's implementation of NT volume mapping (PR #47), a feature I could not properly test myself from my machine, as it requires multiple logical disks. Being familiar with the codebase, I verified its implementation and soundness.
+
+[Enrique's PR Link] [#39](https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
+
+[Enrique's Review] [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
+
+**[Mohan Sun]**, [Linux backend implementation]
+> [Specific contributions]
+> Added FileIO monitoring API through kernal probe registered by BCC
+> Expanded ErrorCode for easier debugging
+> Updated documentation to match the current functionality
+> 
+> My Pull Request: 
+> - [#48] https://github.com/csc301-2026-f/21-WSD-Team/pull/48
+> - 
+> My code review: 
+> - [#53] https://github.com/csc301-2026-f/21-WSD-Team/pull/53
+> - [#49] https://github.com/csc301-2026-f/21-WSD-Team/pull/49
+> - [#44] https://github.com/csc301-2026-f/21-WSD-Team/pull/44
+
+**[Sahil Pathak]**, [Database]
+One of the biggest limitations after D2 was a lack of CI testing and additional safety features for our databases, this let errors like AttributeError from the database passing onto core causin unpredicatable behavior, potential crashes and wrong predictions. So I focused on improving our testing coverage and making our database more fault tolerant.
+Implemented comprehensive unit and contract tests for the database repository, covering cold-start queries, device/process metrics ingestion, UTC timestamp formatting, dynamic time-bucketing, and recommendation upserts. Diagnosed and resolved a CI pipeline failure where missing flask in the test runner environment prevented HTTP and DB integration test suites from loading. Hardened the SQLiteHistoryRepository against interface mismatches by adding safe no-op handling for file activity and preventing stale state during recommendation collisions. Reviewed backend PRs for Core adapter integration.
 
 **[Jesslyn Perdana]**, [Algorithm II Design]
 > [Specific contributions]
@@ -32,10 +63,6 @@ This change was submitted through PR #42 and later PR #45. Besides writing code,
 [PR Link] (https://github.com/csc301-2026-f/21-WSD-Team/pull/38) (https://github.com/csc301-2026-f/21-WSD-Team/pull/42) (https://github.com/csc301-2026-f/21-WSD-Team/pull/45)
 [Code Review] (https://github.com/csc301-2026-f/21-WSD-Team/pull/39)
 
-**[Name]**, [Role]
-> [Specific contributions]
-
-
 **[John Deng]**, [Team Lead, ALGO-01 Development & Integration]
 My role in D3 was mainly leading the team in coordination and doing cross-component integration. I created multiple tables to let group members sign up for their midterm dates, trying to set adaptive deadlines for everyone, continuously tracking people's progress, reviewing pull requests whenever anyone requested it, and fixing bugs between the Windows Agent, CORE, and recommendation algorithms.
 
@@ -48,3 +75,14 @@ Besides, I actively reviewed teammates' pull requests, including CORE integratio
 [John's PR Links] [#37](https://github.com/csc301-2026-f/21-WSD-Team/pull/37), [#47](https://github.com/csc301-2026-f/21-WSD-Team/pull/47)
 
 [John's Code Reviews] [#38](https://github.com/csc301-2026-f/21-WSD-Team/pull/38), [#39](https://github.com/csc301-2026-f/21-WSD-Team/pull/39), [#40](https://github.com/csc301-2026-f/21-WSD-Team/pull/40), [#43](https://github.com/csc301-2026-f/21-WSD-Team/pull/43), [#46](https://github.com/csc301-2026-f/21-WSD-Team/pull/46), [#44](https://github.com/csc301-2026-f/21-WSD-Team/pull/44), [#52](https://github.com/csc301-2026-f/21-WSD-Team/pull/52)
+
+**[Juan Sebastian Alexander]**, [QA, Testing & CI/CD]
+After D2, our tests only covered individual components, and CI ran just the algorithm tests. Nothing checked that the full app worked end to end that the HTTP API matched our contract or that the product could actually be built and installed. For D3 I focused on closing those gaps.
+
+I wrote end-to-end tests that run the whole app in demo mode, HTTP contract tests for every API endpoint, and integration tests for US-02 (process history). These tests exposed a bug where refreshing creates duplicate recommendations, which is now tracked by an expected-failure test. I also fixed a Windows-only CI failure (WinError 32) caused by database files that stayed locked during cleanup.
+
+I then extended the GitHub Actions workflow into a full CI/CD pipeline. It runs every test on Ubuntu and Windows with Python 3.10 and 3.12, adds a lint check (ruff) and verifies the Linux build by packaging, installing and smoke-testing the app. After every merge to main, it automatically publishes a new GitHub Release with the installable package. Every change is now tested, built and released before it reaches users. 
+
+[Juan's PR Links] [#41](https://github.com/csc301-2026-f/21-WSD-Team/pull/41), [#49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49)
+
+[Juan's Code Reviews] [#58](https://github.com/csc301-2026-f/21-WSD-Team/pull/58)
