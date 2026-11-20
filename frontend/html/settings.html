@@ -1,144 +1,17 @@
 <!DOCTYPE html>
 <!-- SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
      SPDX-License-Identifier: GPL-3.0-only -->
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Customize Wise Storage Director to suit your needs. Manage application preferences and configure available storage monitoring and optimization settings.">
-
-    <title>WSD App</title>
-
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
-</head>
-
-<body>
-    <span id="navOpenButton">&#9776;</span>
-
-    <div id="mainSidenav" class="sidenav">
-        <a href="#" id="navCloseButton" class="closebtn">&times;</a>
-        <a href="index.html">Main Dashboard</a>
-        <a href="task_priority.html">Task Priority</a>
-        <a href="stats.html">Disk Usage Statistics</a>
-        <a href="about.html">About</a>
-        <a href="settings.html">Settings</a>
-        <a href="authors.html">Group Info</a>
-    </div>
-
-    <!-- OLD HEADER NAVIGATION MENU
-
-    <div class="header-box">
-        <ul>
-            <li>
-                <p><a href="index.html">Main Dashboard</a></p>
-            </li>
-            <li>
-                <p><a href="task_priority.html">Task Priority</a></p>
-            </li>
-            <li>
-                <p><a href="stats.html">Disk Usage Statistics</a></p>
-            </li>
-            <li>
-                <p><a href="about.html">About</a></p>
-            </li>
-            <li>
-                <p><a href="settings.html">Settings</a></p>
-            </li>
-            <li>
-                <p><a href="authors.html">Group Info</a></p>
-            </li>
-        </ul>
-    </div>
-    -->
-
-    <main>
-        <div class="header-box">
-            <h1>Wise Storage Director - Settings</h1>
-        </div>
-
-        <div class="box-container">
-            <div class="box">
-                <h2>Optimize "Auto-Mode" Settings For Me</h2>
-                <p title="Chooses user-safe default settings.">(?)</p>
-
-                <input type="checkbox" id="auto-settings">
-                <label for="auto-settings">Auto-Mode</label>
-            </div>
-        </div>
-
-        <div class="box-container">
-
-            <!-- SETTINGS BOX 1 -->
-            <div class="box" id="settings">
-
-                <h2>SSD Caching</h2>
-                <p title="SSD Caching Mode is recommended primarily for default users.">(?)</p>
-                <ul>
-                    <li>
-                        <input type="checkbox" id="enable-cache" checked>
-                        <label for="enable-cache">Enable SSD caching</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="cache-read">
-                        <label for="cache-read">Cache frequently read data</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="cache-write">
-                        <label for="cache-write">Cache frequently written data</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="auto-cache">
-                        <label for="auto-cache">Automatically manage cached data</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="clear-cache">
-                        <label for="clear-cache">Clear cache before operation</label>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- SETTINGS BOX 2 -->
-            <div class="box" id="settings">
-
-                <h2>RAID 0 Mode</h2>
-                <p title="RAID 0 Mode is an experimental mode. In the context of WSD, RAID 0 refers to the usage of performance-oriented file-level storage pooling, not traditional block-level striping.">(?)</p>
-                <ul>
-                    <li>
-                        <input type="checkbox" id="enable-raid">
-                        <label for="enable-raid">Enable RAID 0</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="auto-select-drives">
-                        <label for="auto-select-drives">Automatically select drives</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="balance-drives">
-                        <label for="balance-drives">Balance data across drives</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="performance-mode">
-                        <label for="performance-mode">Prioritize performance</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="monitor-raid">
-                        <label for="monitor-raid">Monitor RAID status</label>
-                    </li>
-                </ul>
-            </div>
-
-        </div>
-    </main>
-
-    <script type="module" src="../js/ui.js"></script>
-</body>
-</html>
+<html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Review storage configuration capabilities exposed by Wise Storage Director.">
+    <title>Storage Configuration | WSD</title><link rel="stylesheet" href="../css/style.css"><link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
+</head><body>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button><nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <main><header class="page-intro"><h1>Storage Configuration</h1><p>Review storage features that the connected backend reports as supported.</p></header>
+        <section class="data-panel"><p class="notice">This frontend currently has no configuration write API. The statuses below describe reported capabilities; they do not change system settings.</p><p id="configuration-status" role="status" class="status-note">Checking backend capabilities…</p>
+            <div class="data-table-wrap"><table class="data-table"><thead><tr><th>Feature</th><th>Status</th><th>Details</th></tr></thead><tbody id="capabilities-body"></tbody></table></div>
+        </section>
+        <section class="data-panel"><h2>mergerfs mount directory</h2><p id="mergerfs-status">The backend does not expose a configured mergerfs mount directory or selected-device list through the current API.</p><p>Mount and unmount operations are not available in this interface.</p></section>
+        <section class="data-panel"><h2>Task priorities</h2><p>Task priority controls are currently informational placeholders. No API endpoint is available to read or update priority settings.</p><a href="task_priority.html">Open Task Priorities</a></section>
+    </main><script type="module" src="../js/ui.js"></script><script type="module" src="../js/configuration.js"></script>
+</body></html>

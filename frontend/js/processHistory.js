@@ -9,6 +9,7 @@ import {
 import {
     getProcessInstanceId
 } from "./processUtils.js";
+import { chartColors, createChartOptions } from "./chartTheme.js";
 
 const REFRESH_INTERVAL_MS = 2000;
 const HISTORY_WINDOW_MS = 60 * 1000;
@@ -152,45 +153,30 @@ function renderHistory(records) {
                     {
                         label: "Read (MB/s)",
                         data: readRates,
-                        borderColor: "#0D9488",
-                        backgroundColor: "#0D9488",
+                        borderColor: chartColors.navy,
+                        backgroundColor: chartColors.navy,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 3,
                         tension: 0.2,
+                        fill: false,
                         spanGaps: false
                     },
                     {
                         label: "Write (MB/s)",
                         data: writeRates,
-                        borderColor: "#D97706",
-                        backgroundColor: "#D97706",
+                        borderColor: chartColors.amber,
+                        backgroundColor: chartColors.amber,
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 3,
                         tension: 0.2,
+                        fill: false,
                         spanGaps: false
                     }
                 ]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: false,
-                interaction: {
-                    intersect: false,
-                    mode: "index"
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: "Time"
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: "Throughput (MB/s)"
-                        }
-                    }
-                }
-            }
+            options: createChartOptions({ yTitle: "Throughput (MB/s)" })
         });
 
         return;

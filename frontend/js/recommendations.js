@@ -13,6 +13,9 @@ const refreshButton = document.getElementById(
 );
 
 let isRefreshing = false;
+let currentRecommendations = [];
+const filterInput = document.getElementById("recommendation-filter");
+const sortSelect = document.getElementById("recommendation-sort");
 
 /* ELEMENT CREATION */
 
@@ -116,8 +119,24 @@ function renderRecommendations(recommendations) {
             !Array.isArray(recommendation)
     );
 
-    const sortedRecommendations =
-        sortRecommendations(validRecommendations);
+    currentRecommendations = validRecommendations;
+    let sortedRecommendations = sortRecommendations(validRecommendations);
+    if (sortSelect?.value === "benefit") {
+        sortedRecommendations.sort((a, b) => {
+            const av = typeof a.estimated_benefit === "number" ? a.estimated_benefit : null;
+            const bv = typeof b.estimated_benefit === "number" ? b.estimated_benefit : null;
+            if (av === null && bv === null) return 0;
+            if (av === null) return 1;
+            if (bv === null) return -1;
+            return bv - av;
+        });
+    }
+    const query = (filterInput?.value ?? "").trim().toLowerCase();
+    if (query) {
+        sortedRecommendations = sortedRecommendations.filter(item =>
+            JSON.stringify(item).toLowerCase().includes(query)
+        );
+    }
 
     container.replaceChildren();
 
@@ -320,5 +339,7 @@ if (!container || !statusElement || !refreshButton) {
     );
 } else {
     refreshButton.addEventListener("click", handleRefresh);
+    filterInput?.addEventListener("input", () => renderRecommendations(currentRecommendations));
+    sortSelect?.addEventListener("change", () => renderRecommendations(currentRecommendations));
     loadRecommendations();
 }
