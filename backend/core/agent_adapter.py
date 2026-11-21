@@ -63,9 +63,9 @@ class LinuxAgentAdapter:
         return normalize_linux_process_metric(process_metric, self.backend.host_id)
 
 
-    def get_file_activity(self, sample_window_seconds = 10, now_ns = None):
-        return []
-    #TODO agent not done
+    def get_file_activity(self, sample_window_seconds = 10, now_ns = None) -> list[dict]:
+        #TODO not yet decided
+        return normalize_linux_file_activity(self.backend.get_all_file_stats(sample_window_seconds), self.backend.host_id)
 
     def close(self):
         self.backend.close()
