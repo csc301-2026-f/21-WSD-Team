@@ -77,3 +77,30 @@ CREATE TABLE IF NOT EXISTS app_settings (
     value TEXT NOT NULL,
     updated_at_utc TEXT NOT NULL
 );
+
+-- Telemetry: Time-series samples per file (for D4 File I/O & Heat tracking)
+CREATE TABLE IF NOT EXISTS file_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_id TEXT NOT NULL,
+    file_id TEXT,
+    path TEXT,
+    device_id TEXT,
+    window_start_utc TEXT NOT NULL,
+    window_end_utc TEXT NOT NULL,
+    read_bytes INTEGER,
+    write_bytes INTEGER,
+    read_ops INTEGER,
+    write_ops INTEGER,
+    file_size_bytes INTEGER,
+    source TEXT NOT NULL
+);
+
+-- Fast lookup indexes for file heat and absolute filepath history searches
+CREATE INDEX IF NOT EXISTS idx_file_activity_window 
+ON file_activity(window_start_utc, window_end_utc);
+
+CREATE INDEX IF NOT EXISTS idx_file_activity_path 
+ON file_activity(path, window_start_utc);
+
+CREATE INDEX IF NOT EXISTS idx_file_activity_device 
+ON file_activity(device_id, window_start_utc);
