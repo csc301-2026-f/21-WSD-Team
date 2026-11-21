@@ -45,7 +45,8 @@ def create_http_api(core_service):
 
     @http_api.post("/api/v1/recommendations/refresh")
     def refresh_recommendation():
-        recommendations = core_service.refresh_recommendation()
+        mode = request.args.get("mode")
+        recommendations = core_service.refresh_recommendation(mode)
         response = success_response(recommendations)
         return jsonify(response)
 

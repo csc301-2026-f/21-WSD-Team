@@ -20,7 +20,7 @@ class CoreService:
         if not self.demo_mode:
             self.agent.close()
 
-    def collect_and_record(self):
+    def collect_and_record(self) -> None:
         """
         Collect one snapshot of device and process I/O data and persist it to database.
 
@@ -112,7 +112,10 @@ class CoreService:
             mode_config= {} #Not required in D2
             capabilities = self.capabilities or {} #TODO agent not done
 
-        recommendations =self.algorithm.evaluate_raid0(devices, realtime, history, mode_config, capabilities)
+        if mode == "ssd_caching":
+            recommendations =self.algorithm.evaluate_ssd(devices, realtime, history, mode_config, capabilities)
+        else:
+            recommendations =self.algorithm.evaluate_raid0(devices, realtime, history, mode_config, capabilities)
         self.database.save_recommendations(recommendations)
         return recommendations
 
