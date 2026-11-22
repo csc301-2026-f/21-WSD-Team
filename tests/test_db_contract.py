@@ -201,15 +201,14 @@ def test_process_instance_id_built_from_pid_and_start_time(repo):
 
 # ingest_file_activity / query_file_heat
 
-def test_ingest_file_activity_safe_noop(repo):
-    # Core must not hit an AttributeError when calling this method
-    repo.ingest_file_activity([{"path": "/tmp/test.dat", "bytes": 1024}])
+def test_ingest_file_activity_empty_list_is_noop(repo):
+    # Must not raise or insert anything when given an empty list
+    repo.ingest_file_activity([])
     assert repo.query_file_heat(
         start_utc="2026-10-08T00:00:00Z", end_utc="2026-10-08T01:00:00Z"
     ) == []
 
-def test_query_file_heat_always_returns_empty_list(repo):
-    # File-level tracking is intentionally unimplemented; the contract is []
+def test_query_file_heat_empty_when_no_records(repo):
     result = repo.query_file_heat(
         start_utc="2026-10-08T00:00:00Z",
         end_utc="2026-10-08T23:59:59Z",
@@ -217,6 +216,76 @@ def test_query_file_heat_always_returns_empty_list(repo):
         device_ids=["nvme0n1"],
     )
     assert result == []
+
+def test_ingest_and_query_file_heat(repo):
+    samples = [
+        {
+            "host_id": "host_1",
+            "file_id": "f_001",
+            "path": "/var/log/syslog",
+            "device_id": "nvme0n1",
+            "window_start_utc": "2026-10-08T20:00:00Z",
+            "window_end_utc": "2026-10-08T20:00:10Z",
+            "read_bytes": 1000,
+            "write_bytes": 5000,
+            "read_ops": 2,
+            "write_ops": 10,
+            "file_size_bytes": 204800,
+            "source": "os_agent",
+        },
+        {
+            "host_id": "host_1",
+            "file_id": "f_001",
+            "path": "/var/log/syslog",
+            "device_id": "nvme0n1",
+            "window_start_utc": "2026-10-08T20:00:10Z",
+            "window_end_utc": "2026-10-08T20:00:20Z",
+            "read_bytes": 2000,
+            "write_bytes": 3000,
+            "read_ops": 4,
+            "write_ops": 6,
+            "file_size_bytes": 207800,
+            "source": "os_agent",
+        },
+        {
+            "host_id": "host_1",
+            "file_id": "f_002",
+            "path": "/home/user/video.mp4",
+            "device_id": "sda1",
+            "window_start_utc": "2026-10-08T20:00:00Z",
+            "window_end_utc": "2026-10-08T20:00:20Z",
+            "read_bytes": 50000,
+            "write_bytes": 0,
+            "read_ops": 50,
+            "write_ops": 0,
+            "file_size_bytes": 104857600,
+            "source": "os_agent",
+        },
+    ]
+    repo.ingest_file_activity(samples)
+
+    # 1. General heat query (ordered by total_bytes DESC -> video.mp4 first)
+    all_heat = repo.query_file_heat(
+        start_utc="2026-10-08T20:00:00Z",
+        end_utc="2026-10-08T20:01:00Z",
+    )
+    assert len(all_heat) == 2
+    assert all_heat[0]["path"] == "/home/user/video.mp4"
+    assert all_heat[0]["total_bytes"] == 50000
+
+    # 2. Path filter (Mohan's requirement: searchable by absolute filepath)
+    syslog_heat = repo.query_file_heat(
+        start_utc="2026-10-08T20:00:00Z",
+        end_utc="2026-10-08T20:01:00Z",
+        path="/var/log/syslog",
+    )
+    assert len(syslog_heat) == 1
+    assert syslog_heat[0]["total_read_bytes"] == 3000
+    assert syslog_heat[0]["total_write_bytes"] == 8000
+    assert syslog_heat[0]["total_bytes"] == 11000
+    assert syslog_heat[0]["sample_count"] == 2
+    assert syslog_heat[0]["total_read_ops"] == 6
+    assert syslog_heat[0]["total_write_ops"] == 16
 
 
 # save_settings / get_settings
