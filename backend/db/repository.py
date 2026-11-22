@@ -132,13 +132,38 @@ class SQLiteHistoryRepository:
     
     # For Shengrong (Core): Safe no-op ingestion for file activity ---
     def ingest_file_activity(self, samples: List[Dict[str, Any]]) -> None:
-        """
-        Ingests file-level activity if provided by OS agent.
-        Currently safely accepts incoming samples without error while file heat 
-        tracking is uninstrumented at the OS level.
-        """
-        # Kept as safe no-op so Core's ingestion loop does not raise AttributeError
-        pass
+            if not samples:
+                return
+            records = [
+                (
+                    s.get("host_id", "default_host"),
+                    s.get("file_id"),
+                    s.get("path"),
+                    s.get("device_id"),
+                    s["window_start_utc"],
+                    s["window_end_utc"],
+                    s.get("read_bytes"),
+                    s.get("write_bytes"),
+                    s.get("read_ops"),
+                    s.get("write_ops"),
+                    s.get("file_size_bytes"),
+                    s.get("source", "os_agent"),
+                )
+                for s in samples
+            ]
+            with self._get_connection() as conn:
+                conn.cursor().executemany(
+                    """
+                    INSERT INTO file_activity (
+                        host_id, file_id, path, device_id,
+                        window_start_utc, window_end_utc,
+                        read_bytes, write_bytes, read_ops, write_ops,
+                        file_size_bytes, source
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    records,
+                )
+                conn.commit()
 
     # For John & Jesslyn (Algorithm) & Shengrong (HTTP-01f): Device historical range and aggregation
     def query_device_history(
@@ -241,16 +266,56 @@ class SQLiteHistoryRepository:
             cursor.execute(query, agg_params)
             return [dict(row) for row in cursor.fetchall()]
 
-    # For John & Jesslyn (Algorithm): Returns empty list when OS agents lack file telemetry
+    # For John & Jesslyn (Algorithm) & Mohan (UI/Search): File heat & filepath history
     def query_file_heat(
         self,
         start_utc: str,
         end_utc: str,
         limit: int = 100,
         device_ids: Optional[List[str]] = None,
+        path: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        # Returns empty list as file-level tracking is currently unsupported from OS agents
-        return []
+        conditions = ["window_end_utc >= ?", "window_start_utc <= ?"]
+        params: List[Any] = [start_utc, end_utc]
+
+        if device_ids:
+            placeholders = ",".join("?" for _ in device_ids)
+            conditions.append(f"device_id IN ({placeholders})")
+            params.extend(device_ids)
+
+        if path:
+            conditions.append("path = ?")
+            params.append(path)
+
+        where_clause = " AND ".join(conditions)
+        params.append(limit)
+
+        query = f"""
+            SELECT
+                COALESCE(path, file_id) AS file_key,
+                MAX(file_id) AS file_id,
+                MAX(path) AS path,
+                MAX(device_id) AS device_id,
+                MIN(window_start_utc) AS first_seen_utc,
+                MAX(window_end_utc) AS last_seen_utc,
+                COUNT(*) AS sample_count,
+                COALESCE(SUM(read_bytes), 0) AS total_read_bytes,
+                COALESCE(SUM(write_bytes), 0) AS total_write_bytes,
+                COALESCE(SUM(read_ops), 0) AS total_read_ops,
+                COALESCE(SUM(write_ops), 0) AS total_write_ops,
+                (COALESCE(SUM(read_bytes), 0) + COALESCE(SUM(write_bytes), 0)) AS total_bytes,
+                MAX(file_size_bytes) AS file_size_bytes
+            FROM file_activity
+            WHERE {where_clause}
+            GROUP BY COALESCE(path, file_id)
+            ORDER BY total_bytes DESC
+            LIMIT ?
+        """
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
 
     #SETTINGS & RECOMMENDATIONS
 
