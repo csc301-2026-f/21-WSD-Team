@@ -69,6 +69,16 @@ class CoreService:
             return []
         return self.agent.get_process_metrics()
 
+    def get_current_file_activity(self):
+        """
+        Return current file activity for display.
+
+        Flow: Agent -> CORE -> HTTP/UI
+        """
+        if self.demo_mode:
+            return []
+        return self.agent.get_file_activity(8)
+
     def get_historical_process_activity(self, process_instance_ids, start_utc,
                                         end_utc, bucket_seconds = None):
         """

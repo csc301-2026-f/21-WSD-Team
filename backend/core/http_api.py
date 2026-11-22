@@ -90,6 +90,12 @@ def create_http_api(core_service):
         response = success_response(process_history)
         return jsonify(response)
 
+    @http_api.get("/api/v1/files/activity/latest")
+    def get_latest_file_activity():
+        latest_activity = core_service.get_current_file_activity()
+        response = success_response(latest_activity)
+        return jsonify(response)
+
     @http_api.errorhandler(404)
     def handle_not_found(error):
         response = fail_response("NOT_FOUND", "Endpoint Not Found")
