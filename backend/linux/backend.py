@@ -6,6 +6,7 @@ from .file import list_folder_files
 
 from .process import get_all_process
 from .drive import get_all_drive
+from .file_operation import *
 
 
 class LinuxBackend:
@@ -192,12 +193,39 @@ class LinuxBackend:
 
         return self.file_collector.get_metrics(interval_seconds)
 
+    def get_actual_path(self, file_path: str) -> str | ErrorCode:
+        """
+        Find which partition actually stores a file in a mergerfs pool.
 
-"""    def get_all_process_io(self, interval_seconds: int) -> list[ProcessMetric]:
-        if not self._started:
-            return None
+        :param file_path: Absolute path of a file inside the mergerfs mount,
+                          e.g. "/srv/pool/docs/a.md"
+        :return: Path on the partition holding the data, e.g.
+                 "/run/media/wisky/test2/docs/a.md", or ErrorCode.NOT_ON_MERGERFS
+                 if the path is not on a mergerfs mount or mergerfs xattrs are disabled
+        """
+        resolved = resolve_mergerfs_path(file_path)
+        if isinstance(resolved, ErrorCode):
+            return resolved
 
-    def get_all_drive_io(self, interval_seconds: int) -> list[DriveMetric]:
-        if not self._started:
-            return None"""
+        return resolved[0]
 
+    def start_move_file(self, file_path: str, destination_mount: str) -> MoveHandle | ErrorCode:
+        """
+        Start moving a file in a mergerfs pool to another partition, keeping the
+        same relative path. Returns immediately while mv runs in the background.
+
+        The destination directory must already exist; an existing file at the
+        destination is never overwritten.
+
+        Use the returned handle to follow the move: progress() (0.0 to 1.0),
+        is_running(), result(), wait(timeout) and cancel().
+
+        :param file_path: Absolute path of the file inside the mergerfs mount
+        :param destination_mount: Absolute mount point of the destination partition,
+                                  e.g. "/run/media/wisky/test1"
+        :return: MoveHandle for the running move, or an ErrorCode if it could not
+                 start: PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
+                 NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, DESTINATION_EXISTS or
+                 MOVE_FAILED
+        """
+        return start_mergerfs_move(file_path, destination_mount)
