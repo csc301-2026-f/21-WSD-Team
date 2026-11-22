@@ -87,7 +87,7 @@ class LinuxBackend:
 
     def get_device_io(
         self, interval_seconds: int, device_name: str
-    ) -> DriveMetric | None:
+    ) -> DriveMetric | ErrorCode:
         """
         Retrieve disk I/O statistics from previously collected samples.
         Does not block while waiting for new samples.
@@ -98,13 +98,13 @@ class LinuxBackend:
                  or history is insufficient
         """
         if not self._started:
-            return None
+            return ErrorCode.BACKEND_NOT_STARTED
 
         return self.disk_collector.get_metric(interval_seconds, device_name)
 
     def get_process_io(
         self, interval_seconds: int, pid: int
-    ) -> ProcessMetric | None:
+    ) -> ProcessMetric | ErrorCode:
         """
         Retrieve process I/O statistics from previously collected samples.
         Process must exist in both samples being compared.
@@ -115,13 +115,10 @@ class LinuxBackend:
                  process is unavailable, or access is denied
         """
         if not self._started:
-            return None
+            return ErrorCode.BACKEND_NOT_STARTED
 
         rtn = self.process_collector.get_metric(interval_seconds, pid)
-        if isinstance(rtn, ErrorCode):
-            return None
-        else:
-            return rtn
+        return rtn
 
     def track_file(self, file_path: str) -> ErrorCode | File:
         """

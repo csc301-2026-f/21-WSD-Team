@@ -49,20 +49,20 @@ class DiskIOCollector:
             sleep_time = next_sample - time.monotonic()
             self._stop_event.wait(sleep_time)
 
-    def get_metric(self, time_interval: int, device_name: str) -> DriveMetric | None:
+    def get_metric(self, time_interval: int, device_name: str) -> DriveMetric | ErrorCode:
         if time_interval <= 0 or device_name not in self._drive_names:
-            return None
+            return ErrorCode.INVALID_TIME_INTERVAL
 
         with self._lock:
             if len(self._history) <= time_interval:
-                return None
+                return ErrorCode.INVALID_TIME_INTERVAL
             latest_batch = self._history[-1]
             older_batch = self._history[-(time_interval + 1)]
 
         latest = next((s for s in latest_batch if s.device_id == device_name), None)
         older = next((s for s in older_batch if s.device_id == device_name), None)
         if latest is None or older is None:
-            return None
+            return ErrorCode.INVALID_TIME_INTERVAL
 
         return DriveMetric(
             timestamp=older.timestamp,
@@ -158,6 +158,7 @@ class FileIOCollector:
         self._thread = None
         self._stop_event = threading.Event()
         self._lock = threading.Lock()
+        self._next_id = 0
 
     def start(self) -> ErrorCode | None:
         if self._thread and self._thread.is_alive():
@@ -201,7 +202,8 @@ class FileIOCollector:
             self._history.clear()
 
     def track(self, file_path: str) -> File | ErrorCode:
-        file = resolve_file(file_path)
+        file = resolve_file(file_path, self._next_id)
+        self._next_id += 1
         if isinstance(file, ErrorCode):
             return file
 
@@ -211,7 +213,10 @@ class FileIOCollector:
             return self._track_locked(file)
 
     def track_many(self, file_paths: list[str]) -> tuple[File, ...] | ErrorCode:
-        resolved = [resolve_file(path) for path in file_paths]
+        resolved = []
+        for path in file_paths:
+            resolved.append(resolve_file(path, self._next_id))
+            self._next_id += 1
 
         files = []
         with self._lock:

@@ -206,6 +206,7 @@ class ProcessSample:
 
 @dataclass(frozen=True)
 class File:
+    file_id: int
     absolute_path: str
     inode: int = field(compare=False)
     device: int = field(compare=False)

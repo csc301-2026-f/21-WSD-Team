@@ -337,11 +337,12 @@ def kernel_dev(st_dev: int) -> int:
     return (major << KERNEL_DEV_MINOR_BITS) | minor
 
 
-def resolve_file(file_path: str) -> File | ErrorCode:
+def resolve_file(file_path: str, file_id: int) -> File | ErrorCode:
     """
     Gets information about a file from its path.
 
     :param file_path: absolute path of the file
+    :param file_id: file_id assigned to this file
     :return: a File object, or an ErrorCode if the file cannot be used
     """
     if not os.path.isabs(file_path):
@@ -362,6 +363,7 @@ def resolve_file(file_path: str) -> File | ErrorCode:
         return ErrorCode.NOT_A_REGULAR_FILE
 
     return File(
+        file_id=file_id,
         absolute_path=real_path,
         inode=file_info.st_ino,
         device=file_info.st_dev
