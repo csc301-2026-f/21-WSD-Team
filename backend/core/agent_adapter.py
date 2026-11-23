@@ -88,19 +88,35 @@ class LinuxAgentAdapter:
         return normalize_linux_file_activity(self.backend.get_all_file_stats(sample_window_seconds), self.backend.host_id)
 
     def track_file(self, path):
-        return self.backend.track_file(path)
+        track = self.backend.track_file(path)
+        if isinstance(track, ErrorCode):
+                logger.error(f"File tracking error: {track.name}")
+                raise RuntimeError(f"File tracking error: {track.name}")
+        return track
 
     def track_folder(self, path):
-        return self.backend.track_folder(path)
+        track = self.backend.track_folder(path)
+        if isinstance(track, ErrorCode):
+                logger.error(f"Folder tracking error: {track.name}")
+                raise RuntimeError(f"Folder tracking error: {track.name}")
+        return track
 
     def list_tracked_files(self):
         return self.backend.list_tracked_files()
 
     def untrack_file(self, file):
-        return self.backend.untrack_file(file)
+        untrack = self.backend.untrack_file(file)
+        if isinstance(untrack, ErrorCode):
+            logger.error(f"File untracking error: {untrack.name}")
+            raise RuntimeError(f"File untracking error: {untrack.name}")
+        return untrack
 
     def untrack_folder(self, files):
-        return self.backend.untrack_folder(files)
+        untrack = self.backend.untrack_folder(files)
+        if isinstance(untrack, ErrorCode):
+            logger.error(f"Folder untracking error: {untrack.name}")
+            raise RuntimeError(f"Folder untracking error: {untrack.name}")
+        return untrack
 
     def close(self):
         self.backend.close()
