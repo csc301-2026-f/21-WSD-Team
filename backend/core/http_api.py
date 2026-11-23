@@ -96,6 +96,14 @@ def create_http_api(core_service):
         response = success_response(latest_activity)
         return jsonify(response)
 
+    @http_api.post("/api/v1/actions/execute")
+    def execute_move_action():
+        pass
+
+    @http_api.get("/api/v1/actions/{action_id}")
+    def get_action_status(action_id):
+        pass
+
     @http_api.errorhandler(404)
     def handle_not_found(error):
         response = fail_response("NOT_FOUND", "Endpoint Not Found")

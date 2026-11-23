@@ -118,7 +118,7 @@ def normalize_linux_file_activity(file_stats, host_id) -> list[dict]:
             except OSError:
                 file_size = None
             metric_dict = {"host_id": host_id,
-                           "file_id": file_matric.file.absolute_path, #file_id is not provide, used absolute path instead by suggestion in contract
+                           "file_id": str(file_matric.file.file_id),
                            "path": file_matric.file.absolute_path,
                            "device_id": None, #TODO data not provide
                            "window_start_utc": file_matric.timestamp,
