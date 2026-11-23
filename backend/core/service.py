@@ -129,5 +129,66 @@ class CoreService:
         self.database.save_recommendations(recommendations)
         return recommendations
 
+    def track_file(self, path):
+        """
+        Start tracking a file and save its subscription to the database.
 
+        Flow: Agent -> CORE -> DB
+        """
+        file = self.agent.track_file(path)
+        self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
+                                                "host_id": self.host_id,
+                                                "path": path,
+                                                "target_type": "file",
+                                                "status": "active"})
+        return file
 
+    def track_folder(self, path):
+        """
+        Start tracking a folder and save its subscription to the database.
+
+        Flow: Agent -> CORE -> DB
+        """
+        folder = self.agent.track_folder(path)
+        self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
+                                                "host_id": self.host_id,
+                                                "path": path,
+                                                "target_type": "folder",
+                                                "status": "active"})
+        return folder
+
+    def list_file_subscriptions(self, status = "active"):
+        """
+        Return file and folder subscriptions
+
+        Flow: DB -> CORE -> HTTP/UI
+        """
+        return self.database.list_file_subscriptions(status)
+
+    def untrack_file(self, file):
+        """
+        Untracking a file and save its subscription to the database.
+
+        Flow: Agent -> CORE -> DB
+        """
+        path = file.absolute_path
+        file = self.agent.untrack_file(file)
+        self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
+                                                "host_id": self.host_id,
+                                                "path": path,
+                                                "target_type": "file",
+                                                "status": "removed"})
+
+    def untrack_folder(self, files):
+        """
+        Untracking a folder and save its subscription to the database.
+
+        Flow: Agent -> CORE -> DB
+        """
+        path = None #TODO None yet decided ***
+        folder = self.agent.untrack_folder(files)
+        self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
+                                                "host_id": self.host_id,
+                                                "path": path,
+                                                "target_type": "folder",
+                                                "status": "removed"})

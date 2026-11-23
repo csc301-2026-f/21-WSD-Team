@@ -104,6 +104,18 @@ def create_http_api(core_service):
     def get_action_status(action_id):
         pass
 
+    @http_api.post("/api/v1/files/subscriptions")
+    def track_file_folder():
+        pass
+
+    @http_api.delete("/api/v1/files/subscriptions")
+    def untrack_file_folder():
+        pass
+
+    @http_api.get("/api/v1/files/subscriptions")
+    def list_subscriptions():
+        pass
+
     @http_api.errorhandler(404)
     def handle_not_found(error):
         response = fail_response("NOT_FOUND", "Endpoint Not Found")

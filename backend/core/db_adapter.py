@@ -40,3 +40,9 @@ class DataBaseAdaptor:
 
     def list_recommendations(self, mode: str | None = None) -> list[dict]:
         return self.repository.list_recommendations(mode)
+
+    def upsert_file_subscription(self, sub) -> None:
+        return self.repository.upsert_file_subscription(sub)
+
+    def list_file_subscriptions(self, status = None):
+        return self.repository.list_file_subscriptions(status)
