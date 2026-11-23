@@ -317,6 +317,170 @@ class SQLiteHistoryRepository:
             cursor.execute(query, params)
             return [dict(row) for row in cursor.fetchall()]
 
+    # For Shengrong (Core) & Algo: Query non-overlapping 60s FileActivity windows
+    def query_file_activity_windows(
+        self,
+        start_utc: str,
+        end_utc: str,
+        path: Optional[str] = None,
+        device_ids: Optional[List[str]] = None,
+        limit: int = 5000,
+    ) -> List[Dict[str, Any]]:
+        conditions = ["window_end_utc >= ?", "window_start_utc <= ?"]
+        params: List[Any] = [start_utc, end_utc]
+
+        if path:
+            conditions.append("path = ?")
+            params.append(path)
+
+        if device_ids:
+            placeholders = ",".join("?" for _ in device_ids)
+            conditions.append(f"device_id IN ({placeholders})")
+            params.extend(device_ids)
+
+        where_clause = " AND ".join(conditions)
+        params.append(limit)
+
+        query = f"""
+            SELECT
+                host_id, file_id, path, device_id,
+                window_start_utc, window_end_utc,
+                read_bytes, write_bytes, read_ops, write_ops,
+                file_size_bytes, source
+            FROM file_activity
+            WHERE {where_clause}
+            ORDER BY window_start_utc ASC
+            LIMIT ?
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return [dict(row) for row in cursor.fetchall()]
+    
+    # For Core & UI: Save or update a watched file/folder subscription
+    def upsert_file_subscription(self, sub: Dict[str, Any]) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._get_connection() as conn:
+            conn.cursor().execute(
+                """
+                INSERT INTO file_subscriptions (
+                    subscription_id, host_id, path, target_type,
+                    status, created_at_utc, updated_at_utc
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(path) DO UPDATE SET
+                    target_type = excluded.target_type,
+                    status = excluded.status,
+                    updated_at_utc = excluded.updated_at_utc
+                """,
+                (
+                    sub.get("subscription_id") or sub["path"],
+                    sub.get("host_id", "default_host"),
+                    sub["path"],
+                    sub["target_type"],  # 'file' or 'folder'
+                    sub.get("status", "active"),
+                    sub.get("created_at_utc", now),
+                    now,
+                ),
+            )
+            conn.commit()
+
+    # For Core: Retrieve active subscriptions on app startup/reboot to resume monitoring
+    def list_file_subscriptions(
+        self, status: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            if status:
+                cursor.execute(
+                    "SELECT * FROM file_subscriptions WHERE status = ? ORDER BY created_at_utc ASC",
+                    (status,),
+                )
+            else:
+                cursor.execute(
+                    "SELECT * FROM file_subscriptions ORDER BY created_at_utc ASC"
+                )
+            return [dict(row) for row in cursor.fetchall()]
+
+    # For Core & Algo: Save or update a file move record and its execution result
+    def save_file_move_record(self, record: Dict[str, Any]) -> None:
+        now = datetime.now(timezone.utc).isoformat()
+        with self._get_connection() as conn:
+            conn.cursor().execute(
+                """
+                INSERT INTO file_move_records (
+                    move_id, recommendation_id, host_id, file_id,
+                    source_path, target_path, source_device_id, target_device_id,
+                    bytes_total, bytes_moved, status, error_message,
+                    started_at_utc, completed_at_utc, updated_at_utc
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(move_id) DO UPDATE SET
+                    bytes_moved = excluded.bytes_moved,
+                    status = excluded.status,
+                    error_message = excluded.error_message,
+                    started_at_utc = COALESCE(excluded.started_at_utc, file_move_records.started_at_utc),
+                    completed_at_utc = excluded.completed_at_utc,
+                    updated_at_utc = excluded.updated_at_utc
+                """,
+                (
+                    record["move_id"],
+                    record.get("recommendation_id"),
+                    record.get("host_id", "default_host"),
+                    record.get("file_id"),
+                    record["source_path"],
+                    record["target_path"],
+                    record.get("source_device_id"),
+                    record.get("target_device_id"),
+                    record.get("bytes_total"),
+                    record.get("bytes_moved", 0),
+                    record.get("status", "pending"),
+                    record.get("error_message"),
+                    record.get("started_at_utc"),
+                    record.get("completed_at_utc"),
+                    now,
+                ),
+            )
+            conn.commit()
+
+    # For Core: Fetch unfinished approved/in-progress file moves on startup to resume
+    def get_incomplete_file_moves(self) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT * FROM file_move_records
+                WHERE status IN ('approved', 'in_progress')
+                ORDER BY updated_at_utc ASC
+                """
+            )
+            return [dict(row) for row in cursor.fetchall()]
+
+    # For Core & UI: List historical file move records and outcomes
+    def list_file_move_records(
+        self, status: Optional[str] = None, limit: int = 100
+    ) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            if status:
+                cursor.execute(
+                    """
+                    SELECT * FROM file_move_records
+                    WHERE status = ?
+                    ORDER BY updated_at_utc DESC
+                    LIMIT ?
+                    """,
+                    (status, limit),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT * FROM file_move_records
+                    ORDER BY updated_at_utc DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                )
+            return [dict(row) for row in cursor.fetchall()]
+
     #SETTINGS & RECOMMENDATIONS
 
     # For Shengrong (HTTP-01i) & Danny (UI): Persist user preferences & auto-mode flags, this was for US-06
