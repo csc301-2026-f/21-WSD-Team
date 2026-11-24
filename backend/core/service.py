@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from datetime import datetime, timezone
 from .demo_data import load_demo_input
+import logging
+logger = logging.getLogger(__name__)
 
 class CoreService:
     def __init__(self, agent, algorithm, database, capabilities=None, demo_mode = False, host_id = None):
@@ -11,6 +13,7 @@ class CoreService:
         self.capabilities = capabilities
         self.demo_mode = demo_mode
         self.host_id = host_id
+        self.track_folders = {}
 
     def start(self)-> None:
         if not self.demo_mode:
@@ -150,6 +153,7 @@ class CoreService:
         Flow: Agent -> CORE -> DB
         """
         folder = self.agent.track_folder(path)
+        self.track_folders[path] = folder
         self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
                                                 "host_id": self.host_id,
                                                 "path": path,
@@ -185,10 +189,15 @@ class CoreService:
 
         Flow: Agent -> CORE -> DB
         """
-        path = None #TODO None yet decided ***
-        folder = self.agent.untrack_folder(files)
+        path = [key for key, value in self.track_folders.items() if value == files]
+        if not path:
+            logger.error("Folder subscription is not found")
+            raise ValueError("Folder subscription is not found")
+        path = path[0]
+        self.agent.untrack_folder(files)
         self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
                                                 "host_id": self.host_id,
                                                 "path": path,
                                                 "target_type": "folder",
                                                 "status": "removed"})
+        del self.track_folders[path]
