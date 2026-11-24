@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 from .demo_data import load_demo_input
 import logging
+import os
 logger = logging.getLogger(__name__)
 
 class CoreService:
@@ -139,6 +140,7 @@ class CoreService:
         Flow: Agent -> CORE -> DB
         """
         file = self.agent.track_file(path)
+        path = os.path.normpath(path)
         self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
                                                 "host_id": self.host_id,
                                                 "path": path,
@@ -153,6 +155,7 @@ class CoreService:
         Flow: Agent -> CORE -> DB
         """
         folder = self.agent.track_folder(path)
+        path = os.path.normpath(path)
         self.track_folders[path] = folder
         self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
                                                 "host_id": self.host_id,
