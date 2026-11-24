@@ -98,14 +98,20 @@ class CoreService:
             host_id = None
             if devices:
                 host_id = devices[0].get("host_id")
-            evaluation_time_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-            realtime={
-                "host_id": host_id,
-                "evaluation_time_utc": evaluation_time_utc}
+
             file_activity = self.agent.get_file_activity(60)
+
+            # Generate evaluation time AFTER collecting file activity
+            evaluation_time_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            realtime = {
+                "host_id": host_id,
+                "evaluation_time_utc": evaluation_time_utc
+            }
+
             history={"file_activity": file_activity}
             mode_config= {} #Not required in D2
             capabilities = self.capabilities or {} #TODO agent not done
+
         recommendations =self.algorithm.evaluate_raid0(devices, realtime, history, mode_config, capabilities)
         self.database.save_recommendations(recommendations)
         return recommendations

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 import wmi
 import pythoncom
+import win32file
 from .contracts import Device, MediaType
 
 
@@ -18,6 +19,9 @@ class DeviceProvider:
             self._drive_letter_mapping_bounds = self._get_drive_letter_mapping_bounds()
         finally: 
             pythoncom.CoUninitialize()
+
+        # Map NT volume paths to Windows drive letters and physical disk IDs.
+        self._nt_volume_mapping = self._build_nt_volume_mapping()
 
     def list_devices(self) -> list[Device]:
         """return cached discovered physical disks."""
@@ -122,6 +126,50 @@ class DeviceProvider:
             result[disk_number] = sorted(mount_points)
 
         return result
+
+    def _build_nt_volume_mapping(self):
+            """Build a mapping from NT volume paths to drive letters and disk IDs."""
+            mapping = {}
+
+            for device in self._device_list:
+                for drive in device.mount_points:
+                    try:
+                        # Query the actual NT volume name instead of inferring
+                        # the drive letter from a DiskIO byte offset.
+                        nt_volume = win32file.QueryDosDevice(drive)
+
+                        if isinstance(nt_volume, (list, tuple)):
+                            nt_volume = nt_volume[0]
+                        else:
+                            nt_volume = nt_volume.split("\0", 1)[0]
+
+                    except OSError:
+                        continue
+
+                    # Keep all matches so ambiguous volume mappings can be rejected.
+                    mapping.setdefault(
+                        nt_volume.casefold(), []
+                    ).append((nt_volume, drive, device.device_id))
+
+            # Only retain volumes with an unambiguous drive-letter mapping.
+            return {
+                key: entries[0]
+                for key, entries in mapping.items()
+                if len(entries) == 1
+            }
+
+    def resolve_nt_file_path(self, nt_path):
+        """Resolve an NT file path to a Windows path and physical disk ID."""
+        if not isinstance(nt_path, str):
+            return None
+
+        for nt_volume, drive, disk_number in self._nt_volume_mapping.values():
+            # Match the full volume prefix to avoid confusing similar names.
+            if nt_path.casefold().startswith(nt_volume.casefold() + "\\"):
+                return drive + nt_path[len(nt_volume):], disk_number
+
+        # Do not guess a drive letter when the volume cannot be identified.
+        return None
 
     def _get_drive_letter_mapping_bounds(self) -> dict[int, list[(int,int,str)]]:
         """cache important information to map disk number and offset to drive letter."""

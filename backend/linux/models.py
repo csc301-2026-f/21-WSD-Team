@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 
 
@@ -204,9 +204,83 @@ class ProcessSample:
     writes_complete: int
 
 
+@dataclass(frozen=True)
+class File:
+    absolute_path: str
+    inode: int = field(compare=False)
+    device: int = field(compare=False)
+
+
+@dataclass(frozen=True)
+class FileSample:
+    file: File
+    timestamp: str
+    size_bytes: int
+    read_attempts: int
+    read_requested_bytes: int
+    read_success_ops: int
+    read_completed_bytes: int
+    read_gap_sum: int
+    read_gap_count: int
+    write_attempts: int
+    write_requested_bytes: int
+    write_success_ops: int
+    write_completed_bytes: int
+    write_gap_sum: int
+    write_gap_count: int
+
+
+@dataclass(frozen=True)
+class FileMetric:
+    file: File
+    timestamp: str
+    duration: int
+    read_attempts: int
+    read_requested_bytes: int
+    read_success_ops: int
+    read_completed_bytes: int
+    read_average_gap: float | None
+    write_attempts: int
+    write_requested_bytes: int
+    write_success_ops: int
+    write_completed_bytes: int
+    write_average_gap: float | None
+
+
+
+@dataclass(frozen=True)
+class FileCounters:
+    """
+    Stores the counters collected from the kernel for a file.
+    The order of the fields is the same as file_stats in the BPF program.
+    """
+    read_attempts: int = 0
+    read_requested_bytes: int = 0
+    read_success_ops: int = 0
+    read_completed_bytes: int = 0
+    read_gap_sum: int = 0
+    read_gap_count: int = 0
+    write_attempts: int = 0
+    write_requested_bytes: int = 0
+    write_success_ops: int = 0
+    write_completed_bytes: int = 0
+    write_gap_sum: int = 0
+    write_gap_count: int = 0
+
+
 class ErrorCode(IntEnum):
     SUCESS = 0
     PROCESS_NOT_FOUND = 1
     PROCESS_PID_REUSED = 2
     BACKEND_NOT_STARTED = 3
     INVALID_TIME_INTERVAL = 4
+    PATH_NOT_ABSOLUTE = 5
+    FILE_NOT_FOUND = 6
+    NOT_A_REGULAR_FILE = 7
+    NOT_A_DIRECTORY = 8
+    PERMISSION_DENIED = 9
+    FILE_NOT_TRACKED = 10
+    TRACKING_LIMIT_REACHED = 11
+    FILE_TRACER_UNAVAILABLE = 12
+
+

@@ -29,7 +29,7 @@ class WindowsBackend:
         if self._started:
             return
 
-        self.etw_source.start(self.aggregator.add_event)
+        self.etw_source.start(self.aggregator.add_event, self.aggregator.resolve_file_events)
         self._started = True
 
     def get_devices(self) -> list[Device]:
