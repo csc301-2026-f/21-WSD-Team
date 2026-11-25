@@ -475,6 +475,7 @@ def optimality_ratio(score, optimal_score):
     return float(score / optimal_score) * 100
 
 
+@pytest.mark.benchmark
 @pytest.mark.parametrize("seed", [1, 7, 42, 301, 2026])
 def test_prediction_benchmark(seed):
     rng = Random(seed)
@@ -761,6 +762,7 @@ def run_file_placement_benchmark(seed):
 BENCHMARK_ROUNDS = 100
 
 
+@pytest.mark.benchmark
 def test_file_placement_benchmark():
     """Evaluate file placement across randomized workloads."""
 
@@ -1070,6 +1072,7 @@ def run_ablation_benchmark(seed):
 
     return result
 
+@pytest.mark.benchmark
 def test_file_placement_ablation():
     """Measure component contributions; D4 Production denotes the legacy baseline."""
 

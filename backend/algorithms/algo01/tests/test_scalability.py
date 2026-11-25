@@ -10,6 +10,8 @@ from random import Random
 from statistics import mean
 from time import perf_counter
 
+import pytest
+
 from backend.algorithms.algo01.inputs import D2Inputs, DEFAULTS
 from backend.algorithms.algo01.candidates import collect_candidates
 from backend.algorithms.algo01.prediction import (
@@ -215,6 +217,7 @@ def measure_peak_memory(activity, algorithm):
         tracemalloc.stop()
 
 
+@pytest.mark.benchmark
 def test_scalability_benchmark():
     """Report scalability across increasing file counts."""
 
