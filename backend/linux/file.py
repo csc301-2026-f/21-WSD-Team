@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 import ctypes
 import os
+from pathlib import Path
 import stat
 import threading
 
@@ -337,13 +338,42 @@ def kernel_dev(st_dev: int) -> int:
     return (major << KERNEL_DEV_MINOR_BITS) | minor
 
 
-def resolve_file(file_path: str, file_id: int) -> File | ErrorCode:
+def validate_tracking_path(path: str) -> ErrorCode | None:
+    """Accept literal absolute paths and reject shell operators and control characters."""
+    if not isinstance(path, str):
+        return ErrorCode.INVALID_PATH
+    try:
+        os.fsencode(path)
+    except UnicodeEncodeError:
+        return ErrorCode.INVALID_PATH
+    if not os.path.isabs(path):
+        return ErrorCode.PATH_NOT_ABSOLUTE
+    if any(ord(ch) < 32 or ord(ch) == 127 or ch in ";&|`<>" for ch in path):
+        return ErrorCode.INVALID_PATH
+    if "$(" in path or "${" in path:
+        return ErrorCode.INVALID_PATH
+    return None
+
+
+def block_device_name(st_dev: int) -> str | None:
+    """Resolve a filesystem device number to its sysfs disk or logical device name."""
+    entry = Path("/sys/dev/block") / f"{os.major(st_dev)}:{os.minor(st_dev)}"
+    try:
+        device = entry.resolve(strict=True)
+        if (device / "partition").is_file():
+            device = device.parent
+        return device.name
+    except OSError:
+        return None
+
+
+def resolve_file(file_path: str, file_id: int) -> tuple[File, int] | ErrorCode:
     """
     Gets information about a file from its path.
 
     :param file_path: absolute path of the file
     :param file_id: file_id assigned to this file
-    :return: a File object, or an ErrorCode if the file cannot be used
+    :return: a File and its raw filesystem device number, or an ErrorCode
     """
     if not os.path.isabs(file_path):
         return ErrorCode.PATH_NOT_ABSOLUTE
@@ -366,8 +396,8 @@ def resolve_file(file_path: str, file_id: int) -> File | ErrorCode:
         file_id=file_id,
         absolute_path=real_path,
         inode=file_info.st_ino,
-        device=file_info.st_dev
-    )
+        device=block_device_name(file_info.st_dev),
+    ), file_info.st_dev
 
 
 def list_folder_files(folder_path: str) -> list[str] | ErrorCode:
@@ -378,8 +408,9 @@ def list_folder_files(folder_path: str) -> list[str] | ErrorCode:
     :param folder_path: absolute path of the folder
     :return: sorted list of file paths, or an ErrorCode
     """
-    if not os.path.isabs(folder_path):
-        return ErrorCode.PATH_NOT_ABSOLUTE
+    error = validate_tracking_path(folder_path)
+    if error is not None:
+        return error
 
     real_path = os.path.realpath(folder_path)
 

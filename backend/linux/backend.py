@@ -129,7 +129,7 @@ class LinuxBackend:
         example by an editor saving through rename, it keeps its record and counters continue.
 
         :param file_path: Absolute path to a regular file; symlinks are resolved
-        :return: File being tracked, or an ErrorCode: PATH_NOT_ABSOLUTE,
+        :return: File being tracked, or an ErrorCode: INVALID_PATH, PATH_NOT_ABSOLUTE,
                  FILE_NOT_FOUND, NOT_A_REGULAR_FILE, PERMISSION_DENIED,
                  TRACKING_LIMIT_REACHED or FILE_TRACER_UNAVAILABLE
         """
@@ -143,7 +143,7 @@ class LinuxBackend:
         the tracking limit is reached, the files tracked so far are returned.
 
         :param folder_path: Absolute path to a folder
-        :return: Files being tracked, or an ErrorCode: PATH_NOT_ABSOLUTE,
+        :return: Files being tracked, or an ErrorCode: INVALID_PATH, PATH_NOT_ABSOLUTE,
                  FILE_NOT_FOUND, NOT_A_DIRECTORY, PERMISSION_DENIED or
                  FILE_TRACER_UNAVAILABLE
         """

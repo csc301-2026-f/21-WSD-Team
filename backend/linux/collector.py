@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import os
 import stat
@@ -12,7 +12,7 @@ from .constants import *
 from .models import DriveMetric, ProcessMetric, Drive, ErrorCode, File, FileSample, FileMetric
 from .drive import sample_all_drive
 from .process import sample_all_process
-from .file import FileIOProbe, COUNTER_FIELDS, resolve_file
+from .file import FileIOProbe, COUNTER_FIELDS, block_device_name, resolve_file, validate_tracking_path
 
 
 class DiskIOCollector:
@@ -139,6 +139,7 @@ class ProcessIOCollector:
 class _TrackedFile:
     file: File
     slot: int
+    st_dev: int
     kernel_key: tuple[int, int, int] | None = None
 
 
@@ -202,6 +203,9 @@ class FileIOCollector:
             self._history.clear()
 
     def track(self, file_path: str) -> File | ErrorCode:
+        error = validate_tracking_path(file_path)
+        if error is not None:
+            return error
         file = resolve_file(file_path, self._next_id)
         self._next_id += 1
         if isinstance(file, ErrorCode):
@@ -210,7 +214,7 @@ class FileIOCollector:
         with self._lock:
             if self._tracer_failed:
                 return ErrorCode.FILE_TRACER_UNAVAILABLE
-            return self._track_locked(file)
+            return self._track_locked(*file)
 
     def track_many(self, file_paths: list[str]) -> tuple[File, ...] | ErrorCode:
         resolved = []
@@ -225,7 +229,7 @@ class FileIOCollector:
             for file in resolved:
                 if isinstance(file, ErrorCode):
                     continue
-                result = self._track_locked(file)
+                result = self._track_locked(*file)
                 if result is ErrorCode.TRACKING_LIMIT_REACHED:
                     break
                 if isinstance(result, File) and result not in files:
@@ -310,12 +314,12 @@ class FileIOCollector:
             sleep_time = max(0, next_sample - time.monotonic())
             self._stop_event.wait(sleep_time)
 
-    def _track_locked(self, file: File) -> File | ErrorCode:
+    def _track_locked(self, file: File, st_dev: int) -> File | ErrorCode:
         existing = self._tracked.get(file.absolute_path)
         if existing is not None:
             return existing.file
 
-        stat_key = (file.device, file.inode)
+        stat_key = (st_dev, file.inode)
         owner = self._stat_owners.get(stat_key)
         if owner is not None:
             return self._tracked[owner].file
@@ -324,7 +328,7 @@ class FileIOCollector:
             return ErrorCode.TRACKING_LIMIT_REACHED
 
         slot = self._free_slots.pop()
-        tracked = _TrackedFile(file=file, slot=slot)
+        tracked = _TrackedFile(file=file, slot=slot, st_dev=st_dev)
 
         if self._probe is not None:
             self._probe.reset(slot)
@@ -358,7 +362,7 @@ class FileIOCollector:
                 self._probe.remove(key)
 
     def _release_locked(self, path: str, tracked: _TrackedFile) -> None:
-        stat_key = (tracked.file.device, tracked.file.inode)
+        stat_key = (tracked.st_dev, tracked.file.inode)
         if self._stat_owners.get(stat_key) == path:
             del self._stat_owners[stat_key]
 
@@ -383,13 +387,14 @@ class FileIOCollector:
 
             sizes[path] = st.st_size
             new_stat_key = (st.st_dev, st.st_ino)
-            old_stat_key = (tracked.file.device, tracked.file.inode)
+            old_stat_key = (tracked.st_dev, tracked.file.inode)
 
             if new_stat_key != old_stat_key:
                 if self._stat_owners.get(old_stat_key) == path:
                     del self._stat_owners[old_stat_key]
                 self._stat_owners[new_stat_key] = path
-                tracked.file = File(absolute_path=path, inode=st.st_ino, device=st.st_dev)
+                tracked.st_dev = st.st_dev
+                tracked.file = replace(tracked.file, inode=st.st_ino, device=block_device_name(st.st_dev))
                 self._bind_locked(path, tracked)
             elif tracked.kernel_key is None:
                 self._bind_locked(path, tracked)

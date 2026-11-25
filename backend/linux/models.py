@@ -209,7 +209,7 @@ class File:
     file_id: int
     absolute_path: str
     inode: int = field(compare=False)
-    device: int = field(compare=False)
+    device: str | None = field(compare=False)
 
 
 @dataclass(frozen=True)
@@ -288,3 +288,4 @@ class ErrorCode(IntEnum):
     FILE_ALREADY_EXISTS = 15
     MOVE_FAILED = 16
     MOVE_CANCELLED = 17
+    INVALID_PATH = 18
