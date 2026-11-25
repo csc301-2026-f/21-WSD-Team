@@ -130,40 +130,42 @@ class SQLiteHistoryRepository:
             )
             conn.commit()
     
-    # For Shengrong (Core): Safe no-op ingestion for file activity ---
+    # For Shengrong (Core): Ingests file-level activity telemetry ---
     def ingest_file_activity(self, samples: List[Dict[str, Any]]) -> None:
-            if not samples:
-                return
-            records = [
-                (
-                    s.get("host_id", "default_host"),
-                    s.get("file_id"),
-                    s.get("path"),
-                    s.get("device_id"),
-                    s["window_start_utc"],
-                    s["window_end_utc"],
-                    s.get("read_bytes"),
-                    s.get("write_bytes"),
-                    s.get("read_ops"),
-                    s.get("write_ops"),
-                    s.get("file_size_bytes"),
-                    s.get("source", "os_agent"),
-                )
-                for s in samples
-            ]
-            with self._get_connection() as conn:
-                conn.cursor().executemany(
-                    """
-                    INSERT INTO file_activity (
-                        host_id, file_id, path, device_id,
-                        window_start_utc, window_end_utc,
-                        read_bytes, write_bytes, read_ops, write_ops,
-                        file_size_bytes, source
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    records,
-                )
-                conn.commit()
+        if not samples:
+            return
+        records = [
+            (
+                s.get("host_id", "default_host"),
+                s.get("file_id"),
+                s.get("path"),
+                s.get("device_id"),
+                s["window_start_utc"],
+                s["window_end_utc"],
+                s.get("read_bytes"),
+                s.get("write_bytes"),
+                s.get("read_ops"),
+                s.get("write_ops"),
+                s.get("file_size_bytes"),
+                s.get("read_average_gap"),
+                s.get("write_average_gap"),
+                s.get("source", "os_agent"),
+            )
+            for s in samples
+        ]
+        with self._get_connection() as conn:
+            conn.cursor().executemany(
+                """
+                INSERT INTO file_activity (
+                    host_id, file_id, path, device_id,
+                    window_start_utc, window_end_utc,
+                    read_bytes, write_bytes, read_ops, write_ops,
+                    file_size_bytes, read_average_gap, write_average_gap, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                records,
+            )
+            conn.commit()
 
     # For John & Jesslyn (Algorithm) & Shengrong (HTTP-01f): Device historical range and aggregation
     def query_device_history(
@@ -304,7 +306,9 @@ class SQLiteHistoryRepository:
                 COALESCE(SUM(read_ops), 0) AS total_read_ops,
                 COALESCE(SUM(write_ops), 0) AS total_write_ops,
                 (COALESCE(SUM(read_bytes), 0) + COALESCE(SUM(write_bytes), 0)) AS total_bytes,
-                MAX(file_size_bytes) AS file_size_bytes
+                MAX(file_size_bytes) AS file_size_bytes,
+                AVG(read_average_gap) AS avg_read_average_gap,
+                AVG(write_average_gap) AS avg_write_average_gap
             FROM file_activity
             WHERE {where_clause}
             GROUP BY COALESCE(path, file_id)
@@ -346,7 +350,7 @@ class SQLiteHistoryRepository:
                 host_id, file_id, path, device_id,
                 window_start_utc, window_end_utc,
                 read_bytes, write_bytes, read_ops, write_ops,
-                file_size_bytes, source
+                file_size_bytes, read_average_gap, write_average_gap, source
             FROM file_activity
             WHERE {where_clause}
             ORDER BY window_start_utc ASC

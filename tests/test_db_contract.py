@@ -231,6 +231,8 @@ def test_ingest_and_query_file_heat(repo):
             "read_ops": 2,
             "write_ops": 10,
             "file_size_bytes": 204800,
+            "read_average_gap": 0.0,
+            "write_average_gap": 512.5,
             "source": "os_agent",
         },
         {
@@ -245,6 +247,8 @@ def test_ingest_and_query_file_heat(repo):
             "read_ops": 4,
             "write_ops": 6,
             "file_size_bytes": 207800,
+            "read_average_gap": 1024.0,
+            "write_average_gap": 0.0,
             "source": "os_agent",
         },
         {
@@ -259,6 +263,8 @@ def test_ingest_and_query_file_heat(repo):
             "read_ops": 50,
             "write_ops": 0,
             "file_size_bytes": 104857600,
+            "read_average_gap": None,
+            "write_average_gap": None,
             "source": "os_agent",
         },
     ]
@@ -286,6 +292,61 @@ def test_ingest_and_query_file_heat(repo):
     assert syslog_heat[0]["sample_count"] == 2
     assert syslog_heat[0]["total_read_ops"] == 6
     assert syslog_heat[0]["total_write_ops"] == 16
+    assert syslog_heat[0]["avg_read_average_gap"] == 512.0
+    assert syslog_heat[0]["avg_write_average_gap"] == 256.25
+
+
+def test_query_file_activity_windows_with_gaps(repo):
+    samples = [
+        {
+            "host_id": "host_1",
+            "file_id": "f_100",
+            "path": "/data/seq.bin",
+            "device_id": "nvme0n1",
+            "window_start_utc": "2026-10-08T20:00:00Z",
+            "window_end_utc": "2026-10-08T20:01:00Z",
+            "read_bytes": 1048576,
+            "write_bytes": 0,
+            "read_ops": 16,
+            "write_ops": 0,
+            "file_size_bytes": 10485760,
+            "read_average_gap": 0.0,
+            "write_average_gap": None,
+            "source": "os_agent",
+        },
+        {
+            "host_id": "host_1",
+            "file_id": "f_101",
+            "path": "/data/random.bin",
+            "device_id": "nvme0n1",
+            "window_start_utc": "2026-10-08T20:00:00Z",
+            "window_end_utc": "2026-10-08T20:01:00Z",
+            "read_bytes": 524288,
+            "write_bytes": 262144,
+            "read_ops": 128,
+            "write_ops": 64,
+            "file_size_bytes": 20971520,
+            "read_average_gap": 65536.5,
+            "write_average_gap": 32768.25,
+            "source": "os_agent",
+        },
+    ]
+    repo.ingest_file_activity(samples)
+
+    windows = repo.query_file_activity_windows(
+        start_utc="2026-10-08T20:00:00Z",
+        end_utc="2026-10-08T20:01:00Z",
+        device_ids=["nvme0n1"],
+    )
+    assert len(windows) == 2
+
+    seq_window = next(w for w in windows if w["file_id"] == "f_100")
+    assert seq_window["read_average_gap"] == 0.0
+    assert seq_window["write_average_gap"] is None
+
+    rand_window = next(w for w in windows if w["file_id"] == "f_101")
+    assert rand_window["read_average_gap"] == 65536.5
+    assert rand_window["write_average_gap"] == 32768.25
 
 
 # save_settings / get_settings
@@ -364,3 +425,68 @@ def test_list_recommendations_requires_approval_is_bool(repo):
 def test_save_recommendations_empty_list_is_noop(repo):
     repo.save_recommendations([])  # must not raise
     assert repo.list_recommendations() == []
+
+
+# file_subscriptions / file_move_records (File migration & resume)
+
+def test_file_subscription_lifecycle(repo):
+    sub = {
+        "subscription_id": "sub_1",
+        "path": "/data/hot_dir",
+        "target_type": "folder",
+        "status": "active",
+    }
+    repo.upsert_file_subscription(sub)
+    active = repo.list_file_subscriptions(status="active")
+    assert len(active) == 1
+    assert active[0]["path"] == "/data/hot_dir"
+    assert active[0]["target_type"] == "folder"
+
+    # Upsert on conflict (same path, updated status)
+    repo.upsert_file_subscription({**sub, "status": "paused"})
+    all_subs = repo.list_file_subscriptions()
+    assert len(all_subs) == 1
+    assert all_subs[0]["status"] == "paused"
+    assert repo.list_file_subscriptions(status="active") == []
+
+
+def test_file_move_record_lifecycle_and_resume(repo):
+    move = {
+        "move_id": "move_1",
+        "source_path": "/mnt/hdd/large.dat",
+        "target_path": "/mnt/ssd/large.dat",
+        "bytes_total": 104857600,
+        "bytes_moved": 0,
+        "status": "approved",
+    }
+    repo.save_file_move_record(move)
+
+    # Incomplete moves for resume
+    incomplete = repo.get_incomplete_file_moves()
+    assert len(incomplete) == 1
+    assert incomplete[0]["move_id"] == "move_1"
+    assert incomplete[0]["status"] == "approved"
+
+    # Update progress to in_progress
+    repo.save_file_move_record({
+        **move,
+        "bytes_moved": 52428800,
+        "status": "in_progress",
+        "started_at_utc": "2026-10-08T21:00:00Z",
+    })
+    incomplete = repo.get_incomplete_file_moves()
+    assert len(incomplete) == 1
+    assert incomplete[0]["bytes_moved"] == 52428800
+    assert incomplete[0]["status"] == "in_progress"
+
+    # Complete the move
+    repo.save_file_move_record({
+        **move,
+        "bytes_moved": 104857600,
+        "status": "completed",
+        "completed_at_utc": "2026-10-08T21:05:00Z",
+    })
+    assert repo.get_incomplete_file_moves() == []
+    completed = repo.list_file_move_records(status="completed")
+    assert len(completed) == 1
+    assert completed[0]["bytes_moved"] == 104857600

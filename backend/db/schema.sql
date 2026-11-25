@@ -92,6 +92,8 @@ CREATE TABLE IF NOT EXISTS file_activity (
     read_ops INTEGER,
     write_ops INTEGER,
     file_size_bytes INTEGER,
+    read_average_gap REAL,
+    write_average_gap REAL,
     source TEXT NOT NULL
 );
 
