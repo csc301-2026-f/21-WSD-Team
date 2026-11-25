@@ -25,6 +25,9 @@ class DataBaseAdaptor:
                               end_utc: str, bucket_seconds: int | None = None) -> list[dict]:
         return self.repository.query_process_history(process_instance_ids, start_utc, end_utc, bucket_seconds)
 
+    def query_file_activity_windows(self, start_utc, end_utc, path = None, device_ids = None, limit = 5000):
+        return self.repository.query_file_activity_windows(start_utc, end_utc, path, device_ids, limit)
+
     def query_file_heat(self, start_utc: str, end_utc: str, limit: int = 100,
                         device_ids: list[str] | None = None) -> list[dict]: # CONDITIONAL
         return self.repository.query_file_heat(start_utc, end_utc, limit, device_ids)

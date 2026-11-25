@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from .demo_data import load_demo_input
 import logging
 import os
@@ -83,6 +83,16 @@ class CoreService:
             return []
         return self.agent.get_file_activity(8)
 
+    def save_current_file_activity(self):
+        """
+        Save current file activity to the database
+
+        Flow: Agent -> CORE -> DB
+        """
+        if not self.demo_mode:
+            file_activity = self.agent.get_file_activity(60)
+            self.database.ingest_file_activity(file_activity)
+
     def get_historical_process_activity(self, process_instance_ids, start_utc,
                                         end_utc, bucket_seconds = None):
         """
@@ -112,8 +122,10 @@ class CoreService:
             host_id = None
             if devices:
                 host_id = devices[0].get("host_id")
-
-            file_activity = self.agent.get_file_activity(60)
+            current = datetime.now(timezone.utc)
+            start_utc = (current - timedelta(minutes = 60)).isoformat().replace("+00:00", "Z")
+            end_utc = current.isoformat().replace("+00:00", "Z")
+            file_activity = self.database.query_file_activity_windows(start_utc, end_utc)
 
             # Generate evaluation time AFTER collecting file activity
             evaluation_time_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -126,6 +138,7 @@ class CoreService:
             mode_config= {} #Not required in D2
             capabilities = self.capabilities or {} #TODO agent not done
 
+        # Check mode to use
         if mode == "ssd_caching":
             recommendations =self.algorithm.evaluate_ssd(devices, realtime, history, mode_config, capabilities)
         else:

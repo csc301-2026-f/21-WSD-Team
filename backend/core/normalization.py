@@ -127,6 +127,8 @@ def normalize_linux_file_activity(file_stats, host_id) -> list[dict]:
                            "write_bytes": file_matric.write_completed_bytes,
                            "read_ops": file_matric.read_success_ops,
                            "write_ops": file_matric.write_success_ops,
+                           "read_average_gap": file_matric.read_average_gap,
+                           "write_average_gap": file_matric.write_average_gap,
                            "file_size_bytes": file_size, #TODO data not provide, using the suggestion
                            "source": "linux_ebpf" #suggested by contract
                            }
