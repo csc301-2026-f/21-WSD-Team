@@ -131,6 +131,9 @@ def create_http_api(core_service):
         path = action.get("path")
         if os.path.isfile(path):
             file = [file for file in core_service.agent.list_tracked_files() if file.absolute_path == path]
+            if not file:
+                response = fail_response("NOT_FOUND", "File is not tracked")
+                return jsonify(response)
             core_service.untrack_file(file[0])
         elif os.path.isdir(path):
             folder = core_service.track_folders[path]
