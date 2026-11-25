@@ -1,12 +1,12 @@
 [
   {
-    "recommendation_id": "raid0-97e94e4c0013d49283872858",
+    "recommendation_id": "raid0-1307875d661b1559d42f619a",
     "mode": "raid0",
     "action": "move",
     "file_id": "sample-video",
     "source_device_id": "hdd-1",
     "target_device_id": "ssd-1",
-    "reason": "MOCK: sample-video: 120 reads (2 reads/s). Consider hdd-1 -> ssd-1. D2 read-activity heuristic; SSD speedup is unmeasured.",
+    "reason": "MOCK: sample-video: 120 reads (2 reads/s). D2 read-activity heuristic. Consider hdd-1 -> ssd-1. SSD speedup is unmeasured.",
     "created_at_utc": "2026-10-17T12:00:00Z",
     "requires_approval": true,
     "estimated_benefit": null,

@@ -12,6 +12,7 @@ from .inputs import PolicyInputError, validate_inputs
 from .candidates import collect_candidates
 from .greedy_selection import select_recommendations
 from .strategy_controller import select_files
+from .prediction import apply_predictions
 
 
 def _has_mock_activity(history):
@@ -39,6 +40,16 @@ def evaluate_raid0_policy(devices: list[dict], realtime: dict, history: dict,
     if not budgets:
         warnings.add("no_eligible_ssd")
     candidates = collect_candidates(context, device_map, warnings)
+
+    # apply predictive migration scores before file selection
+    if candidates and budgets:
+        candidates = apply_predictions(
+            candidates,
+            context.activity,
+            context.host,
+            context.now
+        )
+
     result = select_recommendations(candidates, budgets, context, warnings,
     execution_supported=capabilities.get("file_move") is True,
     selector=select_files)
