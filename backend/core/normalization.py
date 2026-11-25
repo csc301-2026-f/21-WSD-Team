@@ -120,7 +120,7 @@ def normalize_linux_file_activity(file_stats, host_id) -> list[dict]:
             metric_dict = {"host_id": host_id,
                            "file_id": str(file_matric.file.file_id),
                            "path": file_matric.file.absolute_path,
-                           "device_id": None, #TODO data not provide
+                           "device_id": file_matric.file.device,
                            "window_start_utc": file_matric.timestamp,
                            "window_end_utc": end_utc,
                            "read_bytes": file_matric.read_completed_bytes,
