@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from .response import success_response, fail_response
 from datetime import datetime
-
+import os
 
 def is_valid_utc(value):
     """
@@ -106,15 +106,39 @@ def create_http_api(core_service):
 
     @http_api.post("/api/v1/files/subscriptions")
     def track_file_folder():
-        pass
+        action = request.get_json()
+        path = action.get("path")
+        if os.path.isfile(path):
+            file = core_service.track_file(path)
+        elif os.path.isdir(path):
+            file = core_service.track_folder(path)
+        else:
+            response = fail_response("INVALID_PATH", "Tracking path is invalid")
+            return jsonify(response)
+        response = success_response(path)
+        return jsonify(response)
 
     @http_api.delete("/api/v1/files/subscriptions")
     def untrack_file_folder():
-        pass
+        action = request.get_json()
+        path = action.get("path")
+        if os.path.isfile(path):
+            file = [file for file in core_service.agent.list_tracked_files() if file.absolute_path == path]
+            core_service.untrack_file(file[0])
+        elif os.path.isdir(path):
+            folder = core_service.track_folders[path]
+            core_service.untrack_folder(folder)
+        else:
+            response = fail_response("INVALID_PATH", "Untracking path is invalid")
+            return jsonify(response)
+        response = success_response(path)
+        return jsonify(response)
 
     @http_api.get("/api/v1/files/subscriptions")
     def list_subscriptions():
-        pass
+        subscriptions = core_service.list_file_subscriptions()
+        response = success_response(subscriptions)
+        return jsonify(response)
 
     @http_api.errorhandler(404)
     def handle_not_found(error):
