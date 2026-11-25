@@ -118,5 +118,19 @@ class LinuxAgentAdapter:
             raise RuntimeError(f"Folder untracking error: {untrack.name}")
         return untrack
 
+    def get_actual_path(self, file_path: str):
+        path = self.backend.get_actual_path(file_path)
+        if isinstance(path, ErrorCode):
+            logger.error(f"Actual path error: {path}")
+            raise RuntimeError(f"Actual path error: {path}")
+        return path
+
+    def start_move_file(self, file_path: str, destination_mount: str):
+        move_handle = self.backend.start_move_file(file_path, destination_mount)
+        if isinstance(move_handle, ErrorCode):
+            logger.error("Invalid file move")
+            raise RuntimeError("Invalid file move")
+        return move_handle
+
     def close(self):
         self.backend.close()

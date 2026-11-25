@@ -49,3 +49,12 @@ class DataBaseAdaptor:
 
     def list_file_subscriptions(self, status = None):
         return self.repository.list_file_subscriptions(status)
+
+    def save_file_move_record(self, record):
+        return self.repository.save_file_move_record(record)
+
+    def list_file_move_records(self, status, limit = 100):
+        return self.repository.list_file_move_records(status, limit)
+
+    def get_incomplete_file_moves(self):
+        return self.repository.get_incomplete_file_moves()

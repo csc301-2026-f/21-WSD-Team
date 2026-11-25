@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 from datetime import datetime, timezone, timedelta
 from .demo_data import load_demo_input
+from backend.linux.models import ErrorCode
 import logging
 import os
+import uuid
 logger = logging.getLogger(__name__)
 
 class CoreService:
@@ -15,6 +17,7 @@ class CoreService:
         self.demo_mode = demo_mode
         self.host_id = host_id
         self.track_folders = {}
+        self.movements = {}
 
     def start(self)-> None:
         if not self.demo_mode:
@@ -217,3 +220,33 @@ class CoreService:
                                                 "target_type": "folder",
                                                 "status": "removed"})
         del self.track_folders[path]
+
+    def execute_movement(self, file_path, destination_mount, recommendation_id = None):
+        """
+        Execute file movement
+        """
+        move_id = str(uuid.uuid4())
+        move_handle = self.agent.start_move_file(file_path, destination_mount)
+        self.movements[move_id] = move_handle
+        record = {"move_id": move_id,
+                  "recommendation_id": recommendation_id,
+                  "host_id": self.host_id,
+                  "source_path": move_handle.source_path,
+                  "target_path": move_handle.target_path,
+                  "bytes_total": move_handle.total_bytes,
+                  "status": "in_progress",
+                  "started_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                  }
+        self.database.save_file_move_record(record)
+        return move_id
+
+    def get_action_status(self, action_id):
+        action = self.movements[action_id]
+        result = action.result()
+        if isinstance(result, ErrorCode):
+            result = result.name
+            logger.error(f"File movement error: {result}")
+        return {"progress": action.progress(),
+                "is_running": action.is_running(),
+                "result": result
+                }

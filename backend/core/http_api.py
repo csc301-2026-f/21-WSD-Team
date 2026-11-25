@@ -98,11 +98,18 @@ def create_http_api(core_service):
 
     @http_api.post("/api/v1/actions/execute")
     def execute_move_action():
-        pass
+        action = request.get_json()
+        file_path = action.get("file_path")
+        destination_mount = action.get("destination_mount")
+        move_id = core_service.execute_movement(file_path, destination_mount)
+        response = success_response(move_id)
+        return jsonify(response)
 
-    @http_api.get("/api/v1/actions/{action_id}")
+    @http_api.get("/api/v1/actions/<action_id>")
     def get_action_status(action_id):
-        pass
+        status = core_service.get_action_status(action_id)
+        response = success_response(status)
+        return jsonify(response)
 
     @http_api.post("/api/v1/files/subscriptions")
     def track_file_folder():
