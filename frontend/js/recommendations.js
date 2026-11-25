@@ -16,6 +16,15 @@ let isRefreshing = false;
 let currentRecommendations = [];
 const filterInput = document.getElementById("recommendation-filter");
 const sortSelect = document.getElementById("recommendation-sort");
+const modeSelect = document.getElementById("recommendation-mode");
+
+function updateRefreshAvailability() {
+    const isCacheMode = modeSelect?.value === "ssd_caching";
+    refreshButton.disabled = isRefreshing || isCacheMode;
+    refreshButton.title = isCacheMode
+        ? "The active API refresh currently generates RAID 0 recommendations only."
+        : "Generate RAID 0 recommendations from current backend data.";
+}
 
 /* ELEMENT CREATION */
 
@@ -262,13 +271,17 @@ async function loadRecommendations() {
         "Loading saved recommendations...";
 
     try {
-        const recommendations = await getRecommendations();
+        const mode = modeSelect?.value || undefined;
+        const recommendations = await getRecommendations(mode);
 
         const displayedCount =
             renderRecommendations(recommendations);
 
+        const modeLabel = mode === "raid0"
+            ? "RAID 0 / file-level pooling"
+            : mode === "ssd_caching" ? "SSD caching" : "all modes";
         statusElement.textContent =
-            `${displayedCount} saved recommendation(s).`;
+            `${displayedCount} saved recommendation(s) for ${modeLabel}.`;
 
     } catch (error) {
         console.error("Failed to load recommendations:", error);
@@ -289,8 +302,7 @@ async function handleRefresh() {
     if (isRefreshing) return;
 
     isRefreshing = true;
-
-    refreshButton.disabled = true;
+    updateRefreshAvailability();
     refreshButton.textContent = "Refreshing...";
     statusElement.textContent = "Generating recommendations...";
 
@@ -326,7 +338,7 @@ async function handleRefresh() {
 
     } finally {
         isRefreshing = false;
-        refreshButton.disabled = false;
+        updateRefreshAvailability();
         refreshButton.textContent = "Refresh Recommendations";
     }
 }
@@ -339,7 +351,12 @@ if (!container || !statusElement || !refreshButton) {
     );
 } else {
     refreshButton.addEventListener("click", handleRefresh);
+    modeSelect?.addEventListener("change", () => {
+        updateRefreshAvailability();
+        loadRecommendations();
+    });
     filterInput?.addEventListener("input", () => renderRecommendations(currentRecommendations));
     sortSelect?.addEventListener("change", () => renderRecommendations(currentRecommendations));
+    updateRefreshAvailability();
     loadRecommendations();
 }

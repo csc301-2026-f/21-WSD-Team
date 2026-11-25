@@ -7,10 +7,10 @@ const links = [
     ["Disk Usage Statistics", "stats.html", "Monitoring"],
     ["Storage Analytics", "analytics.html", "Monitoring"],
     ["Process Analytics", "process_analytics.html", "Monitoring"],
+    ["File I/O Monitoring", "file_io.html", "Monitoring"],
     ["Drive Management", "drives.html", "Storage"],
     ["Storage Configuration", "settings.html", "Storage"],
     ["Recommendations", "recommendations.html", "Optimization"],
-    ["Task Priorities", "task_priority.html", "Optimization"],
     ["Data Export", "export.html", "Reports"],
     ["About", "about.html", "Information"],
     ["Group Info", "authors.html", "Information"]

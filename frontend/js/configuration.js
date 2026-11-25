@@ -4,6 +4,8 @@ import { getCapabilities } from "./api.js";
 
 const body = document.getElementById("capabilities-body");
 const status = document.getElementById("configuration-status");
+const modeRadios = [...document.querySelectorAll('input[name="storage-mode"]')];
+const modeSelectionNote = document.getElementById("mode-selection-note");
 const features = [
     ["Device metrics", "device_metrics"],
     ["Process metrics", "process_metrics"],
@@ -15,7 +17,36 @@ const features = [
     ["Dry run action", "dry_run_action"]
 ];
 
+function updateSelection() {
+    const selected = modeRadios.find(radio => radio.checked)?.value;
+    const label = selected === "ssd_caching" ? "SSD Caching" : "RAID 0 / File-Level Pooling";
+    modeSelectionNote.textContent = `${label} selected for this page preview. This does not change system configuration.`;
+}
+
+function renderModeStatus(capabilities, key, badgeId, detailId, implementationDetail) {
+    const badge = document.getElementById(badgeId);
+    const detail = document.getElementById(detailId);
+    const value = capabilities && Object.hasOwn(capabilities, key) ? capabilities[key] : null;
+    if (value === true) {
+        badge.textContent = "Reported available";
+        badge.dataset.state = "available";
+        detail.textContent = `Backend reports support. ${implementationDetail}`;
+    } else if (value === false) {
+        badge.textContent = "Unavailable";
+        badge.dataset.state = "unavailable";
+        detail.textContent = `Backend reports this feature is unavailable. ${implementationDetail}`;
+    } else {
+        badge.textContent = "Not reported";
+        badge.dataset.state = "unknown";
+        detail.textContent = `The backend did not report this capability. ${implementationDetail}`;
+    }
+}
+
 function render(capabilities) {
+    renderModeStatus(capabilities, "file_level_pooling", "raid0-status-badge", "raid0-status-detail",
+        "WSD does not expose mergerfs mount configuration or a mode-switch API.");
+    renderModeStatus(capabilities, "ssd_caching", "cache-status-badge", "cache-status-detail",
+        "Cache routing and execution are not exposed through the current API.");
     body.replaceChildren();
     for (const [label, key] of features) {
         const row = document.createElement("tr");
@@ -29,10 +60,13 @@ function render(capabilities) {
     }
 }
 
+modeRadios.forEach(radio => radio.addEventListener("change", updateSelection));
+updateSelection();
+
 getCapabilities().then(capabilities => {
     render(capabilities);
     status.textContent = "Capabilities loaded from the connected backend.";
 }).catch(error => {
     render(null);
-    status.textContent = `Could not load backend capabilities: ${error.message}`;
+    status.textContent = `Could not load backend capabilities: ${error.message}. Mode availability is unknown.`;
 });
