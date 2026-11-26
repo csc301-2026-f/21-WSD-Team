@@ -14,6 +14,8 @@ from .algo_adapter import AlgorithmAdapter
 from .db_adapter import DataBaseAdaptor
 from .http_api import create_http_api
 from .service import CoreService
+from ..algorithms.algo02 import evaluate_ssd_caching_policy
+
 
 def create_application(*, demo_mode=False, data_dir=None):
     # Chk data storage location
@@ -67,7 +69,7 @@ def create_application(*, demo_mode=False, data_dir=None):
 
     # Adapter initialization
     database_adapter = DataBaseAdaptor(active_repository)
-    algorithm_adapter = AlgorithmAdapter(evaluate_raid0_policy)
+    algorithm_adapter = AlgorithmAdapter(evaluate_raid0_policy, evaluate_ssd_caching_policy)
 
     capabilities = {
         "device_metrics": not demo_mode,

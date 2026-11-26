@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from dataclasses import asdict
-
+from datetime import datetime, timedelta
+import os
 
 def size_to_bytes(size):
     if size is None:
@@ -103,6 +104,33 @@ def normalize_linux_process_metric(metrics, host_id) -> list[dict]:
         normalized_process_matric.append(metric_dict)
     return normalized_process_matric
 
-def normalize_linux_file_activity():
-    #TODO agent not done
-    pass
+def normalize_linux_file_activity(file_stats, host_id) -> list[dict]:
+    #TODO not yet decided
+    normalized_file_io = []
+    for file in file_stats:
+        file_matric = file_stats[file]
+        if file_matric is not None:
+            start_time = datetime.fromisoformat(file_matric.timestamp.replace("Z", "+00:00"))
+            end_time = start_time + timedelta(seconds = file_matric.duration)
+            end_utc = end_time.isoformat().replace("+00:00", "Z")
+            try:
+                file_size = os.stat(file_matric.file.absolute_path).st_size
+            except OSError:
+                file_size = None
+            metric_dict = {"host_id": host_id,
+                           "file_id": str(file_matric.file.file_id),
+                           "path": file_matric.file.absolute_path,
+                           "device_id": file_matric.file.device,
+                           "window_start_utc": file_matric.timestamp,
+                           "window_end_utc": end_utc,
+                           "read_bytes": file_matric.read_completed_bytes,
+                           "write_bytes": file_matric.write_completed_bytes,
+                           "read_ops": file_matric.read_success_ops,
+                           "write_ops": file_matric.write_success_ops,
+                           "read_average_gap": file_matric.read_average_gap,
+                           "write_average_gap": file_matric.write_average_gap,
+                           "file_size_bytes": file_size, #TODO data not provide, using the suggestion
+                           "source": "linux_ebpf" #suggested by contract
+                           }
+            normalized_file_io.append(metric_dict)
+    return normalized_file_io
