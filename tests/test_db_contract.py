@@ -349,6 +349,38 @@ def test_query_file_activity_windows_with_gaps(repo):
     assert rand_window["write_average_gap"] == 32768.25
 
 
+def test_query_file_activity_windows_returns_latest_desc_with_limit(repo):
+    # Ingest 3 windows ordered across time; with limit=2, query must return the latest 2 (DESC)
+    samples = [
+        {
+            "host_id": "host_1",
+            "file_id": f"f_{i}",
+            "path": f"/data/file_{i}.bin",
+            "device_id": "nvme0n1",
+            "window_start_utc": f"2026-10-08T20:0{i}:00Z",
+            "window_end_utc": f"2026-10-08T20:0{i}:59Z",
+            "read_bytes": 1000 * i,
+            "write_bytes": 0,
+            "read_ops": i,
+            "write_ops": 0,
+            "file_size_bytes": 10000,
+            "source": "os_agent",
+        }
+        for i in range(1, 4)
+    ]
+    repo.ingest_file_activity(samples)
+
+    windows = repo.query_file_activity_windows(
+        start_utc="2026-10-08T20:00:00Z",
+        end_utc="2026-10-08T20:10:00Z",
+        limit=2,
+    )
+    assert len(windows) == 2
+    # Most recent first
+    assert windows[0]["file_id"] == "f_3"
+    assert windows[1]["file_id"] == "f_2"
+
+
 # save_settings / get_settings
 
 def test_settings_roundtrip(repo):

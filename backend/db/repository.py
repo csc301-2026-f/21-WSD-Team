@@ -353,7 +353,7 @@ class SQLiteHistoryRepository:
                 file_size_bytes, read_average_gap, write_average_gap, source
             FROM file_activity
             WHERE {where_clause}
-            ORDER BY window_start_utc ASC
+            ORDER BY window_start_utc DESC
             LIMIT ?
         """
         with self._get_connection() as conn:
