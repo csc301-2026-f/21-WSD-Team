@@ -1,5 +1,25 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
+"""Tests for Shengrong's D4 CORE work (branch shengrong/d4-core).
+
+Covers:
+  - File subscriptions: track / untrack files and folders, through
+    LinuxAgentAdapter, CoreService and the HTTP API
+    (POST / DELETE / GET /api/v1/files/subscriptions)
+  - Error handling: backend ErrorCodes become errors, bad requests get a
+    JSON error instead of a crash
+  - Saving file activity every minute, and recommendations reading it back
+  - ssd_caching mode in /api/v1/recommendations/refresh
+  - Move actions: POST /api/v1/actions/execute and GET /api/v1/actions/<id>
+
+Fakes stand in for the Linux backend and the database, so these tests run on
+any OS and on CI without eBPF. The last section uses the real SQLite
+repository and runs once Sahil's database branch (db_file_io) is merged.
+
+Tests marked xfail(strict=True) describe behaviour the API contract asks for
+but the code does not do yet. When the code is fixed the test "XPASSes" and
+fails the run, as a reminder to delete the xfail marker.
+"""
 import dataclasses
 import logging
 import os
@@ -32,6 +52,32 @@ class FakeFile:
     absolute_path: str
 
 
+class FakeMoveHandle:
+    """Stands in for backend.linux.file_operation.MoveHandle."""
+
+    def __init__(self, source_path, destination_path, total_bytes=1000):
+        self.source_path = source_path
+        self.destination_path = destination_path
+        self.total_bytes = total_bytes
+        self.fake_progress = 0.0
+        self.fake_running = True
+        self.fake_result = None
+
+    def progress(self):
+        return self.fake_progress
+
+    def is_running(self):
+        return self.fake_running
+
+    def result(self):
+        return self.fake_result
+
+    def finish(self, result):
+        self.fake_running = False
+        self.fake_progress = 1.0 if not isinstance(result, ErrorCode) else self.fake_progress
+        self.fake_result = result
+
+
 class FakeTrackingBackend:
     """Fake Linux backend that tracks files in memory.
 
@@ -44,6 +90,7 @@ class FakeTrackingBackend:
         self.errors = {}
         self.file_stats = {}
         self.file_stats_calls = []
+        self.moves = []
 
     def _error(self, name):
         return self.errors.get(name)
@@ -101,6 +148,13 @@ class FakeTrackingBackend:
         self.file_stats_calls.append(interval)
         return self.file_stats
 
+    def start_move_file(self, file_path, destination_mount):
+        if self._error("start_move_file"):
+            return self._error("start_move_file")
+        handle = FakeMoveHandle(file_path, os.path.join(destination_mount, os.path.basename(file_path)))
+        self.moves.append(handle)
+        return handle
+
 
 class FakeDatabase:
     """In-memory stand-in for the database adapter (same upsert-by-path rule as SQLite)."""
@@ -111,6 +165,7 @@ class FakeDatabase:
         self.activity_window_queries = []
         self.activity_to_return = []
         self.saved_recommendations = []
+        self.move_records = {}           # move_id -> latest saved record
 
     def upsert_file_subscription(self, sub):
         row = dict(sub)
@@ -131,6 +186,9 @@ class FakeDatabase:
 
     def save_recommendations(self, items):
         self.saved_recommendations.extend(items)
+
+    def save_file_move_record(self, record):
+        self.move_records[record["move_id"]] = dict(record)
 
 
 class FakeAlgorithms:
@@ -469,20 +527,99 @@ def test_refresh_ssd_caching_mode_uses_algo02(client, algorithms, database):
 
 
 # --------------------------------------------------------------------------- #
-# 7. Move actions (HTTP-01k / HTTP-01l) - still being built
+# 7. Move actions: POST /api/v1/actions/execute, GET /api/v1/actions/<move_id>
 # --------------------------------------------------------------------------- #
-@pytest.mark.xfail(strict=True, reason="execute_move_action is still 'pass' (returns None -> 500)")
-def test_http_execute_action_answers_with_json(client):
-    response = client.post("/api/v1/actions/execute", json={"recommendation_id": "r-1"})
-    assert response.status_code != 500
-    assert response.get_json()["status"] in {"success", "error"}
+EXECUTE = "/api/v1/actions/execute"
+MOVE = {"file_path": "/pool/videos/movie.mkv", "destination_mount": "/mnt/ssd"}
 
 
-@pytest.mark.xfail(strict=True, reason="route is written '/api/v1/actions/{action_id}'; Flask needs "
-                                       "'<action_id>', so real ids get 404")
-def test_http_action_status_route_matches_an_id(client):
-    response = client.get("/api/v1/actions/move-123")
-    assert response.status_code != 404
+def start_move(client):
+    body = client.post(EXECUTE, json=MOVE).get_json()
+    assert body["status"] == "success", body
+    return body["data"]
+
+
+def test_execute_starts_the_move_on_the_backend(client, backend):
+    start_move(client)
+    (handle,) = backend.moves
+    assert handle.source_path == "/pool/videos/movie.mkv"
+    assert handle.destination_path == os.path.join("/mnt/ssd", "movie.mkv")
+
+
+def test_execute_returns_a_move_id(client):
+    move_id = start_move(client)
+    assert isinstance(move_id, str) and move_id
+
+
+def test_each_move_gets_its_own_id(client):
+    assert start_move(client) != start_move(client)
+
+
+def test_execute_saves_an_in_progress_move_record(client, database):
+    move_id = start_move(client)
+    record = database.move_records[move_id]
+    assert record["status"] == "in_progress"
+    assert record["host_id"] == HOST
+    assert record["source_path"] == "/pool/videos/movie.mkv"
+    assert record["target_path"] == os.path.join("/mnt/ssd", "movie.mkv")
+    assert record["bytes_total"] == 1000
+    assert record["started_at_utc"].endswith("Z")
+
+
+def test_status_while_the_move_is_running(client, backend):
+    move_id = start_move(client)
+    backend.moves[0].fake_progress = 0.5
+    body = client.get(f"/api/v1/actions/{move_id}").get_json()
+    assert body["status"] == "success"
+    assert body["data"] == {"progress": 0.5, "is_running": True, "result": None}
+
+
+def test_status_after_the_move_finished(client, backend):
+    move_id = start_move(client)
+    backend.moves[0].finish(os.path.join("/mnt/ssd", "movie.mkv"))
+    data = client.get(f"/api/v1/actions/{move_id}").get_json()["data"]
+    assert data == {"progress": 1.0, "is_running": False,
+                    "result": os.path.join("/mnt/ssd", "movie.mkv")}
+
+
+def test_status_of_a_failed_move_gives_the_error_code_name(client, backend):
+    move_id = start_move(client)
+    backend.moves[0].finish(ErrorCode.PERMISSION_DENIED)
+    data = client.get(f"/api/v1/actions/{move_id}").get_json()["data"]
+    assert data["is_running"] is False
+    assert data["result"] == "PERMISSION_DENIED"
+
+
+def test_backend_refusing_the_move_is_a_json_error_and_saves_nothing(client, backend, database):
+    backend.errors["start_move_file"] = ErrorCode.FILE_NOT_FOUND
+    response = client.post(EXECUTE, json=MOVE)
+    assert response.status_code == 500
+    assert response.get_json()["error"]["code"] == "CORE_ERROR"
+    assert database.move_records == {}
+
+
+@pytest.mark.xfail(strict=True, reason="an unknown move id hits self.movements[action_id] -> KeyError -> 500; "
+                                       "the contract has NOT_FOUND for this")
+def test_status_of_an_unknown_move_is_not_found(client):
+    response = client.get("/api/v1/actions/does-not-exist")
+    assert response.status_code == 404
+    assert response.get_json()["error"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.xfail(strict=True, reason="no body / no file_path reaches the backend and gives 500")
+@pytest.mark.parametrize("payload", [{}, {"destination_mount": "/mnt/ssd"}])
+def test_execute_without_a_file_path_is_a_4xx(client, payload):
+    response = client.post(EXECUTE, json=payload)
+    assert 400 <= response.status_code < 500
+
+
+@pytest.mark.xfail(strict=True, reason="the move record is only saved once, as in_progress; "
+                                       "finishing the move never updates it, so a restart cannot tell it finished")
+def test_finished_move_is_saved_as_completed(client, backend, database):
+    move_id = start_move(client)
+    backend.moves[0].finish(os.path.join("/mnt/ssd", "movie.mkv"))
+    client.get(f"/api/v1/actions/{move_id}")
+    assert database.move_records[move_id]["status"] == "completed"
 
 
 # --------------------------------------------------------------------------- #
