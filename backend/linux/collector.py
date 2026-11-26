@@ -12,7 +12,7 @@ from .constants import *
 from .models import DriveMetric, ProcessMetric, Drive, ErrorCode, File, FileSample, FileMetric
 from .drive import sample_all_drive
 from .process import sample_all_process
-from .file import FileIOProbe, COUNTER_FIELDS, block_device_name, resolve_file, validate_tracking_path
+from .file import FileIOProbe, COUNTER_FIELDS, file_device_name, resolve_file, validate_tracking_path
 
 
 class DiskIOCollector:
@@ -389,14 +389,19 @@ class FileIOCollector:
             new_stat_key = (st.st_dev, st.st_ino)
             old_stat_key = (tracked.st_dev, tracked.file.inode)
 
-            if new_stat_key != old_stat_key:
+            identity_changed = new_stat_key != old_stat_key
+            device = tracked.file.device
+            if identity_changed or os.major(st.st_dev) == 0:
+                device = file_device_name(path, st.st_dev)
+            if identity_changed or device != tracked.file.device:
+                tracked.file = replace(tracked.file, inode=st.st_ino, device=device)
+
+            if identity_changed:
                 if self._stat_owners.get(old_stat_key) == path:
                     del self._stat_owners[old_stat_key]
                 self._stat_owners[new_stat_key] = path
                 tracked.st_dev = st.st_dev
-                tracked.file = replace(tracked.file, inode=st.st_ino, device=block_device_name(st.st_dev))
-                self._bind_locked(path, tracked)
-            elif tracked.kernel_key is None:
+            if identity_changed or tracked.kernel_key is None:
                 self._bind_locked(path, tracked)
 
         return sizes

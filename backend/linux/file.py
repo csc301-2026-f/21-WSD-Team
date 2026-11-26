@@ -9,6 +9,7 @@ import threading
 
 from bcc import BPF
 
+from .file_operation import resolve_mergerfs_path
 from .models import File, ErrorCode, FileCounters
 from .constants import *
 
@@ -339,7 +340,6 @@ def kernel_dev(st_dev: int) -> int:
 
 
 def validate_tracking_path(path: str) -> ErrorCode | None:
-    """Accept literal absolute paths and reject shell operators and control characters."""
     if not isinstance(path, str):
         return ErrorCode.INVALID_PATH
     try:
@@ -365,6 +365,20 @@ def block_device_name(st_dev: int) -> str | None:
         return device.name
     except OSError:
         return None
+
+
+def file_device_name(path: str, st_dev: int) -> str | None:
+    if os.major(st_dev) == 0:
+        branch = resolve_mergerfs_path(path)
+        if not isinstance(branch, ErrorCode):
+            actual_path, _ = branch
+            if not os.path.isabs(actual_path):
+                return None
+            try:
+                st_dev = os.stat(actual_path).st_dev
+            except (OSError, ValueError):
+                return None
+    return block_device_name(st_dev)
 
 
 def resolve_file(file_path: str, file_id: int) -> tuple[File, int] | ErrorCode:
@@ -396,7 +410,7 @@ def resolve_file(file_path: str, file_id: int) -> tuple[File, int] | ErrorCode:
         file_id=file_id,
         absolute_path=real_path,
         inode=file_info.st_ino,
-        device=block_device_name(file_info.st_dev),
+        device=file_device_name(real_path, file_info.st_dev),
     ), file_info.st_dev
 
 

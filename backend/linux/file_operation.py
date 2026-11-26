@@ -22,8 +22,8 @@ def resolve_mergerfs_path(source_path: str) -> tuple[str, str] | ErrorCode:
              or mergerfs xattrs are disabled
     """
     try:
-        actual_path = os.getxattr(source_path, MERGERFS_FULLPATH_XATTR).decode()
-        relative_path = os.getxattr(source_path, MERGERFS_RELPATH_XATTR).decode()
+        actual_path = os.fsdecode(os.getxattr(source_path, MERGERFS_FULLPATH_XATTR))
+        relative_path = os.fsdecode(os.getxattr(source_path, MERGERFS_RELPATH_XATTR))
     except OSError:
         return ErrorCode.NOT_ON_MERGERFS
 
