@@ -4,15 +4,26 @@ import {
     mockDevices,
     getMockMetrics,
     getMockProcesses,
-    getMockProcessHistory
+    getMockProcessHistory,
+    getMockFileActivity
 } from "./mockData.js";
 
 // Flask backend address from backend/main.py.
 const API_BASE_URL = "";
 
-// Keep true while testing the frontend with mock device/process data.
+// Default data mode for device, process, and file activity APIs. The File I/O
+// page can switch this shared API setting for its current page session.
 // Recommendations always use the real Flask backend.
 const USE_MOCK_DATA = false;
+let mockDataEnabled = USE_MOCK_DATA;
+
+export function isMockDataEnabled() {
+    return mockDataEnabled;
+}
+
+export function setMockDataEnabled(enabled) {
+    mockDataEnabled = Boolean(enabled);
+}
 
 /* SHARED API REQUEST FUNCTION */
 
@@ -22,32 +33,33 @@ async function getJson(path, options = {}) {
         : `${API_BASE_URL}${path}`;
 
     const response = await fetch(url, options);
+    let result;
 
-    // Try to extract the backend's error message if the request failed.
-    if (!response.ok) {
-        let message = `HTTP error ${response.status}`;
-
-        try {
-            const errorResult = await response.json();
-
-            if (errorResult.error) {
-                message += `: ${JSON.stringify(errorResult.error)}`;
-            }
-        } catch {
-            // The response may not contain JSON.
-        }
-
-        throw new Error(message);
+    try {
+        result = await response.json();
+    } catch {
+        const detail = response.ok
+            ? "The API response was not valid JSON."
+            : `HTTP error ${response.status} with a non-JSON response.`;
+        throw new Error(detail);
     }
 
-    const result = await response.json();
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+        throw new Error("The API returned an invalid response envelope.");
+    }
 
-    if (result.status !== "success") {
-        const message = result.error
-            ? JSON.stringify(result.error)
-            : "The API returned an error.";
+    if (!response.ok || result.status !== "success") {
+        const apiError = result.error;
+        const code = typeof apiError?.code === "string" ? apiError.code : null;
+        const message = typeof apiError?.message === "string"
+            ? apiError.message
+            : `The API returned ${result.status || "an invalid status"}.`;
+        const status = response.ok ? "" : ` (HTTP ${response.status})`;
+        throw new Error(`${code ? `${code}: ` : ""}${message}${status}`);
+    }
 
-        throw new Error(message);
+    if (!Object.hasOwn(result, "data")) {
+        throw new Error("The API success response did not include data.");
     }
 
     return result.data;
@@ -56,7 +68,7 @@ async function getJson(path, options = {}) {
 /* DEVICES */
 
 export async function getDevices() {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return mockDevices;
     }
 
@@ -66,7 +78,7 @@ export async function getDevices() {
 /* DISK METRICS */
 
 export async function getLatestMetrics() {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return getMockMetrics();
     }
 
@@ -76,7 +88,7 @@ export async function getLatestMetrics() {
 /* PROCESS INFORMATION */
 
 export async function getLatestProcesses() {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return getMockProcesses();
     }
 
@@ -91,7 +103,7 @@ export async function getProcessHistory({
     end_utc,
     bucket_seconds
 }) {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return getMockProcessHistory({
             process_instance_id,
             start_utc,
@@ -145,8 +157,19 @@ export async function getRecommendations(mode) {
  * This does not mean that any recommended file operation was executed.
  */
 
-export async function refreshRecommendations() {
-    return getJson("/api/v1/recommendations/refresh", {
+export async function refreshRecommendations(mode) {
+    const params = new URLSearchParams();
+
+    if (mode) {
+        params.set("mode", mode);
+    }
+
+    const query = params.toString();
+    const path = query
+        ? `/api/v1/recommendations/refresh?${query}`
+        : "/api/v1/recommendations/refresh";
+
+    return getJson(path, {
         method: "POST"
     });
 }
@@ -155,4 +178,55 @@ export async function refreshRecommendations() {
 
 export async function getCapabilities() {
     return getJson("/api/v1/capabilities");
+}
+
+/* LATEST FILE ACTIVITY */
+
+export async function getLatestFileActivity() {
+    if (isMockDataEnabled()) {
+        return getMockFileActivity();
+    }
+
+    return getJson("/api/v1/files/activity/latest");
+}
+
+/* FILE AND FOLDER SUBSCRIPTIONS */
+
+const subscriptionPath = "/api/v1/files/subscriptions";
+
+export async function getFileSubscriptions() {
+    return getJson(subscriptionPath);
+}
+
+export async function createFileSubscription(path) {
+    return getJson(subscriptionPath, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path })
+    });
+}
+
+export async function deleteFileSubscription(path) {
+    return getJson(subscriptionPath, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path })
+    });
+}
+
+/* MERGERFS FILE MOVE ACTIONS */
+
+export async function executeFileMove(filePath, destinationMount) {
+    return getJson("/api/v1/actions/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            file_path: filePath,
+            destination_mount: destinationMount
+        })
+    });
+}
+
+export async function getFileActionStatus(actionId) {
+    return getJson(`/api/v1/actions/${encodeURIComponent(actionId)}`);
 }

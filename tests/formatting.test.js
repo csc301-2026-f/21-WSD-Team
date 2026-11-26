@@ -8,7 +8,8 @@ import {
     formatIops,
     formatAverageLatency,
     getValidMetricValues,
-    sumMetricValues
+    sumMetricValues,
+    sumMetricValuesWithCoverage
 } from "../frontend/js/formatting.js";
 
 
@@ -102,4 +103,37 @@ test("sums valid metric values", () => {
         sumMetricValues(metrics, "read_bytes_per_sec"),
         3000000
     );
+});
+
+test("does not treat an empty metric response as a measured zero", () => {
+    assert.equal(sumMetricValues([], "read_bytes_per_sec"), null);
+});
+
+test("reports whether a metric total includes every record", () => {
+    assert.deepEqual(sumMetricValuesWithCoverage([
+        { read_bytes_per_sec: 10 },
+        { read_bytes_per_sec: 20 }
+    ], "read_bytes_per_sec"), {
+        value: 30,
+        reportedCount: 2,
+        totalCount: 2,
+        complete: true
+    });
+
+    assert.deepEqual(sumMetricValuesWithCoverage([
+        { read_bytes_per_sec: 10 },
+        { read_bytes_per_sec: null }
+    ], "read_bytes_per_sec"), {
+        value: 10,
+        reportedCount: 1,
+        totalCount: 2,
+        complete: false
+    });
+
+    assert.deepEqual(sumMetricValuesWithCoverage([], "read_bytes_per_sec"), {
+        value: null,
+        reportedCount: 0,
+        totalCount: 0,
+        complete: false
+    });
 });

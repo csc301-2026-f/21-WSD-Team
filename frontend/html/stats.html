@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Explore disk usage statistics with Wise Storage Director. Review storage consumption, monitor drive performance, and understand how applications use your available storage.">
 
-    <title>WSD App</title>
+    <title>Disk Usage Statistics | WSD</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
@@ -21,7 +21,6 @@
     <div id="mainSidenav" class="sidenav">
         <a href="#" id="navCloseButton" class="closebtn">&times;</a>
         <a href="index.html">Main Dashboard</a>
-        <a href="task_priority.html">Task Priority</a>
         <a href="stats.html">Disk Usage Statistics</a>
         <a href="about.html">About</a>
         <a href="settings.html">Settings</a>
@@ -36,7 +35,6 @@
                 <p><a href="index.html">Main Dashboard</a></p>
             </li>
             <li>
-                <p><a href="task_priority.html">Task Priority</a></p>
             </li>
             <li>
                 <p><a href="stats.html">Disk Usage Statistics</a></p>
@@ -63,7 +61,8 @@
             <div class="box">
 
                 <div id="graph">
-                    <h2>Disk Usage Over Time</h2>
+                    <h2>Recent I/O Performance</h2>
+                    <p class="status-note">Charts summarize device measurements collected in this browser session, up to five minutes. Device history is not returned by the current API.</p>
                     <div class="box-container" id="graph-container">
                         <div class="box" id="throughput-box">
                             <h3>Average Throughput (MB/s)</h3>
@@ -89,6 +88,7 @@
                 <p>Write IOPS: <strong id="write-iops">Waiting for data...</strong></p>
                 <p>Devices Reporting: <strong id="devices-reporting">Waiting for data...</strong></p>
                 <p>Last Updated: <strong id="metrics-updated">Waiting for data...</strong></p>
+                <p id="metrics-api-status" class="status-note" role="status" aria-live="polite">Loading device metrics from the live API...</p>
 
                 <h4>Average I/O Latency</h4>
                 <p>Read Latency: <strong id="read-latency">Not provided</strong></p>

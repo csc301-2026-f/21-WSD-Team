@@ -13,6 +13,19 @@ const refreshButton = document.getElementById(
 );
 
 let isRefreshing = false;
+let currentRecommendations = [];
+const filterInput = document.getElementById("recommendation-filter");
+const sortSelect = document.getElementById("recommendation-sort");
+const modeSelect = document.getElementById("recommendation-mode");
+
+function updateRefreshAvailability() {
+    refreshButton.disabled = isRefreshing;
+    const mode = modeSelect?.value;
+    const label = mode === "ssd_caching"
+        ? "SSD Caching"
+        : "RAID 0 / file-level pooling";
+    refreshButton.title = `Generate ${label} recommendations from current backend data.`;
+}
 
 /* ELEMENT CREATION */
 
@@ -116,8 +129,24 @@ function renderRecommendations(recommendations) {
             !Array.isArray(recommendation)
     );
 
-    const sortedRecommendations =
-        sortRecommendations(validRecommendations);
+    currentRecommendations = validRecommendations;
+    let sortedRecommendations = sortRecommendations(validRecommendations);
+    if (sortSelect?.value === "benefit") {
+        sortedRecommendations.sort((a, b) => {
+            const av = typeof a.estimated_benefit === "number" ? a.estimated_benefit : null;
+            const bv = typeof b.estimated_benefit === "number" ? b.estimated_benefit : null;
+            if (av === null && bv === null) return 0;
+            if (av === null) return 1;
+            if (bv === null) return -1;
+            return bv - av;
+        });
+    }
+    const query = (filterInput?.value ?? "").trim().toLowerCase();
+    if (query) {
+        sortedRecommendations = sortedRecommendations.filter(item =>
+            JSON.stringify(item).toLowerCase().includes(query)
+        );
+    }
 
     container.replaceChildren();
 
@@ -243,19 +272,23 @@ async function loadRecommendations() {
         "Loading saved recommendations...";
 
     try {
-        const recommendations = await getRecommendations();
+        const mode = modeSelect?.value || undefined;
+        const recommendations = await getRecommendations(mode);
 
         const displayedCount =
             renderRecommendations(recommendations);
 
+        const modeLabel = mode === "raid0"
+            ? "RAID 0 / file-level pooling"
+            : mode === "ssd_caching" ? "SSD caching" : "all modes";
         statusElement.textContent =
-            `${displayedCount} saved recommendation(s).`;
+            `${displayedCount} saved recommendation(s) for ${modeLabel}.`;
 
     } catch (error) {
         console.error("Failed to load recommendations:", error);
 
         statusElement.textContent =
-            "Could not load recommendations. Check that Flask is running.";
+            `Could not load recommendations: ${error.message}`;
 
         showMessage(
             "Unable to load recommendations. Please try again.",
@@ -270,14 +303,16 @@ async function handleRefresh() {
     if (isRefreshing) return;
 
     isRefreshing = true;
-
-    refreshButton.disabled = true;
+    updateRefreshAvailability();
     refreshButton.textContent = "Refreshing...";
     statusElement.textContent = "Generating recommendations...";
 
     try {
         // The backend generates and saves recommendations before returning.
-        const generated = await refreshRecommendations();
+        // “All modes” filters saved results; the backend defaults refresh to
+        // RAID 0, so make the generated mode explicit in that case.
+        const mode = modeSelect?.value || "raid0";
+        const generated = await refreshRecommendations(mode);
 
         if (!Array.isArray(generated)) {
             throw new Error(
@@ -288,14 +323,17 @@ async function handleRefresh() {
         const generatedCount =
             renderRecommendations(generated);
 
+        const modeLabel = mode === "ssd_caching"
+            ? "SSD Caching"
+            : "RAID 0 / file-level pooling";
         statusElement.textContent =
-            `${generatedCount} new recommendation(s) generated and saved.`;
+            `${generatedCount} ${modeLabel} recommendation(s) generated and saved.`;
 
     } catch (error) {
         console.error("Failed to refresh recommendations:", error);
 
         statusElement.textContent =
-            "Could not generate recommendations. Check the backend and try again.";
+            `Could not generate recommendations: ${error.message}`;
 
         // Do not erase previously displayed recommendations on failure.
         if (container.childElementCount === 0) {
@@ -307,7 +345,7 @@ async function handleRefresh() {
 
     } finally {
         isRefreshing = false;
-        refreshButton.disabled = false;
+        updateRefreshAvailability();
         refreshButton.textContent = "Refresh Recommendations";
     }
 }
@@ -320,5 +358,12 @@ if (!container || !statusElement || !refreshButton) {
     );
 } else {
     refreshButton.addEventListener("click", handleRefresh);
+    modeSelect?.addEventListener("change", () => {
+        updateRefreshAvailability();
+        loadRecommendations();
+    });
+    filterInput?.addEventListener("input", () => renderRecommendations(currentRecommendations));
+    sortSelect?.addEventListener("change", () => renderRecommendations(currentRecommendations));
+    updateRefreshAvailability();
     loadRecommendations();
 }

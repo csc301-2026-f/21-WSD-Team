@@ -3,6 +3,7 @@
 """Select the latest usable FileActivity window; never sum overlapping history."""
 from collections import defaultdict
 from ..common.validation import is_integer, is_text, is_fresh, parse_utc, is_mock_source
+from .inputs import is_window_duration_valid
 
 
 def _read_window(row, context, warnings):
@@ -22,13 +23,23 @@ def _read_window(row, context, warnings):
         warnings.add("missing_read_or_write_ops")
         return None
     try:
-        start, end = parse_utc(row.get("window_start_utc")), parse_utc(row.get("window_end_utc"))
+        start = parse_utc(row.get("window_start_utc"))
+        end = parse_utc(row.get("window_end_utc"))
         duration = (end - start).total_seconds()
     except (ValueError, TypeError, OverflowError):
         warnings.add("invalid_or_stale_activity_window")
         return None
-    if not (context.config["min_window_seconds"] <= duration <= context.config["max_window_seconds"]
-            and is_fresh(row.get("window_end_utc"), context.now, context.config["max_age_seconds"])):
+    valid_duration = is_window_duration_valid(
+        duration,
+        context.config["min_window_seconds"],
+        context.config["max_window_seconds"],
+    )
+    fresh = is_fresh(
+        row.get("window_end_utc"),
+        context.now,
+        context.config["max_age_seconds"],
+    )
+    if not valid_duration or not fresh:
         warnings.add("invalid_or_stale_activity_window")
         return None
     return {"row": row, "start": start, "end": end, "duration": duration}

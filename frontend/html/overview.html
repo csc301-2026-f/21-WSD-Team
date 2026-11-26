@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Current Wise Storage Director system overview.">
+    <title>System Overview | WSD</title><link rel="stylesheet" href="../css/style.css">
+</head><body>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button><nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <main><header class="page-intro"><h1>System Overview</h1><p>A current summary of monitored drives and storage activity.</p></header>
+        <section class="metric-grid" aria-label="System metrics">
+            <article class="metric-tile"><h2>Monitored drives</h2><strong id="overview-drive-count">Loading</strong></article>
+            <article class="metric-tile"><h2>Reported capacity</h2><strong id="overview-capacity">Loading</strong></article>
+            <article class="metric-tile"><h2>Read throughput</h2><strong id="overview-read">Loading</strong></article>
+            <article class="metric-tile"><h2>Write throughput</h2><strong id="overview-write">Loading</strong></article>
+            <article class="metric-tile"><h2>Current IOPS</h2><strong id="overview-iops">Loading</strong></article>
+            <article class="metric-tile"><h2>Processes reporting</h2><strong id="overview-processes">Loading</strong></article>
+        </section>
+        <section class="data-panel"><h2>Drive utilization</h2><div id="overview-drive-list" class="metric-grid"></div><p id="overview-status" class="status-note" role="status">Loading current data…</p></section>
+        <section class="data-panel"><h2>Storage alerts</h2><p id="overview-alerts" role="status">Checking drive utilization…</p><p>Capacity warnings use a 90% utilization threshold. Collector health is not exposed by the current API.</p></section>
+        <section class="data-panel"><h2>Monitoring status</h2><p id="overview-updated">Waiting for first update.</p><p>Measurements reflect the latest response from the existing monitoring API.</p></section>
+    </main><script type="module" src="../js/ui.js"></script><script type="module" src="../js/expandedPages.js"></script>
+</body></html>

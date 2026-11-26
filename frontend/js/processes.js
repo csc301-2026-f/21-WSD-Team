@@ -142,7 +142,7 @@ async function refreshProcessTable() {
         console.error("Failed to refresh process table:", error);
 
         statusElement.textContent =
-            "Unable to load processes. Retrying...";
+            `Unable to load processes: ${error.message}. Retrying...`;
 
     } finally {
         isRefreshing = false;
