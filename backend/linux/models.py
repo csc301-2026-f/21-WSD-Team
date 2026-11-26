@@ -13,6 +13,7 @@ class Partition:
         name: Linux partition identifier, such as "sda1" or "nvme0n1p1".
         size_bytes: Total filesystem storage capacity in bytes.
         available_bytes: Available filesystem storage in bytes.
+        mount_point: First absolute mount path reported by lsblk, or None.
 
     Note:
         For partitions without a mounted filesystem, storage information
@@ -21,6 +22,7 @@ class Partition:
     name: str
     size_bytes: int
     available_bytes: int
+    mount_point: str | None = None
 
 
 @dataclass(frozen=True)
