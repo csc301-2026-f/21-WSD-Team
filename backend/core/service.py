@@ -137,7 +137,7 @@ class CoreService:
         else:
             devices = self.agent.get_devices()
             host_id = None
-            if isinstance(self.agent, LinuxAgentAdapter) and mode != "ssd_caching":
+            if isinstance(self.agent, LinuxAgentAdapter) and mode != "ssd_caching" and devices:
                 pool_ids = self.get_mergerfs_pool_device_ids()
                 devices = [device for device in devices if device["device_id"] in pool_ids]
                 if not devices:
@@ -286,10 +286,8 @@ class CoreService:
                 continue
             branch = entry.rsplit("=", 1)[0]
             #Find the partition containing this branch
-            source = subprocess.check_output(
-                ["findmnt", "-rn", "-T", branch, "-o", "SOURCE"],
-                text=True
-            ).strip().split("[", 1)[0]
+            source = subprocess.check_output(["findmnt", "-rn", "-T", branch, "-o", "SOURCE"], text=True
+                                             ).strip().split("[", 1)[0]
             if not source.startswith("/dev/"):
                 raise RuntimeError(f"Unknown device for {branch}")
             source = os.path.realpath(source)
