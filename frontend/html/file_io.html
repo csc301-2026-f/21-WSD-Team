@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">&#9776;</button>
     <nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
     <main>
         <header class="page-intro">
@@ -18,23 +18,33 @@
 
         <section class="data-panel file-io-callout" aria-labelledby="file-io-availability-title">
             <h2 id="file-io-availability-title">File-level data availability</h2>
-            <p id="file-io-status" class="status-note" role="status" aria-live="polite">Checking backend capability…</p>
-            <p>The current API has no file activity or file history route. This page does not substitute process or device totals for file measurements.</p>
+            <p id="file-io-status" class="status-note" role="status" aria-live="polite">Select a data source to load file activity.</p>
+            <p>This page displays only records returned by the file activity API. An empty response does not mean that file activity was measured as zero.</p>
         </section>
 
         <section class="metric-grid file-io-metrics" aria-label="File I/O summary">
-            <article class="metric-tile"><h2>Total file read throughput</h2><strong id="file-total-read">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Total file write throughput</h2><strong id="file-total-write">Unavailable</strong></article>
-            <article class="metric-tile"><h2>File read operation rate</h2><strong id="file-total-read-ops">Unavailable</strong></article>
-            <article class="metric-tile"><h2>File write operation rate</h2><strong id="file-total-write-ops">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Files active in latest window</h2><strong id="file-active-count">Unavailable</strong></article>
+            <article class="metric-tile"><h2>File records returned</h2><strong id="file-total-count">Unavailable</strong></article>
+            <article class="metric-tile"><h2>Total bytes read</h2><strong id="file-total-read-bytes">Unavailable</strong></article>
+            <article class="metric-tile"><h2>Total bytes written</h2><strong id="file-total-write-bytes">Unavailable</strong></article>
+            <article class="metric-tile"><h2>Total read operations</h2><strong id="file-total-read-ops">Unavailable</strong></article>
+            <article class="metric-tile"><h2>Total write operations</h2><strong id="file-total-write-ops">Unavailable</strong></article>
             <article class="metric-tile"><h2>Most active file</h2><strong id="file-most-active">Unavailable</strong></article>
         </section>
 
         <section class="data-panel">
             <div class="file-io-section-heading">
-                <div><h2>File activity</h2><p>Rates are derived from each file activity window when those fields are available.</p></div>
-                <span class="file-data-tag">Measured file attribution only</span>
+                <div><h2>File activity</h2><p>Byte and operation totals are shown as reported. Throughput is calculated only when a valid measurement window is available.</p></div>
+                <span id="file-data-tag" class="file-data-tag">Live API data</span>
+            </div>
+            <div class="toolbar file-io-source-toolbar">
+                <label for="file-data-source">Data source</label>
+                <select id="file-data-source"><option value="live">Live backend</option><option value="mock">Mock preview</option></select>
+                <span id="file-source-status" class="file-source-status" role="status" aria-live="polite"></span>
+            </div>
+            <p class="file-schema-note">This uses the shared device/process mock-data setting for this page session; recommendations always use the live API.</p>
+            <div class="toolbar file-io-refresh-toolbar">
+                <button id="file-refresh-button" type="button">Refresh file activity</button>
+                <span id="file-updated-status" class="status-note">Waiting for the first response.</span>
             </div>
             <div class="toolbar file-io-toolbar">
                 <label for="file-search">Search files</label>
@@ -42,16 +52,16 @@
                 <label for="file-activity-filter">Activity</label>
                 <select id="file-activity-filter"><option value="all">Read or write</option><option value="read">Read activity</option><option value="write">Write activity</option></select>
                 <label for="file-sort">Sort by</label>
-                <select id="file-sort"><option value="total">Total I/O rate</option><option value="read">Read throughput</option><option value="write">Write throughput</option><option value="read_ops">Read operations</option><option value="write_ops">Write operations</option><option value="name">File name</option><option value="path">File path</option></select>
+                <select id="file-sort"><option value="total_bytes">Total bytes transferred</option><option value="read_bytes">Read bytes</option><option value="write_bytes">Write bytes</option><option value="total_ops">Total operations</option><option value="read_ops">Read operations</option><option value="write_ops">Write operations</option><option value="name">File name</option><option value="path">File path</option></select>
             </div>
-            <p id="file-table-status" class="status-note" role="status">File-level measurements are unavailable.</p>
+            <p id="file-table-status" class="status-note" role="status">Loading file activity...</p>
             <div class="data-table-wrap">
                 <table class="data-table file-io-table">
-                    <thead><tr><th>File path</th><th>File name</th><th>Read throughput</th><th>Write throughput</th><th>Read operations/s</th><th>Write operations/s</th><th>Total I/O</th><th>Latest window end</th></tr></thead>
-                    <tbody id="file-activity-body"><tr><td colspan="8">No file-level measurements are exposed by the current API.</td></tr></tbody>
+                    <thead><tr><th>File path</th><th>File name</th><th>Read bytes</th><th>Write bytes</th><th>Total bytes</th><th>Read ops</th><th>Write ops</th><th>Total ops</th><th>File size</th><th>Source</th></tr></thead>
+                    <tbody id="file-activity-body"><tr><td colspan="10">Loading file activity...</td></tr></tbody>
                 </table>
             </div>
-            <p class="file-schema-note">Process attribution is not included in the documented FileActivity fields. Process-level measurements cannot identify which files a process accessed.</p>
+            <p class="file-schema-note">Long paths are truncated in the table; focus or hover a path to see its full value. File activity records do not include process attribution.</p>
         </section>
 
         <section class="data-panel">
@@ -59,18 +69,7 @@
             <p id="file-detail-status" class="status-note">Select a file with reported activity to inspect its details.</p>
             <div id="file-detail-grid" class="file-detail-grid" aria-live="polite"></div>
         </section>
-
-        <section class="data-panel">
-            <h2>Selected file history</h2>
-            <p id="file-history-status" class="status-note">File history is not exposed by the current API. Charts will display data when a history response is available.</p>
-            <div class="file-chart-grid">
-                <div><h3>Read and write throughput</h3><div class="chart-panel"><canvas id="file-throughput-chart" aria-label="Selected file read and write throughput history"></canvas></div></div>
-                <div><h3>Read and write operation rates</h3><div class="chart-panel"><canvas id="file-ops-chart" aria-label="Selected file read and write operation history"></canvas></div></div>
-            </div>
-            <p class="file-schema-note">Historical values require multiple time-stamped FileActivity windows and a file history endpoint. No sample data is generated on this page.</p>
-        </section>
     </main>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="../js/ui.js"></script>
     <script type="module" src="../js/fileIoMonitoring.js"></script>
 </body>

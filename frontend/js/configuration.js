@@ -6,6 +6,10 @@ const body = document.getElementById("capabilities-body");
 const status = document.getElementById("configuration-status");
 const modeRadios = [...document.querySelectorAll('input[name="storage-mode"]')];
 const modeSelectionNote = document.getElementById("mode-selection-note");
+const modeToast = document.getElementById("mode-selection-toast");
+const modeToastMessage = document.getElementById("mode-selection-toast-message");
+let toastDismissTimer = null;
+let toastHideTimer = null;
 const features = [
     ["Device metrics", "device_metrics"],
     ["Process metrics", "process_metrics"],
@@ -21,6 +25,29 @@ function updateSelection() {
     const selected = modeRadios.find(radio => radio.checked)?.value;
     const label = selected === "ssd_caching" ? "SSD Caching" : "RAID 0 / File-Level Pooling";
     modeSelectionNote.textContent = `${label} selected for this page preview. This does not change system configuration.`;
+}
+
+function showModeSelectionToast(selected) {
+    if (!modeToast || !modeToastMessage) return;
+
+    window.clearTimeout(toastDismissTimer);
+    window.clearTimeout(toastHideTimer);
+    modeToast.classList.remove("is-leaving", "is-entering");
+
+    const label = selected === "ssd_caching" ? "SSD Caching" : "RAID 0";
+    modeToastMessage.textContent = `${label} selected (Preview)`;
+    modeToast.hidden = false;
+    void modeToast.offsetWidth;
+    modeToast.classList.add("is-entering");
+
+    toastDismissTimer = window.setTimeout(() => {
+        modeToast.classList.remove("is-entering");
+        modeToast.classList.add("is-leaving");
+        toastHideTimer = window.setTimeout(() => {
+            modeToast.hidden = true;
+            modeToast.classList.remove("is-leaving");
+        }, 240);
+    }, 2760);
 }
 
 function renderModeStatus(capabilities, key, badgeId, detailId, implementationDetail) {
@@ -60,7 +87,10 @@ function render(capabilities) {
     }
 }
 
-modeRadios.forEach(radio => radio.addEventListener("change", updateSelection));
+modeRadios.forEach(radio => radio.addEventListener("change", () => {
+    updateSelection();
+    showModeSelectionToast(radio.value);
+}));
 updateSelection();
 
 getCapabilities().then(capabilities => {

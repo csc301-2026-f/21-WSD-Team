@@ -4,15 +4,26 @@ import {
     mockDevices,
     getMockMetrics,
     getMockProcesses,
-    getMockProcessHistory
+    getMockProcessHistory,
+    getMockFileActivity
 } from "./mockData.js";
 
 // Flask backend address from backend/main.py.
 const API_BASE_URL = "";
 
-// Keep true while testing the frontend with mock device/process data.
+// Default data mode for device, process, and file activity APIs. The File I/O
+// page can switch this shared API setting for its current page session.
 // Recommendations always use the real Flask backend.
 const USE_MOCK_DATA = false;
+let mockDataEnabled = USE_MOCK_DATA;
+
+export function isMockDataEnabled() {
+    return mockDataEnabled;
+}
+
+export function setMockDataEnabled(enabled) {
+    mockDataEnabled = Boolean(enabled);
+}
 
 /* SHARED API REQUEST FUNCTION */
 
@@ -56,7 +67,7 @@ async function getJson(path, options = {}) {
 /* DEVICES */
 
 export async function getDevices() {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return mockDevices;
     }
 
@@ -66,7 +77,7 @@ export async function getDevices() {
 /* DISK METRICS */
 
 export async function getLatestMetrics() {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return getMockMetrics();
     }
 
@@ -76,7 +87,7 @@ export async function getLatestMetrics() {
 /* PROCESS INFORMATION */
 
 export async function getLatestProcesses() {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return getMockProcesses();
     }
 
@@ -91,7 +102,7 @@ export async function getProcessHistory({
     end_utc,
     bucket_seconds
 }) {
-    if (USE_MOCK_DATA) {
+    if (isMockDataEnabled()) {
         return getMockProcessHistory({
             process_instance_id,
             start_utc,
@@ -155,4 +166,14 @@ export async function refreshRecommendations() {
 
 export async function getCapabilities() {
     return getJson("/api/v1/capabilities");
+}
+
+/* LATEST FILE ACTIVITY */
+
+export async function getLatestFileActivity() {
+    if (isMockDataEnabled()) {
+        return getMockFileActivity();
+    }
+
+    return getJson("/api/v1/files/activity/latest");
 }
