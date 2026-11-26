@@ -206,9 +206,10 @@ class ProcessSample:
 
 @dataclass(frozen=True)
 class File:
+    file_id: int
     absolute_path: str
     inode: int = field(compare=False)
-    device: int = field(compare=False)
+    device: str | None = field(compare=False)
 
 
 @dataclass(frozen=True)
@@ -269,7 +270,7 @@ class FileCounters:
 
 
 class ErrorCode(IntEnum):
-    SUCESS = 0
+    SUCCESS = 0
     PROCESS_NOT_FOUND = 1
     PROCESS_PID_REUSED = 2
     BACKEND_NOT_STARTED = 3
@@ -282,5 +283,9 @@ class ErrorCode(IntEnum):
     FILE_NOT_TRACKED = 10
     TRACKING_LIMIT_REACHED = 11
     FILE_TRACER_UNAVAILABLE = 12
-
-
+    NOT_ON_MERGERFS = 13
+    ALREADY_ON_DESTINATION = 14
+    FILE_ALREADY_EXISTS = 15
+    MOVE_FAILED = 16
+    MOVE_CANCELLED = 17
+    INVALID_PATH = 18
