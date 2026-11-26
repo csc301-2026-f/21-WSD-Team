@@ -87,14 +87,26 @@ def build_sliding_window_dataset(
 
     for fid, rows in by_file.items():
         rows_sorted = sorted(rows, key=lambda r: str(r.get("window_end_utc", "")))
-        parsed = []
+        windows: dict[tuple[datetime, datetime], dict | None] = {}
         for r in rows_sorted:
             try:
                 t_start = _parse_ts(r["window_start_utc"])
                 t_end = _parse_ts(r["window_end_utc"])
-                parsed.append((t_start, t_end, r))
+                if t_end <= t_start:
+                    continue
+                key = (t_start, t_end)
+                prior = windows.get(key, r)
+                if prior is not None and prior != r:
+                    windows[key] = None
+                else:
+                    windows.setdefault(key, r)
             except (KeyError, ValueError, TypeError):
                 continue
+
+        parsed = sorted(
+            ((start, end, row) for (start, end), row in windows.items() if row is not None),
+            key=lambda item: item[1],
+        )
 
         ewma_rate = 0.0
         for i, (t_start, t_end, curr_r) in enumerate(parsed):
@@ -108,11 +120,18 @@ def build_sliding_window_dataset(
             ewma_rate = c_rate if i == 0 else (0.4 * c_rate + 0.6 * ewma_rate)
 
             target_end = t_end + horizon
-            future_rows = [
-                nxt_r for (_, nxt_end, nxt_r) in parsed[i + 1 :] 
-                if t_end < nxt_end <= target_end
-            ]
-            if not future_rows:
+            future_rows = []
+            covered_until = t_end
+            for nxt_start, nxt_end, nxt_r in parsed[i + 1 :]:
+                if nxt_end <= covered_until:
+                    continue
+                if nxt_start != covered_until or nxt_end > target_end:
+                    break
+                future_rows.append(nxt_r)
+                covered_until = nxt_end
+                if covered_until == target_end:
+                    break
+            if covered_until != target_end:
                 continue
 
             f_reads = sum(max(0, int(f_r.get("read_ops")) or 0) for f_r in future_rows)
@@ -131,7 +150,7 @@ def build_sliding_window_dataset(
             )
             y.append(label)
             groups.append(fid)
-            label_end_times.append(max(_parse_ts(f_r["window_end_utc"]) for f_r in future_rows))
+            label_end_times.append(target_end)
 
     if not X:
         return np.empty((0, 5)), np.empty((0,), dtype=int), np.empty((0,)), []
@@ -199,6 +218,74 @@ def train_and_val_model(
         metrics["val_f1"] = round(float(f1_score(y_val, y_pred, zero_division=0)), 4)
         metrics["report"] = classification_report(y_val, y_pred, zero_division=0)
     return metrics
+
+
+def train_val_test_model(
+    activity_rows: Iterable[dict],
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    model_path: Path = DEFAULT_MODEL_PATH,
+) -> dict:
+    """Fit on the oldest history, select C on validation, report once on test.
+
+    Samples are assigned by the end of their future label window, so no label
+    extending into a later partition can enter an earlier partition. The saved
+    model is fit on train + validation after selecting C; test remains untouched.
+    """
+    if not (0 < train_ratio < 1 and 0 < val_ratio < 1 and train_ratio + val_ratio < 1):
+        raise ValueError("train_ratio and val_ratio must be positive and sum to less than 1")
+
+    X, y, groups, label_end_times = build_sliding_window_dataset(activity_rows)
+    if len(X) < 10 or len(np.unique(y)) < 2:
+        raise ValueError("Insufficient data in sliding window dataset for training")
+
+    order = np.argsort(label_end_times)
+    X, y, groups = X[order], y[order], groups[order]
+    times = [label_end_times[i] for i in order]
+    train_cut = int(len(y) * train_ratio)
+    val_cut = int(len(y) * (train_ratio + val_ratio))
+    train_end = times[train_cut]
+    val_end = times[val_cut]
+    train_mask = np.array([t < train_end for t in times])
+    val_mask = np.array([(t >= train_end) and (t < val_end) for t in times])
+    test_mask = np.array([t >= val_end for t in times])
+    X_train, y_train, groups_train = X[train_mask], y[train_mask], groups[train_mask]
+    X_val, y_val = X[val_mask], y[val_mask]
+    X_test, y_test = X[test_mask], y[test_mask]
+    if len(X_train) == 0 or len(X_val) == 0 or len(X_test) == 0 or len(np.unique(y_train)) < 2:
+        raise ValueError("Chronological split needs non-empty train, validation, and test sets with both training classes")
+
+    def pipeline(c: float) -> Pipeline:
+        return Pipeline([
+            ("var_thresh", VarianceThreshold(threshold=0.0)),
+            ("clf", LogisticRegression(max_iter=500, class_weight="balanced", random_state=42, C=c)),
+        ])
+
+    # Validation chooses the regularization strength. Test data is not touched
+    # until the final evaluation below.
+    candidates = []
+    for c in (0.1, 1.0, 10.0):
+        candidate = pipeline(c).fit(X_train, y_train)
+        pred = candidate.predict(X_val)
+        candidates.append((f1_score(y_val, pred, zero_division=0), c))
+    best_c = max(candidates, key=lambda item: item[0])[1]
+    final_model = pipeline(best_c).fit(X[train_mask | val_mask], y[train_mask | val_mask])
+
+    y_val_pred = pipeline(best_c).fit(X_train, y_train).predict(X_val)
+    y_test_pred = final_model.predict(X_test)
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(final_model, model_path)
+    return {
+        "train_samples": int(train_mask.sum()),
+        "val_samples": int(val_mask.sum()),
+        "test_samples": int(test_mask.sum()),
+        "selected_C": best_c,
+        "val_accuracy": round(float(accuracy_score(y_val, y_val_pred)), 4),
+        "val_f1": round(float(f1_score(y_val, y_val_pred, zero_division=0)), 4),
+        "test_accuracy": round(float(accuracy_score(y_test, y_test_pred)), 4),
+        "test_f1": round(float(f1_score(y_test, y_test_pred, zero_division=0)), 4),
+        "test_report": classification_report(y_test, y_test_pred, zero_division=0),
+    }
 
 
 def _build_start_pipeline() -> Pipeline:
