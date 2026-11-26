@@ -84,6 +84,10 @@ function renderDrives(devices) {
 
         container.appendChild(box);
     }
+
+    if (devices.length === 0) {
+        container.textContent = "The devices API returned no storage devices.";
+    }
 }
 
 
@@ -92,8 +96,8 @@ function renderDrives(devices) {
 // ------------------------------
 
 function updatePerformanceStats(metrics) {
-    if (!Array.isArray(metrics) || metrics.length === 0) {
-        return;
+    if (!Array.isArray(metrics)) {
+        throw new Error("Expected an array of device metrics.");
     }
 
     // Independently collect valid values for each measurement.
@@ -150,7 +154,9 @@ function updatePerformanceStats(metrics) {
 
     // Update throughput displays.
     document.getElementById("total-throughput").textContent =
-        formatMBps(totalReadBytes + totalWriteBytes);
+        formatMBps(totalReadBytes === null || totalWriteBytes === null
+            ? null
+            : totalReadBytes + totalWriteBytes);
 
     document.getElementById("read-throughput").textContent =
         formatMBps(totalReadBytes);
@@ -160,7 +166,9 @@ function updatePerformanceStats(metrics) {
 
     // Update IOPS displays.
     document.getElementById("current-iops").textContent =
-        formatIops(totalReadIops + totalWriteIops);
+        formatIops(totalReadIops === null || totalWriteIops === null
+            ? null
+            : totalReadIops + totalWriteIops);
 
     document.getElementById("read-iops").textContent =
         formatIops(totalReadIops);
@@ -209,12 +217,17 @@ function updatePerformanceStats(metrics) {
 async function refreshDrives() {
     try {
         const devices = await getDevices();
-
-        console.log("Devices received:", devices);
+        if (!Array.isArray(devices)) {
+            throw new Error("Expected an array of devices.");
+        }
 
         renderDrives(devices);
+        document.getElementById("drive-load-status").textContent =
+            `${devices.length} device(s) returned by the live API.`;
     } catch (error) {
         console.error("Failed to load drives:", error);
+        document.getElementById("drive-load-status").textContent =
+            `Could not load drives: ${error.message}`;
     } finally {
         // Schedule the next refresh after this request finishes.
         setTimeout(refreshDrives, 10000);
@@ -229,11 +242,19 @@ async function refreshDrives() {
 async function refreshMetrics() {
     try {
         const metrics = await getLatestMetrics();
+        if (!Array.isArray(metrics)) {
+            throw new Error("Expected an array of device metrics.");
+        }
 
         updateMetricsCharts(metrics);
         updatePerformanceStats(metrics);
+        document.getElementById("metrics-api-status").textContent = metrics.length
+            ? `${metrics.length} device metric record(s) returned by the live API.`
+            : "The live API returned no device metric samples for this interval.";
     } catch (error) {
         console.error("Failed to update metrics charts:", error);
+        document.getElementById("metrics-api-status").textContent =
+            `Could not load device metrics: ${error.message}`;
     } finally {
         // Schedule the next refresh after this request finishes.
         setTimeout(refreshMetrics, REFRESH_INTERVAL_MS);

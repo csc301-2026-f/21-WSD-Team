@@ -1,5 +1,6 @@
 // SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 // SPDX-License-Identifier: GPL-3.0-only
+import { chartColors, createChartOptions } from "./chartTheme.js";
 
 const WINDOW_MS = 5 * 60 * 1000;
 
@@ -19,8 +20,9 @@ function average(values) {
     return valid.reduce((sum, value) => sum + value, 0) / valid.length;
 }
 
-function createChart(canvasId, title, datasets) {
+function createChart(canvasId, title, datasets, yTitle) {
     const canvas = document.getElementById(canvasId);
+    const options = createChartOptions({ yTitle, maintainAspectRatio: true });
 
     return new Chart(canvas, {
         type: "line",
@@ -33,38 +35,17 @@ function createChart(canvasId, title, datasets) {
                 backgroundColor: dataset.color,
                 borderWidth: 2,
                 pointRadius: 0,
+                pointHoverRadius: 3,
                 tension: 0.2,
+                fill: false,
                 spanGaps: true
             }))
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            animation: false,
-            interaction: {
-                intersect: false,
-                mode: "index"
-            },
+            ...options,
             plugins: {
-                title: {
-                    display: false,
-                    text: title
-                }
-            },
-            scales: {
-                x: {
-                    title: {
-                        display: true,
-                        text: "Time"
-                    },
-                    ticks: {
-                        maxTicksLimit: 8,
-                        maxRotation: 0
-                    }
-                },
-                y: {
-                    beginAtZero: true
-                }
+                ...options.plugins,
+                title: { display: false, text: title }
             }
         }
     });
@@ -75,18 +56,20 @@ export function initializeCharts() {
         "throughputChart",
         "Average Throughput",
         [
-            { label: "Read (MB/s)", color: "#3366ff" },
-            { label: "Write (MB/s)", color: "#ff66aa" }
-        ]
+            { label: "Read (MB/s)", color: chartColors.navy },
+            { label: "Write (MB/s)", color: chartColors.amber }
+        ],
+        "Throughput (MB/s)"
     );
 
     iopsChart = createChart(
         "iopsChart",
         "Average IOPS",
         [
-            { label: "Read IOPS", color: "#229954" },
-            { label: "Write IOPS", color: "#e67e22" }
-        ]
+            { label: "Read IOPS", color: chartColors.navy },
+            { label: "Write IOPS", color: chartColors.amber }
+        ],
+        "Operations per second"
     );
 }
 

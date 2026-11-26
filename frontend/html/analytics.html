@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Compare current storage performance across monitored drives.">
+    <title>Storage Analytics | WSD</title><link rel="stylesheet" href="../css/style.css">
+</head><body>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button><nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <main><header class="page-intro"><h1>Storage Analytics</h1><p>Compare the reported device throughput, IOPS, and latency measurements.</p></header>
+        <section class="data-panel"><div class="toolbar"><label for="analytics-drive">Drive</label><select id="analytics-drive"><option value="">All reporting drives</option></select><button id="analytics-pause" type="button">Pause updates</button></div>
+            <p id="analytics-status" role="status" class="status-note">Loading measurements…</p><div class="chart-panel"><canvas id="drive-performance-chart" aria-label="Recent drive throughput in this browser session"></canvas></div>
+        </section>
+        <section class="data-panel"><h2>Current measurements by drive</h2><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Drive</th><th>Read</th><th>Write</th><th>Read IOPS</th><th>Write IOPS</th><th>Read latency</th><th>Write latency</th><th>Sample time</th></tr></thead><tbody id="analytics-body"></tbody></table></div></section>
+        <section class="data-panel"><h2>History and limits</h2><p>The graph records samples collected while this page is open and keeps the latest five minutes in browser memory. The device metrics API does not provide historical device measurements, so earlier sessions and longer ranges are unavailable.</p></section>
+    </main><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script type="module" src="../js/ui.js"></script><script type="module" src="../js/expandedPages.js"></script>
+</body></html>
