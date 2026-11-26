@@ -2,6 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from ..common.validation import is_integer, is_number, is_text, parse_utc
 
+# For D4 ML Implementation
+GOAL_PROB_THRESHOLDS = {
+    "performance": 0.45,
+    "balanced": 0.60,
+    "lifespan": 0.75,
+}
+
 DEFAULTS = {
     "goal": "performance", 
     "min_read_ops_per_sec": 0.1, 
@@ -11,8 +18,10 @@ DEFAULTS = {
     "max_age_seconds": 300,
     "reserve_bytes": 1073741824, 
     "reserve_fraction": 0.1, 
-    "max_recommendations": 10
-    }
+    "max_recommendations": 10,
+    # For D4 ML Implementation
+    "min_cache_prob": None
+}
 
 class PolicyInputError(ValueError):
     def __init__(self, code, timestamp=None):
@@ -50,8 +59,14 @@ def validate_inputs(devices, realtime, history, mode_config, capabilities):
 
     config = {**DEFAULTS, **mode_config}
 
-    if config["goal"] != "performance":
-        reject("goal_not_implemented_in_d2")
+    # For D4 ML Implementation
+    if config["goal"] not in GOAL_PROB_THRESHOLDS:
+        reject("invalid_goal")
+
+    if config["min_cache_prob"] is None:
+        config["min_cache_prob"] = GOAL_PROB_THRESHOLDS[config["goal"]]
+    elif not is_number(config["min_cache_prob"]) or not (0.0 <= config["min_cache_prob"] <= 1.0):
+        reject("invalid_config")
 
     for key, value in config.items():
         if key == "goal":

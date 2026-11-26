@@ -99,10 +99,10 @@ def build_sliding_window_dataset(
         ewma_rate = 0.0
         for i, (t_start, t_end, curr_r) in enumerate(parsed):
             dur_s = max(1.0, (t_end - t_start). total_seconds())
-            c_reads = max(0, int(curr_r.get("read_ops")) or 0)
-            c_writes = max(0, int(curr_r.get("write_ops")) or 0)
-            c_bytes = max(0, int(curr_r.get("read_bytes")) or 0)
-            c_size = max(1, int(curr_r.get("file_size_bytes")) or 0)
+            c_reads = max(0, int(curr_r.get("read_ops") or 0))
+            c_writes = max(0, int(curr_r.get("write_ops") or 0))
+            c_bytes = max(0, int(curr_r.get("read_bytes") or 0))
+            c_size = max(1, int(curr_r.get("file_size_bytes") or 0))
             c_rate = c_reads / dur_s
 
             ewma_rate = c_rate if i == 0 else (0.4 * c_rate + 0.6 * ewma_rate)
@@ -131,7 +131,7 @@ def build_sliding_window_dataset(
             )
             y.append(label)
             groups.append(fid)
-            label_end_times.append(max(_parse_ts(f_r["window_end_utc"] for f_r in future_rows)))
+            label_end_times.append(max(_parse_ts(f_r["window_end_utc"]) for f_r in future_rows))
 
     if not X:
         return np.empty((0, 5)), np.empty((0,), dtype=int), np.empty((0,)), []
@@ -180,7 +180,7 @@ def train_and_val_model(
             cv=cv, 
             scoring="f1" 
         )
-        grid_search.fit(X_train, y_train, groups=groups)
+        grid_search.fit(X_train, y_train, groups=groups_train)
         best_model = grid_search.best_estimator_
     else:
         best_model = pipe.fit(X_train, y_train)
@@ -284,7 +284,7 @@ def score_cache_candidates(
 
         enriched.append({
             **row,
-            "ml_cache_prob": round(float(prob, 4)),
+            "ml_cache_prob": round(float(prob), 4),
             "predicted_future_reads": round(predicted_reads, 2),
             "estimated_benefit_ms": estimated_benefit_ms,
             "cache_value_density": round(value_density, 4),
