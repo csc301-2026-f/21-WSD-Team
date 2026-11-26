@@ -77,6 +77,11 @@ class CoreService:
         if self.demo_mode:
             demo_data = load_demo_input(self.host_id)
             return demo_data["capabilities"]
+        if isinstance(self.agent, LinuxAgentAdapter):
+            try:
+                self.capabilities["file_level_pooling"] = bool(self.get_mergerfs_pool_device_ids())
+            except (RuntimeError, OSError, subprocess.CalledProcessError):
+                self.capabilities["file_level_pooling"] = False
         return self.capabilities
 
     def get_current_process_activity(self):
@@ -159,7 +164,7 @@ class CoreService:
 
             history={"file_activity": file_activity}
             mode_config= {} #Not required in D2
-            capabilities = self.capabilities or {} #TODO agent not done
+            capabilities = self.get_capabilities()
 
         # Check mode to use
         if mode == "ssd_caching":
@@ -245,6 +250,21 @@ class CoreService:
         """
         Execute file movement
         """
+        if recommendation_id is not None:
+            if not isinstance(self.agent, LinuxAgentAdapter):
+                raise RuntimeError("Recommended move is unavailable")
+            recommendation = next((item for item in self.database.list_recommendations()
+                                   if item["recommendation_id"] == recommendation_id), None)
+            if recommendation is None or recommendation["action"] != "move":
+                raise RuntimeError("Invalid move recommendation")
+            file_path = next((file.absolute_path for file in self.agent.list_tracked_files()
+                              if str(file.file_id) == str(recommendation["file_id"])), None)
+            if file_path is None:
+                raise RuntimeError("Recommended file not found")
+            mounts = self.get_mergerfs_pool_mounts().get(recommendation["target_device_id"], [])
+            if len(mounts) != 1:
+                raise RuntimeError("Cannot determine destination mount")
+            destination_mount = mounts[0]
         move_id = str(uuid.uuid4())
         move_handle = self.agent.start_move_file(file_path, destination_mount)
         self.movements[move_id] = move_handle
@@ -272,7 +292,7 @@ class CoreService:
                 }
 
     #Helper function
-    def get_mergerfs_pool_device_ids(self):
+    def get_mergerfs_pool_mounts(self):
         #Find the mergerfs mount point
         output = subprocess.check_output(["findmnt", "-rn", "-t", "fuse.mergerfs,mergerfs", "-o", "TARGET"], text=True)
         pools = output.splitlines()
@@ -280,7 +300,7 @@ class CoreService:
             raise RuntimeError("Expected exactly one mergerfs pool")
         #Read branch paths from mergerfs
         data = os.getxattr(os.path.join(pools[0], ".mergerfs"),"user.mergerfs.branches").decode("utf-8")
-        pool_ids = set()
+        pool_mounts = {}
         for entry in data.split(":"):
             if not entry:
                 continue
@@ -295,7 +315,10 @@ class CoreService:
             parent = subprocess.check_output(
                 ["lsblk", "-dn", "-o", "PKNAME", source], text=True).strip()
             device_id = parent or os.path.basename(source)
-            pool_ids.add(device_id)
-        if not pool_ids:
+            pool_mounts.setdefault(device_id, []).append(branch)
+        if not pool_mounts:
             raise RuntimeError("No mergerfs pool devices found")
-        return pool_ids
+        return pool_mounts
+
+    def get_mergerfs_pool_device_ids(self):
+        return set(self.get_mergerfs_pool_mounts())
