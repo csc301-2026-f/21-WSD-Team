@@ -207,7 +207,7 @@ class CoreService:
 
         Flow: Agent -> CORE -> DB
         """
-        path = file.absolute_path
+        path = os.path.normpath(file.absolute_path)
         file = self.agent.untrack_file(file)
         self.database.upsert_file_subscription({"subscription_id": None,        #TODO not yet decided
                                                 "host_id": self.host_id,
