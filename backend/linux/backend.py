@@ -200,8 +200,8 @@ class LinuxBackend:
         :param file_path: Absolute path of a file inside the mergerfs mount,
                           e.g. "/srv/pool/docs/a.md"
         :return: Path on the partition holding the data, e.g.
-                 "/run/media/wisky/test2/docs/a.md", or ErrorCode.NOT_ON_MERGERFS
-                 if the path is not on a mergerfs mount or mergerfs xattrs are disabled
+                 "/run/media/wisky/test2/docs/a.md", or INVALID_PATH / PATH_NOT_ABSOLUTE
+                 for invalid input. Returns NOT_ON_MERGERFS if the path is not on a mergerfs mount or mergerfs xattrs are disabled
         """
         resolved = resolve_mergerfs_path(file_path)
         if isinstance(resolved, ErrorCode):
@@ -224,7 +224,7 @@ class LinuxBackend:
         :param destination_mount: Absolute mount point of the destination partition,
                                   e.g. "/run/media/wisky/test1"
         :return: MoveHandle for the running move, or an ErrorCode if it could not
-                 start: PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
+                 start: INVALID_PATH, PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
                  NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, DESTINATION_EXISTS or
                  MOVE_FAILED
         """
