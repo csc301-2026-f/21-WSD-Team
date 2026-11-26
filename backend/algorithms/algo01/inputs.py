@@ -5,9 +5,22 @@ from dataclasses import dataclass
 from datetime import datetime
 from ..common.validation import is_integer, is_number, is_text, parse_utc
 
+# Allow scheduling jitter without changing the public configuration keys.
+SAMPLING_TOLERANCE_SECONDS = 0.5
+
 DEFAULTS = {"goal": "performance", "min_read_ops_per_sec": 0.1, "min_read_fraction": 0.8,
     "min_window_seconds": 60, "max_window_seconds": 3600, "max_age_seconds": 300,
     "reserve_bytes": 1073741824, "reserve_fraction": 0.1, "max_recommendations": 10}
+
+
+def is_window_duration_valid(duration, minimum_seconds, maximum_seconds):
+    """Accept small sampling errors, but never an empty or reversed window."""
+    if duration <= 0:
+        return False
+
+    minimum = minimum_seconds - SAMPLING_TOLERANCE_SECONDS
+    maximum = maximum_seconds + SAMPLING_TOLERANCE_SECONDS
+    return minimum <= duration <= maximum
 
 
 class PolicyInputError(ValueError):

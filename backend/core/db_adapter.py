@@ -25,6 +25,9 @@ class DataBaseAdaptor:
                               end_utc: str, bucket_seconds: int | None = None) -> list[dict]:
         return self.repository.query_process_history(process_instance_ids, start_utc, end_utc, bucket_seconds)
 
+    def query_file_activity_windows(self, start_utc, end_utc, path = None, device_ids = None, limit = 5000):
+        return self.repository.query_file_activity_windows(start_utc, end_utc, path, device_ids, limit)
+
     def query_file_heat(self, start_utc: str, end_utc: str, limit: int = 100,
                         device_ids: list[str] | None = None) -> list[dict]: # CONDITIONAL
         return self.repository.query_file_heat(start_utc, end_utc, limit, device_ids)
@@ -40,3 +43,18 @@ class DataBaseAdaptor:
 
     def list_recommendations(self, mode: str | None = None) -> list[dict]:
         return self.repository.list_recommendations(mode)
+
+    def upsert_file_subscription(self, sub) -> None:
+        return self.repository.upsert_file_subscription(sub)
+
+    def list_file_subscriptions(self, status = None):
+        return self.repository.list_file_subscriptions(status)
+
+    def save_file_move_record(self, record):
+        return self.repository.save_file_move_record(record)
+
+    def list_file_move_records(self, status, limit = 100):
+        return self.repository.list_file_move_records(status, limit)
+
+    def get_incomplete_file_moves(self):
+        return self.repository.get_incomplete_file_moves()

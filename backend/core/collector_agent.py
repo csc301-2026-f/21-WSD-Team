@@ -4,6 +4,7 @@
 
 import threading
 import logging
+import time
 
 class CollectorAgent:
     def __init__(self, core, interval_seconds=1):
@@ -17,10 +18,14 @@ class CollectorAgent:
         self.last_error = None # msg for why error
 
     def _collect_loop(self):
+        count_next_save = time.monotonic() + 60 # Count 60 seconds for next file activity save
         while not self.stop_event.wait(self.interval_seconds): # no stop signal?
             try: # skip failure collection
                 self.core.collect_and_record()
                 self.last_error = None
+                if time.monotonic() >= count_next_save:
+                    self.core.save_current_file_activity()
+                    count_next_save += 60
             except Exception as error:
                 self.last_error = str(error)
                 logging.exception("Collection failed")
