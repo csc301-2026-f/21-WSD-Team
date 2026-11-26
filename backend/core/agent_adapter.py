@@ -44,6 +44,7 @@ class LinuxAgentAdapter:
         start = self.backend.start()
         if start == ErrorCode.FILE_TRACER_UNAVAILABLE:
             logger.error("Linux FileIO service is unavailable")
+        return start
 
     def get_devices(self) -> list[dict]:
         return normalize_linux_device(self.backend.list_devices(), self.backend.host_id)

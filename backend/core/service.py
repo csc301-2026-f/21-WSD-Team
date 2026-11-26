@@ -25,12 +25,16 @@ class CoreService:
             result = self.agent.start()
             if isinstance(self.agent, LinuxAgentAdapter):
                 self.capabilities["file_access_metrics"] = result is None
-            subscriptions = self.database.list_file_subscriptions("active")
-            for sub in subscriptions:
-                if sub["target_type"] == "file":
-                    self.agent.track_file(sub["path"])
-                elif sub["target_type"] == "folder":
-                    self.agent.track_folder(sub["path"])
+            if isinstance(self.agent, LinuxAgentAdapter) and result is None:
+                subscriptions = self.database.list_file_subscriptions("active")
+                for sub in subscriptions:
+                    try:
+                        if sub["target_type"] == "file":
+                            self.agent.track_file(sub["path"])
+                        elif sub["target_type"] == "folder":
+                            self.track_folder(sub["path"])
+                    except Exception as error:
+                        logger.error(f"Failed to restore subscription: {sub['path']}: {error}")
 
     def close(self) -> None:
         if not self.demo_mode:
