@@ -1,5 +1,15 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
+"""Tests for the D4 file I/O tables in the database (Sahil, branch db_file_io).
+
+Covers:
+  - file_subscriptions: upsert_file_subscription, list_file_subscriptions
+  - file_move_records:  save_file_move_record, list_file_move_records,
+                        get_incomplete_file_moves
+  - file_activity:      query_file_activity_windows (newest first, with the
+                        read/write average gap columns)
+  - data still being there after WSD restarts (a new repository on the same file)
+"""
 import gc
 import sqlite3
 from datetime import datetime, timedelta, timezone
@@ -87,7 +97,8 @@ def activity(path="/data/a.bin", device_id="sda", start="2026-11-25T12:00:00Z",
         "host_id": "host-1", "file_id": "f-" + path, "path": path, "device_id": device_id,
         "window_start_utc": start, "window_end_utc": end,
         "read_bytes": read_bytes, "write_bytes": 10, "read_ops": 2, "write_ops": 1,
-        "file_size_bytes": 4096, "source": "linux_ebpf",
+        "file_size_bytes": 4096, "read_average_gap": 0.0, "write_average_gap": 128.0,
+        "source": "linux_ebpf",
     }
 
 
@@ -313,7 +324,7 @@ def test_activity_windows_includes_windows_that_overlap_the_range(repo):
         activity(path="/after", start="2026-11-25T14:00:00Z", end="2026-11-25T14:01:00Z"),
     ])
     rows = repo.query_file_activity_windows("2026-11-25T12:00:00Z", "2026-11-25T13:00:00Z")
-    assert [r["path"] for r in rows] == ["/overlap-start", "/inside", "/overlap-end"]
+    assert [r["path"] for r in rows] == ["/overlap-end", "/inside", "/overlap-start"]  # newest first
 
 
 def test_activity_windows_filter_by_path(repo):
@@ -339,13 +350,40 @@ def test_activity_windows_empty_device_list_means_no_filter(repo):
     assert len(rows) == 2
 
 
-def test_activity_windows_oldest_first_and_limit(repo):
+def test_activity_windows_newest_first_and_limit(repo):
+    """Newest windows come first, so the limit keeps the most recent activity."""
     repo.ingest_file_activity([
         activity(path=f"/f{n}", start=f"2026-11-25T12:0{n}:00Z", end=f"2026-11-25T12:0{n}:59Z")
         for n in [3, 1, 2, 0]
     ])
     rows = repo.query_file_activity_windows("2026-11-25T12:00:00Z", "2026-11-25T13:00:00Z", limit=2)
-    assert [r["path"] for r in rows] == ["/f0", "/f1"]
+    assert [r["path"] for r in rows] == ["/f3", "/f2"]
+
+
+def test_activity_windows_full_order_is_newest_first(repo):
+    repo.ingest_file_activity([
+        activity(path=f"/f{n}", start=f"2026-11-25T12:0{n}:00Z", end=f"2026-11-25T12:0{n}:59Z")
+        for n in [3, 1, 2, 0]
+    ])
+    rows = repo.query_file_activity_windows("2026-11-25T12:00:00Z", "2026-11-25T13:00:00Z")
+    assert [r["path"] for r in rows] == ["/f3", "/f2", "/f1", "/f0"]
+
+
+def test_activity_access_pattern_gaps_are_saved(repo):
+    repo.ingest_file_activity([activity()])
+    (row,) = repo.query_file_activity_windows("2026-11-25T00:00:00Z", "2026-11-26T00:00:00Z")
+    assert row["read_average_gap"] == 0.0       # 0 = fully sequential reads
+    assert row["write_average_gap"] == 128.0
+
+
+def test_activity_without_gaps_is_saved_as_none(repo):
+    """Windows activity has no gap fields; those rows must still be saved."""
+    sample = activity()
+    del sample["read_average_gap"], sample["write_average_gap"]
+    repo.ingest_file_activity([sample])
+    (row,) = repo.query_file_activity_windows("2026-11-25T00:00:00Z", "2026-11-26T00:00:00Z")
+    assert row["read_average_gap"] is None
+    assert row["write_average_gap"] is None
 
 
 def test_activity_rows_without_device_are_kept(repo):
