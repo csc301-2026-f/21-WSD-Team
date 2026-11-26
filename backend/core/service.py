@@ -3,6 +3,7 @@
 from datetime import datetime, timezone, timedelta
 from .demo_data import load_demo_input
 from backend.linux.models import ErrorCode
+from .agent_adapter import LinuxAgentAdapter
 import logging
 import os
 import uuid
@@ -21,7 +22,15 @@ class CoreService:
 
     def start(self)-> None:
         if not self.demo_mode:
-            self.agent.start()
+            result = self.agent.start()
+            if isinstance(self.agent, LinuxAgentAdapter):
+                self.capabilities["file_access_metrics"] = result is None
+            subscriptions = self.database.list_file_subscriptions("active")
+            for sub in subscriptions:
+                if sub["target_type"] == "file":
+                    self.agent.track_file(sub["path"])
+                elif sub["target_type"] == "folder":
+                    self.agent.track_folder(sub["path"])
 
     def close(self) -> None:
         if not self.demo_mode:
@@ -232,7 +241,7 @@ class CoreService:
                   "recommendation_id": recommendation_id,
                   "host_id": self.host_id,
                   "source_path": move_handle.source_path,
-                  "target_path": move_handle.target_path,
+                  "target_path": move_handle.destination_path,
                   "bytes_total": move_handle.total_bytes,
                   "status": "in_progress",
                   "started_at_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
