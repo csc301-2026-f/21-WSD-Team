@@ -77,3 +77,69 @@ CREATE TABLE IF NOT EXISTS app_settings (
     value TEXT NOT NULL,
     updated_at_utc TEXT NOT NULL
 );
+
+-- Telemetry: Time-series samples per file (for D4 File I/O & Heat tracking)
+CREATE TABLE IF NOT EXISTS file_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    host_id TEXT NOT NULL,
+    file_id TEXT,
+    path TEXT,
+    device_id TEXT,
+    window_start_utc TEXT NOT NULL,
+    window_end_utc TEXT NOT NULL,
+    read_bytes INTEGER,
+    write_bytes INTEGER,
+    read_ops INTEGER,
+    write_ops INTEGER,
+    file_size_bytes INTEGER,
+    read_average_gap REAL,
+    write_average_gap REAL,
+    source TEXT NOT NULL
+);
+
+-- Fast lookup indexes for file heat and absolute filepath history searches
+CREATE INDEX IF NOT EXISTS idx_file_activity_window 
+ON file_activity(window_start_utc, window_end_utc);
+
+CREATE INDEX IF NOT EXISTS idx_file_activity_path 
+ON file_activity(path, window_start_utc);
+
+CREATE INDEX IF NOT EXISTS idx_file_activity_device 
+ON file_activity(device_id, window_start_utc);
+
+-- File Subscriptions (Persist watched paths across restarts/reboots)
+CREATE TABLE IF NOT EXISTS file_subscriptions (
+    subscription_id TEXT PRIMARY KEY,
+    host_id TEXT NOT NULL,
+    path TEXT NOT NULL UNIQUE,
+    target_type TEXT NOT NULL,          -- 'file' or 'folder'
+    status TEXT NOT NULL DEFAULT 'active', -- 'active', 'paused', 'removed'
+    created_at_utc TEXT NOT NULL,
+    updated_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_subscriptions_status
+ON file_subscriptions(status);
+
+-- File Move Records & Execution Results (Tracks move lifecycle & resume state)
+CREATE TABLE IF NOT EXISTS file_move_records (
+    move_id TEXT PRIMARY KEY,
+    recommendation_id TEXT,
+    host_id TEXT NOT NULL,
+    file_id TEXT,
+    source_path TEXT NOT NULL,
+    target_path TEXT NOT NULL,
+    source_device_id TEXT,
+    target_device_id TEXT,
+    bytes_total INTEGER,
+    bytes_moved INTEGER DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'in_progress', 'completed', 'failed', 'cancelled'
+    error_message TEXT,
+    started_at_utc TEXT,
+    completed_at_utc TEXT,
+    updated_at_utc TEXT NOT NULL,
+    FOREIGN KEY (recommendation_id) REFERENCES recommendations(recommendation_id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_move_records_status
+ON file_move_records(status);
