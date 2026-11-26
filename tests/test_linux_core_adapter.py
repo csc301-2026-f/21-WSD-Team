@@ -294,7 +294,22 @@ def test_file_activity_values(tmp_path):
     assert activity["write_ops"] == 1
     assert activity["file_size_bytes"] == 1234
     assert activity["source"] == "linux_ebpf"
-    assert activity["device_id"] is None
+    # device_id is checked on its own in test_file_activity_device_id_matches_the_device_list
+
+
+@pytest.mark.xfail(strict=True, reason="file activity uses File.device, the st_dev number (an int), "
+                                       "not the block device name like 'sda' used everywhere else")
+def test_file_activity_device_id_matches_the_device_list(tmp_path):
+    if not HAS_FILE_ID:
+        pytest.skip("needs the real File model from the Linux backend")
+    path = tmp_path / "data.bin"
+    path.write_bytes(b"x")
+    file = make_file(str(path))
+
+    (activity,) = normalize_linux_file_activity({file: file_metric(file)}, HOST)
+
+    # contract: device_id is str | None, and when set it must be a device_id from /api/v1/devices
+    assert activity["device_id"] is None or isinstance(activity["device_id"], str)
 
 
 def test_file_activity_passes_access_pattern_gaps_through(tmp_path):
