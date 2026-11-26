@@ -33,32 +33,33 @@ async function getJson(path, options = {}) {
         : `${API_BASE_URL}${path}`;
 
     const response = await fetch(url, options);
+    let result;
 
-    // Try to extract the backend's error message if the request failed.
-    if (!response.ok) {
-        let message = `HTTP error ${response.status}`;
-
-        try {
-            const errorResult = await response.json();
-
-            if (errorResult.error) {
-                message += `: ${JSON.stringify(errorResult.error)}`;
-            }
-        } catch {
-            // The response may not contain JSON.
-        }
-
-        throw new Error(message);
+    try {
+        result = await response.json();
+    } catch {
+        const detail = response.ok
+            ? "The API response was not valid JSON."
+            : `HTTP error ${response.status} with a non-JSON response.`;
+        throw new Error(detail);
     }
 
-    const result = await response.json();
+    if (!result || typeof result !== "object" || Array.isArray(result)) {
+        throw new Error("The API returned an invalid response envelope.");
+    }
 
-    if (result.status !== "success") {
-        const message = result.error
-            ? JSON.stringify(result.error)
-            : "The API returned an error.";
+    if (!response.ok || result.status !== "success") {
+        const apiError = result.error;
+        const code = typeof apiError?.code === "string" ? apiError.code : null;
+        const message = typeof apiError?.message === "string"
+            ? apiError.message
+            : `The API returned ${result.status || "an invalid status"}.`;
+        const status = response.ok ? "" : ` (HTTP ${response.status})`;
+        throw new Error(`${code ? `${code}: ` : ""}${message}${status}`);
+    }
 
-        throw new Error(message);
+    if (!Object.hasOwn(result, "data")) {
+        throw new Error("The API success response did not include data.");
     }
 
     return result.data;
@@ -187,4 +188,45 @@ export async function getLatestFileActivity() {
     }
 
     return getJson("/api/v1/files/activity/latest");
+}
+
+/* FILE AND FOLDER SUBSCRIPTIONS */
+
+const subscriptionPath = "/api/v1/files/subscriptions";
+
+export async function getFileSubscriptions() {
+    return getJson(subscriptionPath);
+}
+
+export async function createFileSubscription(path) {
+    return getJson(subscriptionPath, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path })
+    });
+}
+
+export async function deleteFileSubscription(path) {
+    return getJson(subscriptionPath, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path })
+    });
+}
+
+/* MERGERFS FILE MOVE ACTIONS */
+
+export async function executeFileMove(filePath, destinationMount) {
+    return getJson("/api/v1/actions/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            file_path: filePath,
+            destination_mount: destinationMount
+        })
+    });
+}
+
+export async function getFileActionStatus(actionId) {
+    return getJson(`/api/v1/actions/${encodeURIComponent(actionId)}`);
 }

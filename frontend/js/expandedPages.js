@@ -3,6 +3,7 @@
 import { getDevices, getLatestMetrics, getLatestProcesses, getProcessHistory, getRecommendations } from "./api.js";
 import { getProcessInstanceId } from "./processUtils.js";
 import { chartColors, createChartOptions } from "./chartTheme.js";
+import { sumMetricValuesWithCoverage } from "./formatting.js";
 
 const page = location.pathname.split("/").pop();
 const latest = { devices: [], metrics: [], processes: [], recommendations: [], updated: null };
@@ -27,9 +28,10 @@ const sampleStatus = process => {
     const ageLabel = age < 60_000 ? `${Math.floor(age / 1000)}s ago` : `${Math.floor(age / 60_000)}m ago`;
     return age > staleAfter ? `${ageLabel} · stale` : ageLabel;
 };
-const sum = (rows, key) => {
-    const nums = rows.map(row => number(row?.[key])).filter(v => v !== null);
-    return nums.length ? nums.reduce((a, b) => a + b, 0) : null;
+const sumLabel = (rows, key, formatter) => {
+    const summary = sumMetricValuesWithCoverage(rows, key);
+    if (summary.value === null) return rows.length ? "Unavailable" : "No measurements";
+    return `${summary.complete ? "" : "At least "}${formatter(summary.value)}`;
 };
 const keyOf = device => String(device.device_id);
 const nameOf = device => device.display_name || device.mount_points?.join(", ") || `Device ${device.device_id}`;
@@ -40,24 +42,41 @@ const setError = (id, error, prefix) => setText(id, `${prefix} ${error?.message 
 
 async function requestData({ devices = false, metrics = false, processes = false, recommendations = false } = {}) {
     const work = [];
-    if (devices) work.push(getDevices().then(data => { latest.devices = Array.isArray(data) ? data : []; }));
-    if (metrics) work.push(getLatestMetrics().then(data => { latest.metrics = Array.isArray(data) ? data : []; }));
-    if (processes) work.push(getLatestProcesses().then(data => { latest.processes = Array.isArray(data) ? data : []; }));
-    if (recommendations) work.push(getRecommendations().then(data => { latest.recommendations = Array.isArray(data) ? data : []; }));
-    const results = await Promise.allSettled(work);
+    const loadArray = (field, request, label) => work.push({
+        field,
+        promise: request.then(data => {
+            if (!Array.isArray(data)) {
+                throw new Error(`Expected ${label} API data to be an array.`);
+            }
+            latest[field] = data;
+        })
+    });
+
+    if (devices) loadArray("devices", getDevices(), "device");
+    if (metrics) loadArray("metrics", getLatestMetrics(), "device metric");
+    if (processes) loadArray("processes", getLatestProcesses(), "process");
+    if (recommendations) loadArray("recommendations", getRecommendations(), "recommendation");
+    const results = await Promise.allSettled(work.map(item => item.promise));
     latest.updated = new Date();
-    return results.filter(item => item.status === "rejected").map(item => item.reason);
+    return results.flatMap((item, index) => item.status === "rejected"
+        ? [{ field: work[index].field, message: item.reason?.message || "Request failed." }]
+        : []);
 }
 
 function renderOverview(errors) {
     const metrics = latest.metrics, processes = latest.processes;
     setText("overview-drive-count", latest.devices.length.toLocaleString());
-    const capacities = latest.devices.map(d => number(d.capacity_bytes)).filter(v => v !== null);
-    setText("overview-capacity", capacities.length ? fmtBytes(capacities.reduce((a, b) => a + b, 0)) : "Unavailable");
-    setText("overview-read", fmtRate(sum(metrics, "read_bytes_per_sec")));
-    setText("overview-write", fmtRate(sum(metrics, "write_bytes_per_sec")));
-    const readIops = sum(metrics, "read_iops"), writeIops = sum(metrics, "write_iops");
-    setText("overview-iops", readIops === null && writeIops === null ? "Unavailable" : fmtIops((readIops || 0) + (writeIops || 0)));
+    setText("overview-capacity", sumLabel(latest.devices, "capacity_bytes", fmtBytes));
+    setText("overview-read", sumLabel(metrics, "read_bytes_per_sec", fmtRate));
+    setText("overview-write", sumLabel(metrics, "write_bytes_per_sec", fmtRate));
+    const readIops = sumMetricValuesWithCoverage(metrics, "read_iops");
+    const writeIops = sumMetricValuesWithCoverage(metrics, "write_iops");
+    const knownIops = [readIops.value, writeIops.value].filter(value => value !== null);
+    const totalIops = knownIops.length ? knownIops.reduce((total, value) => total + value, 0) : null;
+    const completeIops = readIops.complete && writeIops.complete;
+    setText("overview-iops", totalIops === null
+        ? metrics.length ? "Unavailable" : "No measurements"
+        : `${completeIops ? "" : "At least "}${fmtIops(totalIops)}`);
     setText("overview-processes", processes.length.toLocaleString());
     const list = document.getElementById("overview-drive-list");
     list.replaceChildren();
@@ -140,7 +159,10 @@ function renderAnalytics(errors) {
         const m = map.get(keyOf(d)) || {};
         values[keyOf(d)] = { read: valid(m.read_bytes_per_sec) ? m.read_bytes_per_sec / 1e6 : null, write: valid(m.write_bytes_per_sec) ? m.write_bytes_per_sec / 1e6 : null };
     }
-    chartSamples.push({ label: latest.updated.toLocaleTimeString(), values }); chartSamples = chartSamples.slice(-60);
+    if (!errors.some(error => error.field === "metrics")) {
+        chartSamples.push({ label: latest.updated.toLocaleTimeString(), values });
+        chartSamples = chartSamples.slice(-60);
+    }
     updateAnalyticsChart();
     setText("analytics-status", errors.length ? `Could not load some data: ${errors.map(e => e.message).join("; ")}` : `Latest measurements received ${latest.updated.toLocaleTimeString()}.`);
 }

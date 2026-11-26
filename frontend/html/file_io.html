@@ -23,12 +23,24 @@
         </section>
 
         <section class="metric-grid file-io-metrics" aria-label="File I/O summary">
-            <article class="metric-tile"><h2>File records returned</h2><strong id="file-total-count">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Total bytes read</h2><strong id="file-total-read-bytes">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Total bytes written</h2><strong id="file-total-write-bytes">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Total read operations</h2><strong id="file-total-read-ops">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Total write operations</h2><strong id="file-total-write-ops">Unavailable</strong></article>
-            <article class="metric-tile"><h2>Most active file</h2><strong id="file-most-active">Unavailable</strong></article>
+            <article class="metric-tile"><h2>File records returned</h2><strong id="file-total-count">Waiting for activity</strong></article>
+            <article class="metric-tile"><h2>Total bytes read</h2><strong id="file-total-read-bytes">Waiting for activity</strong></article>
+            <article class="metric-tile"><h2>Total bytes written</h2><strong id="file-total-write-bytes">Waiting for activity</strong></article>
+            <article class="metric-tile"><h2>Total read operations</h2><strong id="file-total-read-ops">Waiting for activity</strong></article>
+            <article class="metric-tile"><h2>Total write operations</h2><strong id="file-total-write-ops">Waiting for activity</strong></article>
+            <article class="metric-tile"><h2>Most active file</h2><strong id="file-most-active">Collecting activity</strong></article>
+        </section>
+
+        <section class="data-panel" aria-labelledby="file-history-heading">
+            <h2 id="file-history-heading">Recent file activity history</h2>
+            <p id="file-history-status" class="status-note" role="status" aria-live="polite">Collecting file activity. Historical charts will populate as new observations arrive.</p>
+            <div class="file-history-chart-grid">
+                <div class="file-history-chart-card"><h3>Read, write, and total throughput</h3><div class="chart-panel"><canvas id="file-history-throughput-chart" aria-label="File read, write, and total throughput during the last five minutes"></canvas></div></div>
+                <div class="file-history-chart-card"><h3>Read and write operations</h3><div class="chart-panel"><canvas id="file-history-operations-chart" aria-label="File read and write operations per second during the last five minutes"></canvas></div></div>
+            </div>
+            <h3>Most active files in cached observations</h3>
+            <p class="file-schema-note">Ranked by average recent throughput.</p>
+            <ol id="file-history-active-files" class="file-history-active-files"><li>Collecting file activity...</li></ol>
         </section>
 
         <section class="data-panel">
@@ -57,19 +69,47 @@
             <p id="file-table-status" class="status-note" role="status">Loading file activity...</p>
             <div class="data-table-wrap">
                 <table class="data-table file-io-table">
-                    <thead><tr><th>File path</th><th>File name</th><th>Read bytes</th><th>Write bytes</th><th>Total bytes</th><th>Read ops</th><th>Write ops</th><th>Total ops</th><th>File size</th><th>Source</th></tr></thead>
+                    <thead><tr><th>File path</th><th>File name</th><th>Read<br>bytes</th><th>Write<br>bytes</th><th>Total<br>bytes</th><th>Read<br>ops</th><th>Write<br>ops</th><th>Total<br>ops</th><th>File size</th><th>Source</th></tr></thead>
                     <tbody id="file-activity-body"><tr><td colspan="10">Loading file activity...</td></tr></tbody>
                 </table>
             </div>
             <p class="file-schema-note">Long paths are truncated in the table; focus or hover a path to see its full value. File activity records do not include process attribution.</p>
         </section>
 
+        <section class="data-panel" aria-labelledby="file-subscriptions-title">
+            <h2 id="file-subscriptions-title">File and folder tracking subscriptions</h2>
+            <p>Subscriptions are sent to the live backend and are separate from the mock activity preview. Enter a file or folder path the backend can access. Folder tracking covers the files found when tracking starts; files added later may not be included.</p>
+            <div class="toolbar file-subscription-toolbar">
+                <label for="file-subscription-path">Path</label>
+                <input id="file-subscription-path" type="text" autocomplete="off" placeholder="Absolute file or folder path">
+                <button id="file-subscription-add" type="button">Track path</button>
+                <button id="file-subscriptions-refresh" type="button" class="secondary-button">Refresh subscriptions</button>
+            </div>
+            <p id="file-subscriptions-status" class="status-note" role="status" aria-live="polite">Loading subscriptions from the backend...</p>
+            <div class="data-table-wrap">
+                <table class="data-table file-subscription-table">
+                    <thead><tr><th>Path</th><th>Target type</th><th>Status</th><th>Action</th></tr></thead>
+                    <tbody id="file-subscriptions-body"><tr><td colspan="4">Loading subscriptions...</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+
         <section class="data-panel">
             <h2>Selected file details</h2>
             <p id="file-detail-status" class="status-note">Select a file with reported activity to inspect its details.</p>
             <div id="file-detail-grid" class="file-detail-grid" aria-live="polite"></div>
+            <div class="file-move-controls">
+                <label for="file-move-destination">Destination MergerFS branch mount</label>
+                <div class="toolbar">
+                    <input id="file-move-destination" type="text" autocomplete="off" placeholder="Absolute destination mount path">
+                    <button id="file-move-button" type="button" disabled>Move selected file</button>
+                </div>
+                <p id="file-move-status" class="status-note" role="status" aria-live="polite">File movement availability has not been checked. A destination branch must already contain the matching parent directory.</p>
+                <p class="file-schema-note">The destination branch must already contain the matching parent directory. WSD does not expose a cancellation route for an in-progress move.</p>
+            </div>
         </section>
     </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="../js/ui.js"></script>
     <script type="module" src="../js/fileIoMonitoring.js"></script>
 </body>

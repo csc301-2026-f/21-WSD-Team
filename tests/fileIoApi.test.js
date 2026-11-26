@@ -106,7 +106,7 @@ test("rejects an unavailable file activity endpoint", async () => {
     });
 
     try {
-        await assert.rejects(getLatestFileActivity(), /HTTP error 404/);
+        await assert.rejects(getLatestFileActivity(), /NOT_FOUND: Endpoint Not Found \(HTTP 404\)/);
     } finally {
         globalThis.fetch = originalFetch;
     }

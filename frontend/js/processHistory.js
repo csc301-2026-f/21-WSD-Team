@@ -249,7 +249,7 @@ async function refreshHistory() {
         console.error("Failed to load process history:", error);
 
         statusElement.textContent =
-            "Unable to load process history. Retrying...";
+            `Unable to load process history: ${error.message}. Retrying...`;
 
     } finally {
         isRefreshing = false;

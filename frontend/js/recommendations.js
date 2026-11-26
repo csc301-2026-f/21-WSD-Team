@@ -288,7 +288,7 @@ async function loadRecommendations() {
         console.error("Failed to load recommendations:", error);
 
         statusElement.textContent =
-            "Could not load recommendations. Check that Flask is running.";
+            `Could not load recommendations: ${error.message}`;
 
         showMessage(
             "Unable to load recommendations. Please try again.",
@@ -333,7 +333,7 @@ async function handleRefresh() {
         console.error("Failed to refresh recommendations:", error);
 
         statusElement.textContent =
-            "Could not generate recommendations. Check the backend and try again.";
+            `Could not generate recommendations: ${error.message}`;
 
         // Do not erase previously displayed recommendations on failure.
         if (container.childElementCount === 0) {
