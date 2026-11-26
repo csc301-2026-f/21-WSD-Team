@@ -583,11 +583,11 @@ class LinuxBackend:
 
     def get_device_io(
         self, interval_seconds: int, device_name: str
-    ) -> DriveMetric | None: ...
+    ) -> DriveMetric | ErrorCode: ...
 
     def get_process_io(
         self, interval_seconds: int, pid: int
-    ) -> ProcessMetric | None: ...
+    ) -> ProcessMetric | ErrorCode: ...
 
     def track_file(self, file_path: str) -> ErrorCode | File: ...
     def track_folder(self, folder_path: str) -> ErrorCode | tuple[File, ...]: ...
@@ -598,6 +598,9 @@ class LinuxBackend:
     def get_all_file_stats(
         self, interval_seconds: int
     ) -> dict[File, FileMetric | None]: ...
+
+    def get_actual_path(self, file_path: str) -> str | ErrorCode: ...
+    def start_move_file(self, file_path: str, destination_mount: str) -> MoveHandle | ErrorCode: ...
 ```
 
 `get_capabilities()` is not implemented. `sample_device_io()` and `sample_process_io()` are replaced by `get_device_io()` / `get_process_io()` on background-collected history. `sample_file_activity()` is replaced by the track/untrack calls plus `get_all_file_stats()`.
@@ -605,20 +608,26 @@ class LinuxBackend:
 **Typical usage**
 
 ```python
+from backend.linux.backend import LinuxBackend
+from backend.linux.models import DriveMetric, File
+
 backend = LinuxBackend("host-1")
-err = backend.start()        # None, or ErrorCode.FILE_TRACER_UNAVAILABLE (disk/process still run)
-
-file = backend.track_file("/home/user/data.db")        # File, or ErrorCode
-files = backend.track_folder("/home/user/projects")    # tuple[File, ...], or ErrorCode
-
-stats = backend.get_all_file_stats(5)                  # {File: FileMetric | None}
-for f, metric in stats.items():
-    if metric is not None:
-        print(f.absolute_path, metric.read_completed_bytes, metric.read_average_gap)
-
-backend.untrack_file(file)
-backend.untrack_folder(files)
-backend.close()
+tracer_error = backend.start()
+try:
+    devices = backend.list_devices()
+    if devices:
+        metric = backend.get_device_io(1, devices[0].device_id)
+        if isinstance(metric, DriveMetric):
+            print(metric.read_bytes)  # Two disk samples are available.
+    if tracer_error is None:
+        tracked = backend.track_file("/home/user/data.db")
+        if isinstance(tracked, File):
+            metric = backend.get_all_file_stats(5)[tracked]
+            if metric is not None:
+                print(tracked.absolute_path, metric.read_completed_bytes)
+            backend.untrack_file(tracked)
+finally:
+    backend.close()
 ```
 
 **Sampling history and interval limits** (`constants.py`)
@@ -627,9 +636,9 @@ All three collectors sample in a daemon thread about once per second. `interval_
 
 | Collector | History length | Largest usable `interval_seconds` | `interval_seconds <= 0` |
 |---|---|---|---|
-| Disk | 600 | 599 | returns `None` |
-| Process | 10 | 9 | raises `ValueError` |
-| File | 10 | 9 | raises `ValueError` (only while started; returns `{}` when stopped) |
+| Disk | 600 | 599 | returns `ErrorCode.INVALID_TIME_INTERVAL` while started |
+| Process | 10 | 9 | raises `ValueError` while started |
+| File | 60 | 59 | raises `ValueError` (only while started; returns `{}` when stopped) |
 
 At most 16,384 files can be tracked at once (`MAX_TRACKED_FILES`).
 
@@ -639,11 +648,14 @@ At most 16,384 files can be tracked at once (`MAX_TRACKED_FILES`).
 
 | Field | Type | Meaning |
 |---|---|---|
+| `file_id` | `int` | Assigned by this collector. IDs can have gaps and can repeat across backend instances |
 | `absolute_path` | `str` | Canonical absolute path, symlinks resolved |
 | `inode` | `int` | `st_ino` from `os.stat()` at the last check |
 | `device` | `int` | `st_dev` from `os.stat()` at the last check (raw value, not a block device name) |
 
-Two `File` objects are equal, and hash equally, when `absolute_path` is equal. `inode` and `device` are not compared. A file replaced at the same path (for example an editor saving through rename) therefore keeps the same record, and its counters continue.
+Equality and hashing use `(file_id, absolute_path)`. Tracking a path twice or tracking a hard link to the same inode returns the existing record. Removing it and tracking it again assigns a new ID.
+
+**Replacement at the same path.** When the sampler detects a changed device or inode, it constructs a new `File` without the required `file_id`. This raises `TypeError` in the sampling thread and stops new file samples for all tracked files. Existing history can still be returned.
 
 `FileMetric` is the activity of one file over an interval (difference of two cumulative samples):
 
@@ -672,12 +684,12 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 | `FileActivity` field | Linux source |
 |---|---|
 | `path` | `file.absolute_path` |
-| `window_start_utc` / `window_end_utc` | `timestamp` / `timestamp + duration` seconds |
+| `window_start_utc` / `window_end_utc` | `timestamp` / estimated end from `timestamp + duration` seconds |
 | `read_bytes` / `write_bytes` | `read_completed_bytes` / `write_completed_bytes` |
 | `read_ops` / `write_ops` | `read_success_ops` / `write_success_ops` |
 | `file_size_bytes` | **Not provided by `FileMetric`.** Collected internally, but not exposed; CORE can `os.stat()` the path for now |
 | `device_id` | **Not provided.** `File.device` is a raw `st_dev`, not a block device name like `nvme0n1` |
-| `file_id` | Not provided; `absolute_path` is the stable identifier |
+| `file_id` | `file.file_id` is a collector-local integer. A shared string ID needs a scope if records span backend instances |
 | `source` | Suggested `"linux_ebpf"` |
 
 #### Requirements for file tracking
@@ -686,7 +698,29 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 - BCC Python bindings (`python3-bpfcc` on Debian/Ubuntu, `python3-bcc` on Fedora). **`file.py` imports BCC at module load, so without BCC installed, importing the Linux backend fails with `ModuleNotFoundError`, and device and process collection are unavailable too.**
 - Kernel headers for the running kernel (BCC compiles the probe program on every `start()`).
 - A kernel with BTF and fentry/fexit support. `vfs_read` and `vfs_write` must be traceable; `vfs_readv`, `vfs_writev`, `vfs_iter_read` and `vfs_iter_write` are attached when the kernel exposes them.
-- If the probe program cannot be loaded (no fentry support, missing headers, insufficient privileges), `start()` returns `ErrorCode.FILE_TRACER_UNAVAILABLE`. Disk and process collection still start. The exception is kept in `backend.file_collector.last_error`.
+- If the probe program cannot be loaded (no fentry support, missing headers, insufficient privileges), `start()` returns `ErrorCode.FILE_TRACER_UNAVAILABLE`. Disk and process collection still start. The exception is kept in `backend.file_collector.last_error`. Calling `start()` again while started returns `None` without retrying the tracer. Use `close()` followed by `start()` to retry.
+
+#### mergerfs path lookup and file moves
+
+These calls work independently of `start()`. The caller supplies an existing mergerfs pool and a writable destination branch. For example, moving `/srv/pool/docs/a.md` to `/mnt/ssd` uses `/mnt/ssd/docs/a.md` as the destination. The caller must ensure the branch belongs to the pool, the parent directory exists, and writers have stopped.
+
+| Call | Result |
+|---|---|
+| `get_actual_path(file_path)` | Reads `user.mergerfs.fullpath` and `user.mergerfs.relpath`. Returns the underlying source path, or `NOT_ON_MERGERFS` on any xattr read error, including a missing file or denied access. |
+| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
+| Existing destination | After the same-path check, an existing destination entry raises `AttributeError` before launch. The code refers to `DESTINATION_EXISTS`, while the enum defines `FILE_ALREADY_EXISTS`. The existence check and the move are separate, so a concurrent destination creation can still be overwritten. |
+
+`MoveHandle` exposes `source_path` (pool path), `actual_path` (source branch path), `destination_path` and `total_bytes` (initial size).
+
+| Method | Behavior |
+|---|---|
+| `is_running() -> bool` | Polls the child process. |
+| `progress() -> float` | While running, returns destination size divided by initial size, capped at `0.9999` (zero for an empty source). Success returns `100.0`. Failure or cancellation returns the last observed value. The scale changes on success. |
+| `result()` | Returns `None` while running, then the destination path, `MOVE_FAILED`, or `MOVE_CANCELLED`. Exit status zero or a missing source with a present destination is treated as success. |
+| `wait(timeout=None)` | Blocks until completion or timeout in seconds. Returns the same result as `result()`, or `None` on timeout. |
+| `cancel() -> bool` | Sends terminate, waits up to five seconds, then kills if needed. If the source still exists, attempts to remove the destination and returns `True` with `MOVE_CANCELLED`. Cleanup errors are ignored. Returns `False` if already finished or if the source has disappeared. |
+
+The module-level helpers in [file_operation.py](../backend/linux/file_operation.py) are `resolve_mergerfs_path(source_path)` (underlying path and relative path, or an error), `start_mergerfs_move(source_path, destination_mount)` (the asynchronous implementation), and `move_mergerfs_file(source_path, destination_mount, on_progress=None, progress_interval=0.2)`. The blocking helper returns the destination path or an error and calls `on_progress(value)` when the polled value changes, using the same scale as `progress()`.
 
 **Expected capabilities** (each owner must mark **working / planned / unsupported**):
 
@@ -710,18 +744,18 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 | `device_metrics` | **Implemented; verification pending** | Background sampling of `/proc/diskstats`, bounded history, interval differences |
 | `process_metrics` | **Implemented; verification pending** | Background sampling of `/proc/[pid]/io`, bounded history, interval differences; permission limits apply |
 | `process_to_device_attribution` | **Unsupported** | `/proc/[pid]/io` does not identify physical devices |
-| `file_access_metrics` | **Implemented; verified on one host** | eBPF (BCC) fentry/fexit probes on the kernel VFS read/write functions; per-file attempts, requested/completed bytes, successful operations and average access gap. Live test passed on Fedora 44, kernel 7.2.7, btrfs, before the latest refactor (see §03.2) |
-| `file_level_pooling` | **Planned** | No mergerFS integration |
+| `file_access_metrics` | **Implemented; earlier version tested on one host** | eBPF (BCC) fentry/fexit probes on the kernel VFS read/write functions, with per-file attempts, requested/completed bytes, successful operations and average access gap. Live test passed on Fedora 44, kernel 7.2.7, btrfs, before the latest refactor (see §03.2) |
+| `file_level_pooling` | **Partial** | Resolves paths and moves files within an existing mergerfs pool. Pool creation and mounting are external |
 | `ssd_caching` | **Planned** | No cache/redirection implementation |
-| `file_move` | **Planned** | No file migration function |
+| `file_move` | **Implemented with limitations** | Asynchronous branch-to-branch move with polling and cancellation. See the mergerfs contract above |
 | `dry_run_action` | **Planned** | No dry-run function |
 
 **Notes:**
 - Disk, process and file collectors sample in daemon threads at a target cadence of about one second; observed elapsed intervals may differ.
-- Metrics are differences between cumulative samples; collection history is in memory only and is cleared by `close()`.
+- Metrics are differences between cumulative samples held in memory. `close()` stops all collectors and clears file samples. Tracked paths and the disk/process histories survive a close/start cycle on the same instance. Disk/process intervals spanning that cycle can include the stopped period.
 - File counters describe application requests at the VFS layer, not physical disk I/O. Reads served from the page cache are counted.
 - Not counted: memory-mapped I/O, `sendfile`, `splice`, `copy_file_range`, and I/O submitted through io_uring, because these do not go through the probed functions. For `readv`/`writev` calls with more than 16 buffers, requested bytes count only the first 16.
-- When a file is tracked (and again after it is replaced), the backend opens it once and issues a 0-byte read so the kernel can report how it identifies the file. This read is not counted. It is needed because `stat()` can report a different device than the kernel uses (for example btrfs subvolumes).
+- When a file is tracked with the tracer running, the backend opens it once and issues a 0-byte read so the kernel can report how it identifies the file. This read is not counted. It is needed because `stat()` can report a different device than the kernel uses (for example btrfs subvolumes).
 - `track_folder()` is a snapshot: files created later are not picked up. Symlinks are not followed. A second path to an already tracked file (hard link) returns the first path's `File`.
 - Callable capability reporting (`get_capabilities()`) is unavailable.
 - No overhead benchmark has been run for any collector.
@@ -873,18 +907,7 @@ Remaining Work:
 
 - [x] **TODO · MOHAN** — Actual module path / language / callable signatures
 
-  **Answer / evidence:** 
-- Python 3; 
-  - `backend.py` (public API), 
-  - `collector.py` (disk, process and file sampler threads), 
-  - `drive.py` (Drive related OS api)
-  - `process.py` (Process related OS api)
-  - `file.py` (file tracking: eBPF probe program, BCC loader, path helpers)
-  - `models.py` (frozen dataclasses and `ErrorCode`), 
-  - `constants.py` (sample-history lengths, tracking limits, `/proc` field indexes).
-  - `tests/test_file_tracking.py` (unit tests, fake kernel probe), `tests/live_file_tracking.py` (live test, needs root + BCC), `tests/diagnose_file_tracking.py` (diagnostic for probe/key mismatches).
-
-    The implemented `LinuxBackend` API is listed above. All three collectors receive data via background sampling. `DiskIOCollector(tuple(self.list_devices()))` is constructed with the required argument. This API does **not** implement the earlier proposed dictionary-based signatures.
+  **Answer / evidence:** [backend.py](../backend/linux/backend.py) exposes `LinuxBackend`. [drive.py](../backend/linux/drive.py) and [process.py](../backend/linux/process.py) discover devices and processes and read cumulative counters. [file.py](../backend/linux/file.py) resolves tracked paths and loads the BCC probe. [collector.py](../backend/linux/collector.py) maintains sample histories and computes interval metrics. [models.py](../backend/linux/models.py) defines the frozen records and error codes, and [constants.py](../backend/linux/constants.py) defines limits and timing defaults. [file_operation.py](../backend/linux/file_operation.py) implements mergerfs moves. [mergerfs_setup.txt](../backend/linux/mergerfs_setup.txt) describes the external mount configuration.
 
 - [x] **TODO · MOHAN** — Linux data source(s), permissions and supported distributions
 
@@ -908,10 +931,12 @@ Remaining Work:
   | `ProcessMetric` | `timestamp`, `duration`, `read_bytes`, `write_bytes`, `reads_complete`, `writes_complete` | UTC ISO 8601; requested seconds (`int`); bytes attributed by `/proc/[pid]/io`; `syscr`/`syscw` syscall counts |
   | `Drive` | `timestamp`, `device_id`, `model`, `serial`, `size_bytes`, `media_type`, `partitions` | Device metadata; partition `size_bytes`/`available_bytes` report filesystem usage, or zero if unavailable |
   | `Process` | `pid`, `name`, `start_time_timestamp` | Process metadata; start time is UTC ISO 8601 from `/proc/[pid]/stat` + boot time |
-  | `File` | `absolute_path`, `inode`, `device` | Canonical path; `st_ino` / raw `st_dev` from `os.stat()`; equality by path only |
+  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. Inode and raw device number come from `os.stat()` |
   | `FileMetric` | `file`, `timestamp`, `duration`, `read_attempts`, `read_requested_bytes`, `read_success_ops`, `read_completed_bytes`, `read_average_gap`, `write_attempts`, `write_requested_bytes`, `write_success_ops`, `write_completed_bytes`, `write_average_gap` | UTC ISO 8601; requested seconds (`int`); call counts; bytes; average gap in bytes (`float`) or `None`. Full definitions in the File tracking records table above |
 
-  `FileSample` (cumulative counters plus `size_bytes`) and `FileCounters` are internal and not returned by the public API.
+  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes)` records. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
+
+  Internally, `DriveSample` counts 512-byte sectors and disk operations. `ProcessSample` holds cumulative storage bytes and syscall counts. `FileSample` adds the file, timestamp and size to the cumulative `FileCounters` fields, including gap sums and counts. Public metric reads return interval differences.
 
   Not provided: process-to-file attribution (which process did the I/O), file size in `FileMetric`, and the block device a file lives on.
 
@@ -928,12 +953,12 @@ Remaining Work:
   Process sampling:
   - Dedicated background thread, target cadence 1 second; each tick enumerates all processes and reads `/proc/[pid]/io`
   - Maximum history length: 10 samples
-  - Nonblocking retrieval: `get_process_io()` compares two stored samples; the process must be present in both, with matching identity (PID + start time)
+  - Nonblocking retrieval: `get_process_io()` compares two stored samples; the process must be present in both, with matching identity (PID, name and start timestamp)
 
   File sampling:
   - Dedicated background thread, target cadence 1 second; each tick reads the kernel counters for every tracked file and `os.stat()`s each tracked path to detect replacement
   - Kernel-side counting is continuous (every matching read/write is counted as it happens); only the reading of totals is once per second
-  - Maximum history length: 10 samples
+  - Maximum history length: 60 samples
   - Nonblocking retrieval via `get_all_file_stats()`
 
   **Measured overhead: Not available.**
@@ -944,12 +969,12 @@ Remaining Work:
   - Returned `duration` is the requested interval rather than measured elapsed time.
   - The configured `DEFAULT_SAMPLE_INTERVAL` constant is not currently used by any collector loop.
 
-- [ ] **TODO · MOHAN** — mergerFS file-level placement/migration semantics and limitations
+- [x] **TODO · MOHAN** — mergerFS file-level placement/migration semantics and limitations
 
   **Answer / evidence:**
 
-  **Status: Planned; not implemented.**
-- 
+  See the mergerfs contract in §03 for lookup, move, progress and cancellation. The documented mount configuration puts the writable HDD branch before the writable SSD branch, uses `category.create=ff` and `func.mkdir=all`, and sets `moveonenospc=false`. The move helper assumes the caller has stopped writes and prepared the destination directory. It provides no free-space preflight, writer lock, checksum verification or crash rollback.
+
 - [ ] **TODO · MOHAN** — SSD cache mechanism (FUSE/symlink/alternative), redirect + coherency
 
   **Answer / evidence:**
@@ -965,8 +990,8 @@ Remaining Work:
   | `start()` | `None` on success or if already started; `ErrorCode.FILE_TRACER_UNAVAILABLE` if the file tracer could not load (disk/process still start) |
   | `list_devices()` | Calls discovery even if the backend is stopped; handled `lsblk`/JSON failures return `[]` |
   | `list_processes()` | Returns `[]` while stopped; otherwise enumerates accessible processes |
-  | `get_device_io(interval_seconds, device_name)` | `None` if stopped, interval ≤ 0, unknown drive, insufficient history or missing sample entry |
-  | `get_process_io(interval_seconds, pid)` | `None` if stopped, insufficient history, PID missing from either sample, or PID reused by a different process. **Raises `ValueError` if `interval_seconds <= 0`** |
+  | `get_device_io(interval_seconds, device_name)` | `BACKEND_NOT_STARTED` while stopped. `INVALID_TIME_INTERVAL` for a nonpositive interval, unknown drive, insufficient history, or a missing device in either sample |
+  | `get_process_io(interval_seconds, pid)` | `BACKEND_NOT_STARTED` while stopped. While running, a nonpositive interval raises `ValueError`. Returns `INVALID_TIME_INTERVAL` for insufficient history, `PROCESS_NOT_FOUND` if either sample lacks the PID (including unreadable I/O), or `PROCESS_PID_REUSED` if the process records differ |
   | `refresh_disk_collect()` | No-op while stopped; when running, replaces the disk collector and resets its history |
   | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
   | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
@@ -975,10 +1000,16 @@ Remaining Work:
   | `list_tracked_files()` | Tuple of tracked `File`s (empty if none); works while stopped |
   | `get_all_file_stats(interval_seconds)` | `{}` while stopped. While started: every tracked `File` mapped to a `FileMetric`, or to `None` if history is insufficient. **Raises `ValueError` if `interval_seconds <= 0`** |
 
-  `ErrorCode` values (`models.py`): `SUCESS = 0`, `PROCESS_NOT_FOUND = 1`, `PROCESS_PID_REUSED = 2`, `BACKEND_NOT_STARTED = 3`, `INVALID_TIME_INTERVAL = 4`, `PATH_NOT_ABSOLUTE = 5`, `FILE_NOT_FOUND = 6`, `NOT_A_REGULAR_FILE = 7`, `NOT_A_DIRECTORY = 8`, `PERMISSION_DENIED = 9`, `FILE_NOT_TRACKED = 10`, `TRACKING_LIMIT_REACHED = 11`, `FILE_TRACER_UNAVAILABLE = 12`. Codes 0–4 are not returned by the public API (the process collector uses 1, 2 and 4 internally; the device/process APIs return `None` instead).
+  `ErrorCode` is an `IntEnum` defined in [models.py](../backend/linux/models.py).
+
+  | Values | Members in numeric order |
+  |---|---|
+  | 0–4 | `SUCCESS`, `PROCESS_NOT_FOUND`, `PROCESS_PID_REUSED`, `BACKEND_NOT_STARTED`, `INVALID_TIME_INTERVAL` |
+  | 5–9 | `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED` |
+  | 10–14 | `FILE_NOT_TRACKED`, `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION` |
+  | 15–17 | `FILE_ALREADY_EXISTS`, `MOVE_FAILED`, `MOVE_CANCELLED` |
 
   Limitations:
-  - Device and process APIs still return `None` without distinguishing permission errors, missing processes and other handled failures.
   - Unsupported capability responses have not been standardized across platforms.
   - Some subprocess or background-thread failures may propagate or terminate collection.
 
@@ -989,7 +1020,7 @@ Remaining Work:
   - Implementing raid-0 mode and caching mode automation.
 ---
 
-**Current milestone:** The Linux backend implements device discovery, process discovery with start-time identity, background device/process I/O collection, interval-based metric retrieval, and per-file I/O tracking through eBPF (add/remove files while running, with access-pattern gaps), verified with a live test on one host. Benchmarks, multi-distribution validation, a capability API, pooling/caching operations, and safe storage actions remain outstanding.
+**Current milestone:** Device, process and tracked-file telemetry are implemented. An existing mergerfs pool supports path lookup and explicit file moves with progress and cancellation. The file-tracing live test cited above predates the refactor. Multi-distribution validation, benchmarks, cache redirection, capability reporting and an approved-action executor remain outstanding.
 
 ### 03.3 | OS CONSUMERS + JUAN — Review and test checklist
 
@@ -1365,6 +1396,8 @@ def get_storage_action_status(action_id: str) -> dict: ...
 > [!CAUTION]
 > **IF YOU OWN A PLATFORM BACKEND:** Please fill in these **TODO** items **separately for Windows and Linux**. Do not check a capability as supported unless you can provide evidence.
 
+
+**Linux implementation.** The mergerfs contract in §03 covers placement, permissions, cancellation and failure handling. The Linux backend exposes direct file moves. It has no preview, approval workflow, crash recovery or coherent SSD cache.
 
 - [ ] **TODO · ENRIQUE + MOHAN** — RAID0: What does placement/migration mean on your platform?
   - **Answer / evidence:** _Write your supported behavior, limitations and PR/fixture link here._
