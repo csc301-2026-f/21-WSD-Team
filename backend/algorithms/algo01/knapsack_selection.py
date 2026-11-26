@@ -14,7 +14,7 @@ class StateKey(NamedTuple):
     file_count: int
 
 class StateValue(NamedTuple):
-    total_read_rate: float
+    total_score: float
     selected_indices: tuple[int, ...]
 
 def prune_dominated_states(states):
@@ -28,11 +28,11 @@ def prune_dominated_states(states):
     for key, value in sorted_states:
         best_rate = best_read_rate_by_count.get(key.file_count, float("-inf"))
 
-        if value.total_read_rate <= best_rate: # Dominate!
+        if value.total_score <= best_rate: # Dominate!
             continue
 
         pruned[key] = value
-        best_read_rate_by_count[key.file_count] = value.total_read_rate
+        best_read_rate_by_count[key.file_count] = value.total_score
 
     return pruned
 
@@ -47,7 +47,7 @@ def select_files_knapsack(candidates, capacity, max_recommendations, warnings):
     Returns:
         - List of selected candidate rows
     """
-    states = {StateKey(used_space=0, file_count=0): StateValue(total_read_rate=0.0, selected_indices=())}
+    states = {StateKey(used_space=0, file_count=0): StateValue(total_score=0.0, selected_indices=())}
     transition_count = 0
 
     for index, row in enumerate(candidates): #iterate thru candidates
@@ -61,18 +61,22 @@ def select_files_knapsack(candidates, capacity, max_recommendations, warnings):
             
             new_space = key.used_space + row["size"]
             new_count = key.file_count + 1
-            new_value = value.total_read_rate + row["read_rate"]
+
+            # use predicted migration benefit if available
+            migration_score = row.get("migration_score", row["read_rate"])
+
+            new_value = value.total_score + migration_score
 
             if new_space > capacity or new_count > max_recommendations:
                 continue
 
             new_key = StateKey(used_space=new_space, file_count=new_count)
 
-            new_state = StateValue(total_read_rate=new_value, selected_indices=value.selected_indices + (index,))
+            new_state = StateValue(total_score=new_value, selected_indices=value.selected_indices + (index,))
 
             existing = next_states.get(new_key)
 
-            if existing is None or new_state.total_read_rate > existing.total_read_rate: # if no same StateKey in saved States or curr read rate value is higher
+            if existing is None or new_state.total_score > existing.total_score: # if no same StateKey in saved States or curr read rate value is higher
                 next_states[new_key] = new_state
 
                 if len(next_states) > MAX_DP_STATES:
@@ -81,8 +85,9 @@ def select_files_knapsack(candidates, capacity, max_recommendations, warnings):
         states = prune_dominated_states(next_states)
 
     # Select the best state: maximize read rate, then minimize used space and file count.
-    _, best_state = max(states.items(), key=lambda item: (item[1].total_read_rate, -item[0].used_space, -item[0].file_count)) 
+    _, best_state = max(states.items(), key=lambda item: (item[1].total_score, -item[0].used_space, -item[0].file_count))
     selected = [candidates[index] for index in best_state.selected_indices]
-    selected = sorted(selected, key=lambda row: (-row["read_rate"], row["size"], row["file_id"]))
+    selected = sorted(selected, key=lambda row: (
+    -row.get("migration_score", row["read_rate"]), row["size"], row["file_id"] ))
 
     return selected
