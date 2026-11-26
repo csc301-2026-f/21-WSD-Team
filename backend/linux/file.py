@@ -9,7 +9,7 @@ import threading
 
 from bcc import BPF
 
-from .file_operation import resolve_mergerfs_path
+from .file_operation import resolve_mergerfs_path, validate_tracking_path
 from .models import File, ErrorCode, FileCounters
 from .constants import *
 
@@ -337,22 +337,6 @@ def kernel_dev(st_dev: int) -> int:
     major = os.major(st_dev)
     minor = os.minor(st_dev)
     return (major << KERNEL_DEV_MINOR_BITS) | minor
-
-
-def validate_tracking_path(path: str) -> ErrorCode | None:
-    if not isinstance(path, str):
-        return ErrorCode.INVALID_PATH
-    try:
-        os.fsencode(path)
-    except UnicodeEncodeError:
-        return ErrorCode.INVALID_PATH
-    if not os.path.isabs(path):
-        return ErrorCode.PATH_NOT_ABSOLUTE
-    if any(ord(ch) < 32 or ord(ch) == 127 or ch in ";&|`<>" for ch in path):
-        return ErrorCode.INVALID_PATH
-    if "$(" in path or "${" in path:
-        return ErrorCode.INVALID_PATH
-    return None
 
 
 def block_device_name(st_dev: int) -> str | None:
