@@ -87,6 +87,23 @@ export function getValidMetricValues(metrics, key) {
 
 // Sum valid measurements from metric records.
 export function sumMetricValues(metrics, key) {
-    return getValidMetricValues(metrics, key)
-        .reduce((total, value) => total + value, 0);
+    const values = getValidMetricValues(metrics, key);
+    return values.length
+        ? values.reduce((total, value) => total + value, 0)
+        : null;
+}
+
+// Preserve how many records contributed so callers can label partial totals.
+export function sumMetricValuesWithCoverage(metrics, key) {
+    const values = getValidMetricValues(metrics, key);
+    const totalCount = Array.isArray(metrics) ? metrics.length : 0;
+
+    return {
+        value: values.length
+            ? values.reduce((total, value) => total + value, 0)
+            : null,
+        reportedCount: values.length,
+        totalCount,
+        complete: totalCount > 0 && values.length === totalCount
+    };
 }

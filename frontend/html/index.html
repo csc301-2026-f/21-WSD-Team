@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Monitor your computer's storage with Wise Storage Director. View connected drives, storage usage, performance metrics, and recommended optimizations from one convenient dashboard.">
 
-    <title>WSD App</title>
+    <title>Live Dashboard | WSD</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
@@ -21,7 +21,6 @@
     <div id="mainSidenav" class="sidenav">
         <a href="#" id="navCloseButton" class="closebtn">&times;</a>
         <a href="index.html">Main Dashboard</a>
-        <a href="task_priority.html">Task Priority</a>
         <a href="stats.html">Disk Usage Statistics</a>
         <a href="about.html">About</a>
         <a href="settings.html">Settings</a>
@@ -36,7 +35,6 @@
                 <p><a href="index.html">Main Dashboard</a></p>
             </li>
             <li>
-                <p><a href="task_priority.html">Task Priority</a></p>
             </li>
             <li>
                 <p><a href="stats.html">Disk Usage Statistics</a></p>
@@ -78,14 +76,13 @@
         <div class="box-container" id="driveContainer">
             <!-- JavaScript generates a box for each drive here -->
         </div>
+        <p id="drive-load-status" class="status-note" role="status" aria-live="polite">Loading devices from the live API...</p>
 
         <div class="box-container">
             <div class="box" id="big-start">
-                <h1>Toggle On/Off WSD</h1>
-                <h2>Check the statistics page for more info after launch</h2>
-
-                <input type="checkbox" id="power" checked>
-                <label for="power">ON/OFF</label>
+                <h2>Monitoring</h2>
+                <p>Live measurements are provided by the connected backend while its collector is running. The current API does not expose a frontend start/stop control.</p>
+                <p><a href="overview.html">View system overview</a> · <a href="analytics.html">Compare drive performance</a></p>
             </div>
         </div>
 

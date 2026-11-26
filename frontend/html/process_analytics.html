@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Search current process I/O and review selected process history.">
+    <title>Process Analytics | WSD</title><link rel="stylesheet" href="../css/style.css">
+</head><body>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button><nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <main><header class="page-intro"><h1>Process Analytics</h1><p>Find processes by name or PID and inspect their recent I/O activity.</p></header>
+        <section class="data-panel"><div class="toolbar"><label for="process-analytics-search">Search process</label><input id="process-analytics-search" type="search" placeholder="Name or PID" autocomplete="off"><label for="process-sort">Sort by</label><select id="process-sort"><option value="total">Total I/O rate</option><option value="read">Read rate</option><option value="write">Write rate</option><option value="name">Name</option><option value="pid">PID</option></select></div>
+            <p id="process-analytics-status" role="status" class="status-note">Loading processes…</p><div class="data-table-wrap"><table class="data-table"><thead><tr><th>Process</th><th>PID</th><th>Read</th><th>Write</th><th>Total I/O rate</th><th>Attributed device</th><th>Last sample</th></tr></thead><tbody id="process-analytics-body"></tbody></table></div>
+        </section>
+        <section class="data-panel"><h2>Selected process history</h2><p id="process-history-status" class="status-note">Select a process to request its recent history.</p><div class="chart-panel"><canvas id="process-analytics-chart" aria-label="Selected process read and write history"></canvas></div></section>
+        <section class="data-panel"><p>History range: last 5 minutes. The API may return fewer samples or no samples for this period. A current process rate is unavailable when the backend returns a null measurement.</p></section>
+    </main><script src="https://cdn.jsdelivr.net/npm/chart.js"></script><script type="module" src="../js/ui.js"></script><script type="module" src="../js/expandedPages.js"></script>
+</body></html>

@@ -78,7 +78,7 @@ def create_application(*, demo_mode=False, data_dir=None):
         "file_access_metrics": demo_mode or sys.platform.startswith("win32"),
         "file_level_pooling": False,
         "ssd_caching": False,
-        "file_move": False,
+        "file_move": isinstance(agent, LinuxAgentAdapter),
         "dry_run_action": False,
     }
 

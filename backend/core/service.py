@@ -7,6 +7,7 @@ from .agent_adapter import LinuxAgentAdapter
 import logging
 import os
 import uuid
+import subprocess
 logger = logging.getLogger(__name__)
 
 class CoreService:
@@ -136,6 +137,12 @@ class CoreService:
         else:
             devices = self.agent.get_devices()
             host_id = None
+            if isinstance(self.agent, LinuxAgentAdapter) and mode != "ssd_caching" and devices:
+                pool_ids = self.get_mergerfs_pool_device_ids()
+                devices = [device for device in devices if device["device_id"] in pool_ids]
+                if not devices:
+                    logger.error("No matching mergerfs pool devices")
+                    raise RuntimeError("No matching mergerfs pool devices")
             if devices:
                 host_id = devices[0].get("host_id")
             current = datetime.now(timezone.utc)
@@ -263,3 +270,32 @@ class CoreService:
                 "is_running": action.is_running(),
                 "result": result
                 }
+
+    #Helper function
+    def get_mergerfs_pool_device_ids(self):
+        #Find the mergerfs mount point
+        output = subprocess.check_output(["findmnt", "-rn", "-t", "fuse.mergerfs,mergerfs", "-o", "TARGET"], text=True)
+        pools = output.splitlines()
+        if len(pools) != 1:
+            raise RuntimeError("Expected exactly one mergerfs pool")
+        #Read branch paths from mergerfs
+        data = os.getxattr(os.path.join(pools[0], ".mergerfs"),"user.mergerfs.branches").decode("utf-8")
+        pool_ids = set()
+        for entry in data.split(":"):
+            if not entry:
+                continue
+            branch = entry.rsplit("=", 1)[0]
+            #Find the partition containing this branch
+            source = subprocess.check_output(["findmnt", "-rn", "-T", branch, "-o", "SOURCE"], text=True
+                                             ).strip().split("[", 1)[0]
+            if not source.startswith("/dev/"):
+                raise RuntimeError(f"Unknown device for {branch}")
+            source = os.path.realpath(source)
+            #Get the parent disk ID
+            parent = subprocess.check_output(
+                ["lsblk", "-dn", "-o", "PKNAME", source], text=True).strip()
+            device_id = parent or os.path.basename(source)
+            pool_ids.add(device_id)
+        if not pool_ids:
+            raise RuntimeError("No mergerfs pool devices found")
+        return pool_ids
