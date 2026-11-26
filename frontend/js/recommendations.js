@@ -19,11 +19,12 @@ const sortSelect = document.getElementById("recommendation-sort");
 const modeSelect = document.getElementById("recommendation-mode");
 
 function updateRefreshAvailability() {
-    const isCacheMode = modeSelect?.value === "ssd_caching";
-    refreshButton.disabled = isRefreshing || isCacheMode;
-    refreshButton.title = isCacheMode
-        ? "The active API refresh currently generates RAID 0 recommendations only."
-        : "Generate RAID 0 recommendations from current backend data.";
+    refreshButton.disabled = isRefreshing;
+    const mode = modeSelect?.value;
+    const label = mode === "ssd_caching"
+        ? "SSD Caching"
+        : "RAID 0 / file-level pooling";
+    refreshButton.title = `Generate ${label} recommendations from current backend data.`;
 }
 
 /* ELEMENT CREATION */
@@ -308,7 +309,10 @@ async function handleRefresh() {
 
     try {
         // The backend generates and saves recommendations before returning.
-        const generated = await refreshRecommendations();
+        // “All modes” filters saved results; the backend defaults refresh to
+        // RAID 0, so make the generated mode explicit in that case.
+        const mode = modeSelect?.value || "raid0";
+        const generated = await refreshRecommendations(mode);
 
         if (!Array.isArray(generated)) {
             throw new Error(
@@ -319,8 +323,11 @@ async function handleRefresh() {
         const generatedCount =
             renderRecommendations(generated);
 
+        const modeLabel = mode === "ssd_caching"
+            ? "SSD Caching"
+            : "RAID 0 / file-level pooling";
         statusElement.textContent =
-            `${generatedCount} new recommendation(s) generated and saved.`;
+            `${generatedCount} ${modeLabel} recommendation(s) generated and saved.`;
 
     } catch (error) {
         console.error("Failed to refresh recommendations:", error);

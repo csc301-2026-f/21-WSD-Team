@@ -156,8 +156,19 @@ export async function getRecommendations(mode) {
  * This does not mean that any recommended file operation was executed.
  */
 
-export async function refreshRecommendations() {
-    return getJson("/api/v1/recommendations/refresh", {
+export async function refreshRecommendations(mode) {
+    const params = new URLSearchParams();
+
+    if (mode) {
+        params.set("mode", mode);
+    }
+
+    const query = params.toString();
+    const path = query
+        ? `/api/v1/recommendations/refresh?${query}`
+        : "/api/v1/recommendations/refresh";
+
+    return getJson(path, {
         method: "POST"
     });
 }
