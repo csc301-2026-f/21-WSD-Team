@@ -328,7 +328,7 @@ def score_cache_candidates(
         if isinstance(row, dict) and isinstance(row.get("file_id"), str):
             by_file.setdefault(row["file_id"], []).append(row)
 
-    ewma_by_file: dict[str, list[dict]] = {}
+    ewma_by_file: dict[str, float] = {}
     for fid, rows in by_file.items():
         rows_sorted = sorted(rows, key=lambda r: str(r.get("window_end_utc", "")))
         ewma = 0.0
@@ -352,11 +352,11 @@ def score_cache_candidates(
         dtype=float,
     )
 
-    prob = model.predict_proba(X_cand)[:, 1]
+    probs = model.predict_proba(X_cand)[:, 1]
     latency_gain_ms = max(0.1, HDD_AVG_READ_MS - SSD_AVG_READ_MS)
     enriched: list[dict] = []
 
-    for row, prob in zip(candidates, prob):
+    for row, prob in zip(candidates, probs):
         fid = row["file_id"]
         base_rate = ewma_by_file.get(fid)
         effective_rate = (

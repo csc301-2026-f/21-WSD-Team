@@ -56,8 +56,7 @@ def select_recommendations(candidates, budgets, context, warnings, *, execution_
             "executor_revalidate_identity_capacity_permissions_and_path_compatibility",
             "d4_ml_logistic_cache_scorer",
             "d2_single_ssd_target_per_evaluation",
-            "cache_preserves_original_source_file",
-            "cache_population_execution_not_confirmed",
+            "cache_preserves_original_source_file"
         ]
         
         label = "MOCK: " if row["is_mock"] else ""
