@@ -9,6 +9,23 @@ from .models import ErrorCode
 from .constants import *
 
 
+def validate_tracking_path(path: str) -> ErrorCode | None:
+    """Validate a caller-supplied Linux path before filesystem access."""
+    if not isinstance(path, str):
+        return ErrorCode.INVALID_PATH
+    try:
+        os.fsencode(path)
+    except UnicodeEncodeError:
+        return ErrorCode.INVALID_PATH
+    if not os.path.isabs(path):
+        return ErrorCode.PATH_NOT_ABSOLUTE
+    if any(ord(ch) < 32 or ord(ch) == 127 or ch in ";&|`<>" for ch in path):
+        return ErrorCode.INVALID_PATH
+    if "$(" in path or "${" in path:
+        return ErrorCode.INVALID_PATH
+    return None
+
+
 def resolve_mergerfs_path(source_path: str) -> tuple[str, str] | ErrorCode:
     """
     Find where a file on a mergerfs mount is actually stored.
@@ -21,6 +38,10 @@ def resolve_mergerfs_path(source_path: str) -> tuple[str, str] | ErrorCode:
              or ErrorCode.NOT_ON_MERGERFS if the path is not on a mergerfs mount
              or mergerfs xattrs are disabled
     """
+    error = validate_tracking_path(source_path)
+    if error is not None:
+        return error
+
     try:
         actual_path = os.fsdecode(os.getxattr(source_path, MERGERFS_FULLPATH_XATTR))
         relative_path = os.fsdecode(os.getxattr(source_path, MERGERFS_RELPATH_XATTR))
@@ -172,12 +193,14 @@ def start_mergerfs_move(source_path: str, destination_mount: str) -> MoveHandle 
     :param source_path: Absolute path of the file inside the mergerfs mount
     :param destination_mount: Absolute mount point of the destination partition
     :return: MoveHandle for the running move, or an ErrorCode if it could not
-             start: PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
+             start: INVALID_PATH, PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
              NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, DESTINATION_EXISTS or
              MOVE_FAILED (mv could not be run)
     """
-    if not os.path.isabs(source_path) or not os.path.isabs(destination_mount):
-        return ErrorCode.PATH_NOT_ABSOLUTE
+    for path in (source_path, destination_mount):
+        error = validate_tracking_path(path)
+        if error is not None:
+            return error
     if not os.path.isfile(source_path):
         return ErrorCode.FILE_NOT_FOUND
     if not os.path.isdir(destination_mount):
