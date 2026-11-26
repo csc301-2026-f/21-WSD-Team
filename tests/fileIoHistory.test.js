@@ -85,9 +85,9 @@ test("a cache can be cleared independently for source-mode isolation", () => {
     live.record([row("live", end)], end);
     preview.record([row("mock", end)], end);
 
-    assert.deepEqual(live.getObservations()[0].rows.map(item => item.fileId), ["live"]);
-    assert.deepEqual(preview.getObservations()[0].rows.map(item => item.fileId), ["mock"]);
+    assert.deepEqual(live.getObservations(end)[0].rows.map(item => item.fileId), ["live"]);
+    assert.deepEqual(preview.getObservations(end)[0].rows.map(item => item.fileId), ["mock"]);
     live.clear();
-    assert.equal(live.getObservations().length, 0);
-    assert.equal(preview.getObservations().length, 1);
+    assert.equal(live.getObservations(end).length, 0);
+    assert.equal(preview.getObservations(end).length, 1);
 });
