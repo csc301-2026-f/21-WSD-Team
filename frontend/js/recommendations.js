@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import {
+    getLatestFileActivity,
     getRecommendations,
     refreshRecommendations
 } from "./api.js";
+import { normalizeFileActivity } from "./fileIoApi.js";
 
 const container = document.getElementById("recommendations-container");
 const statusElement = document.getElementById("recommendations-status");
@@ -14,6 +16,7 @@ const refreshButton = document.getElementById(
 
 let isRefreshing = false;
 let currentRecommendations = [];
+let currentFileActivity = [];
 const filterInput = document.getElementById("recommendation-filter");
 const sortSelect = document.getElementById("recommendation-sort");
 const modeSelect = document.getElementById("recommendation-mode");
@@ -104,6 +107,28 @@ function sortRecommendations(recommendations) {
     });
 }
 
+async function loadFileActivityLookup() {
+    try {
+        const records = await getLatestFileActivity();
+        currentFileActivity = normalizeFileActivity(records);
+    } catch (error) {
+        currentFileActivity = [];
+        console.warn("Could not load file paths for recommendations:", error);
+    }
+}
+
+function getRecommendationFile(recommendation) {
+    if (recommendation.file_id === null || recommendation.file_id === undefined || recommendation.file_id === "") {
+        return null;
+    }
+
+    const fileId = String(recommendation.file_id);
+    const candidates = currentFileActivity.filter(file => file.fileId === fileId && file.path);
+    return candidates.find(file => file.deviceId === String(recommendation.source_device_id))
+        ?? candidates[0]
+        ?? null;
+}
+
 /* EMPTY AND ERROR STATES */
 
 function showMessage(
@@ -180,9 +205,10 @@ function renderRecommendations(recommendations) {
             recommendation.file_id !== undefined &&
             recommendation.file_id !== "";
 
-        const title = hasFile
+        const file = getRecommendationFile(recommendation);
+        const title = file?.name || file?.path || (hasFile
             ? `File ID: ${recommendation.file_id}`
-            : "Storage recommendation";
+            : "Storage recommendation");
 
         const mode = recommendation.mode ?? "Unknown mode";
         const action = recommendation.action ?? "Unknown action";
@@ -215,6 +241,7 @@ function renderRecommendations(recommendations) {
         /* DETAILS */
 
         addDetail(card, "Reason", recommendation.reason);
+        if (file?.path) addDetail(card, "File path", file.path);
         addDetail(card, "Source device", recommendation.source_device_id);
         addDetail(card, "Target device", recommendation.target_device_id);
         addDetail(card, "Estimated benefit", recommendation.estimated_benefit);
@@ -273,7 +300,10 @@ async function loadRecommendations() {
 
     try {
         const mode = modeSelect?.value || undefined;
-        const recommendations = await getRecommendations(mode);
+        const [recommendations] = await Promise.all([
+            getRecommendations(mode),
+            loadFileActivityLookup()
+        ]);
 
         const displayedCount =
             renderRecommendations(recommendations);
@@ -319,6 +349,8 @@ async function handleRefresh() {
                 "Expected the refresh response data to be an array."
             );
         }
+
+        await loadFileActivityLookup();
 
         const generatedCount =
             renderRecommendations(generated);

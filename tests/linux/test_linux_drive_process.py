@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 
+import dataclasses
 import json
 import os
 import subprocess
@@ -10,7 +11,7 @@ import pytest
 
 from backend.linux import drive, process
 from backend.linux.collector import DiskIOCollector, ProcessIOCollector
-from backend.linux.models import Drive, DriveMetric, ErrorCode, ProcessMetric
+from backend.linux.models import Drive, DriveMetric, ErrorCode, Partition, ProcessMetric
 
 # Sample lsblk -Jdb -o NAME,TRAN,MODEL,SERIAL,SIZE output: one HDD, one NVMe
 # SSD, one USB stick, plus devices that must be ignored (loop, zram, cdrom).
@@ -52,10 +53,22 @@ def _fake_lsblk(args, text=True):
     raise AssertionError(f"unexpected lsblk call: {args}")
 
 
+# PR #74 adds Partition.mount_point, and _get_partition_storage then returns
+# (total, available, mount_point) instead of (total, available).
+# Match whichever version of the backend is being tested.
+HAS_MOUNT_POINT = "mount_point" in {f.name for f in dataclasses.fields(Partition)}
+
+
+def _fake_partition_storage(name):
+    if HAS_MOUNT_POINT:
+        return 100, 40, f"/mnt/{name}"
+    return 100, 40
+
+
 @pytest.fixture
 def fake_lsblk(monkeypatch):
     monkeypatch.setattr(drive.subprocess, "check_output", _fake_lsblk)
-    monkeypatch.setattr(drive, "_get_partition_storage", lambda name: (100, 40))
+    monkeypatch.setattr(drive, "_get_partition_storage", _fake_partition_storage)
     media = {"sda": "HDD", "nvme0n1": "SSD", "sdb": "SSD"}
     monkeypatch.setattr(drive, "_get_media_type", lambda name: media[name])
 
@@ -84,6 +97,8 @@ def test_partitions_are_found_including_nested(fake_lsblk):
     assert [p.name for p in ssd.partitions] == ["nvme0n1p1"]
     assert usb.partitions == ()
     assert (hdd.partitions[0].size_bytes, hdd.partitions[0].available_bytes) == (100, 40)
+    if HAS_MOUNT_POINT:
+        assert hdd.partitions[0].mount_point == "/mnt/sda1"
 
 
 def test_missing_lsblk_gives_empty_list(monkeypatch):
