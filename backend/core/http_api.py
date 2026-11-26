@@ -102,7 +102,7 @@ def create_http_api(core_service):
         file_path = action.get("file_path")
         destination_mount = action.get("destination_mount")
         recommendation_id = action.get("recommendation_id")
-        move_id = core_service.execute_movement(file_path, destination_mount)
+        move_id = core_service.execute_movement(file_path, destination_mount, recommendation_id)
         response = success_response(move_id)
         return jsonify(response)
 
