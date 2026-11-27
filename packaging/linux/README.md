@@ -1,6 +1,6 @@
 # WSD for Linux
 
-For x86 Linux.
+For x86-64 Linux with glibc 2.39 or newer. Built on Ubuntu 24.04.
 
 ## Install
 
@@ -64,8 +64,24 @@ kernel with BTF and fentry/fexit support, and permission to load eBPF probes.
 On Ubuntu 24.04, install the monitoring dependencies on the Linux host with
 
 ```sh
-sudo apt install util-linux python3-bpfcc "linux-headers-$(uname -r)"
+sudo apt install util-linux python3-bpfcc python3-venv "linux-headers-$(uname -r)"
 ```
+
+For file tracking, stop WSD and restart with root privileges:
+
+```sh
+sudo "$HOME/.local/bin/wsd"
+```
+
+When running from source, run from the repository root:
+
+```sh
+python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install Flask "scikit-learn>=1.5,<2"
+sudo .venv/bin/python -m backend.main --data-dir .wsd-integration
+```
+
+`--system-site-packages` makes the installed BCC bindings available to this environment.
 
 **File moves between pooled drives** require a mounted mergerfs pool and the
 `mv` command from `coreutils`. Install these packages if you use this feature.
@@ -75,7 +91,7 @@ sudo apt install mergerfs coreutils
 ```
 Follow [official mergerFS installation guide](https://trapexit.github.io/mergerfs/latest/) for installation instruction.
 
-Follow the [WSD mergerfs setup instructions](https://github.com/csc301-2026-f/21-WSD-Team/blob/156c386e57bf7b11646a23c089ed3aea137d57e7/backend/linux/mergerfs_setup.txt) for drive order, mount options, and how to prepare a file for moving.
+Follow the [WSD mergerfs setup instructions](../../backend/linux/mergerfs_setup.txt) for drive order, mount options, and how to prepare a file for moving.
 
 ## License and source
 

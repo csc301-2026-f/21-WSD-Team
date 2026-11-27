@@ -1,9 +1,9 @@
-# WSD D2 | Our Internal API Contracts & Team Checklists
+# WSD | Our Internal API Contracts & Team Checklists
 
 > **VERSION: `v0.8` · STATUS: `TEAM DRAFT / NOT APPROVED` · DATE: 2026-10-08**  
 > **Suggested path:** `docs/api-contracts.md`  
 > **Document coordinator:** **John**  
-> **TEAM 21:** This is **our working API contract**. Please fill in the parts you own, review the interfaces you will use, and raise questions directly in the PR. **All signatures and data structures below are proposals, not existing implementations or final decisions.** We can revise the proposed interfaces together, but we must notify affected consumers before merging an incompatible change.
+> **TEAM 21:** This is **our working API contract**. Please fill in the parts you own, review the interfaces you will use, and raise questions directly in the PR. **Implemented interfaces are identified below; other entries remain proposals.** We can revise the proposed interfaces together, but we must notify affected consumers before merging an incompatible change.
 
 ---
 
@@ -406,15 +406,15 @@ A simulated HDD file with 120 reads in 60 seconds. The algorithm recommends SSD 
 No file-level activity is available, so the algorithm returns `none`.
 
 **Platform limits:**  
-See [§05.1 — ALGO-01 limitations](#algo-01-spec). For D2, the algorithm only supports the `performance` goal and selects one SSD per evaluation. It recommends file placement but does not move files, implement caching or estimate actual performance improvements.
+See [§05.1 — ALGO-01 limitations](#algo-01-spec). The algorithm supports the `performance` goal and selects one SSD per evaluation. It recommends file placement but does not move files, implement caching or estimate actual performance improvements.
 
 **Evidence / PR:**  
-Local implementation and tests: `backend/algorithms/algo01/`
+Implementation and tests: `backend/algorithms/algo01/`
 
 Test command:  
-`python -B -m unittest discover -s backend/algorithms/algo01/tests -v`
+`python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"`
 
-PR: Pending. CORE integration has not been completed.
+Merged implementation: [PR #63](https://github.com/csc301-2026-f/21-WSD-Team/pull/63). CORE wiring and historical file input are implemented in [PR #62](https://github.com/csc301-2026-f/21-WSD-Team/pull/62).
 
 - [x] **TODO · PRODUCER** — Signature and input/output schemas filled in; sample values supplied.
 - [x] **TODO · PRODUCER** — Errors, capability limits and unsupported cases documented.
@@ -453,7 +453,7 @@ PR: Pending. CORE integration has not been completed.
 # Device
 {
     "host_id": str, "device_id": str, "display_name": str,
-    "media_type": str | None,              # "hdd"/"ssd"/"unknown"
+    "media_type": str | None,              # "hdd"/"ssd"/"nvme"/"unknown"
     "capacity_bytes": int | None,
     "free_bytes": int | None,
     "mount_points": list[str],
@@ -490,8 +490,8 @@ PR: Pending. CORE integration has not been completed.
     "window_end_utc": str, "read_bytes": int | None,
     "write_bytes": int | None, "read_ops": int | None,
     "write_ops": int | None, "file_size_bytes": int | None,
-    "read_average_gap": float | None,
-    "write_average_gap": float | None,
+    "read_average_gap": float | None,      # optional; bytes
+    "write_average_gap": float | None,     # optional; bytes
     "source": str,
 }
 
@@ -514,6 +514,8 @@ PR: Pending. CORE integration has not been completed.
     "completed_at_utc": str | None, "updated_at_utc": str,
 }
 ```
+
+The optional gap fields measure the average distance from the end of one read or write to the start of the next operation of the same kind on the same open file. Zero means sequential access; omitted or `null` means unavailable. Linux supplies these fields when measured, and DB preserves them for prediction and scoring.
 
 ### 02.2 | Recommendation record — Not action authorization
 
@@ -1235,24 +1237,25 @@ def evaluate_ssd_caching_policy(
 
 - [x] **TODO · JOHN + JESSLYN** — **RAID0** minimum *required* fields vs optional telemetry
   - **Answer / evidence:** 
-    - **Required:** Device ID, media type (HDD/SSD), availability, and target SSD's free space. ALGO-01 in my design would propose some candidates of files to move, so for each file, I require a file ID, source device ID, file size, read and write op counts, sampling intervals(timesteps), and data source(eg. Mock? from Windows? Linux?). CORE also provides the host ID and evaluation time.
-    - **Optional:** File path, read and write bytes during sample interval, judgement on wether and operation is sequential or random I/O(classification), latency, I/O queue depth(when multiple tasks are all unfinishing on same storage device, depth++, just like ready queue in CSC369), and detailed per device performance metrics.
+    - **Required:** Device ID, host ID, media type, availability, and target SSD/NVMe total and free capacity. Each file needs file/source-device IDs, a positive size, read/write operation counts, sampling start/end times and a source label. CORE also supplies the evaluation time and `file_access_metrics=True`.
+    - **Optional:** File path, read/write bytes, and `read_average_gap` / `write_average_gap` in bytes. Missing gap measurements remain `null` or omitted.
 - [ ] **TODO · JOHN + JESSLYN** — **SSD caching** minimum required fields vs optional telemetry
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JOHN + JESSLYN** — Actual policy functions/heuristics and configuration keys
   - **ALGO-01 (John):** `evaluate_raid0_policy(devices, realtime, history, mode_config, capabilities)`
-      - **For D2, the algorithm follows these rules:**
+      - **The current algorithm follows these rules:**
         1. Use the most recent valid I/O activity record for each file.
         2. Consider files on HDDs with at least 0.1 read operations per second, where reads account for at least 80% of total read/write operations.
-        3. Prioritize files with higher read frequencies. If two files have the same frequency, prioritize the smaller file.
+        3. Compare latest-rate, moving-average and Ridge predictions against historical observations, and use the best method. Files without enough recent history use their latest observed read rate. Recent read-gap measurements adjust the score when available.
         4. Select the SSD with the most available space after reserving capacity.
-        5. Recommend moving eligible files to the selected SSD, deducting each file's size from the remaining capacity.
+        5. Use Knapsack to select whole files within the capacity and recommendation limits. Fall back to Greedy if the computation budget is exceeded.
       - **Configuration:** The default thresholds are 0.1 reads/second and 80% reads. The algorithm reserves at least 1 GiB or 10% of the SSD's total capacity, whichever is larger, and generates at most 10 recommendations.
-      - **Limitations:** For D2, only the `performance` goal is supported. The algorithm generates recommendations but does not move files or estimate actual performance improvements.
+      - **Prediction input:** CORE passes up to one hour of per-file history in `history["file_activity"]`. Prediction uses consecutive 60-second windows with up to 0.5 seconds of sampling tolerance. Preserve the actual timestamps and counts; mock activity is excluded from training.
+      - **Limitations:** Only the `performance` goal is supported. The algorithm generates recommendations but does not move files or estimate actual performance improvements.
     - **ALGO-02 (Jesslyn):** Pending Jesslyn's implementation details.
 - [ ] **TODO · JOHN + JESSLYN** — User goal translation (if adopted; do not hard-code three algorithms)
   - **Answer / evidence:**
-    - **ALGO-01 (John):** For D2, I only support the `performance` goal. The algorithm tries to find frequently read files on HDDs and recommends moving them to SSDs if enough space is available.
+    - **ALGO-01 (John):** Only the `performance` goal is supported. The algorithm finds frequently read files on HDDs and recommends moving them to SSDs if enough space is available.
     - Other goals, such as `balanced` and `lifespan`, are not implemented yet. The algorithm returns `none` for unsupported goals instead of running three separate algorithms.
     - **ALGO-02 (Jesslyn):** Pending.
 - [ ] **TODO · JOHN + JESSLYN** — Missing/stale/file-level-unavailable data fallback
@@ -1263,6 +1266,7 @@ def evaluate_ssd_caching_policy(
       3. If the I/O data is too old (more than 300 seconds), ignore it.
       4. If no SSD is available or there is not enough space, return `none`.
       5. If the evaluation time is invalid, raise `PolicyInputError`.
+      6. Files without enough recent prediction history use their latest read rate. Missing recent spatial measurements use a neutral factor.
 - [ ] **TODO · JOHN + JESSLYN** — Allowed recommendation actions, constraints, reason format
   - **Answer / evidence:** 
     - **ALGO-01 (John):** The algorithm currently only returns two actions: `move` and `none`.
@@ -1273,7 +1277,7 @@ def evaluate_ssd_caching_policy(
       - `estimated_benefit=null` because we haven't measured the actual performance improvement.
 - [ ] **TODO · JOHN + JESSLYN** — Example recommendation for RAID0 + caching and a `none` case
   - **Answer / evidence:** - **Answer / evidence:**
-    - **ALGO-01 (John):** Suppose we have a 4 MiB file on an HDD. During a 60-second sampling interval, it is read 120 times and written 0 times. Its read frequency is 2 IOPS, and 100% of its I/O operations are reads. Since this file meets our thresholds, if an SSD has enough free space, the algorithm recommends moving it to that SSD (`action="move"`). User approval is required, and no actual file movement occurs in stage D2.
+    - **ALGO-01 (John):** Suppose we have a 4 MiB file on an HDD. During a 60-second sampling interval, it is read 120 times and written 0 times. Its read frequency is 2 IOPS, and 100% of its I/O operations are reads. Since this file meets our thresholds, if an SSD has enough free space, the algorithm recommends moving it to that SSD (`action="move"`). User approval is required; generating the recommendation does not move the file.
     - **None case:** If no file-level I/O data is available, the algorithm returns `action="none"` with a reason explaining that the required data is missing.
 
 ### 05.2 | ALGORITHM CONSUMERS + JUAN — Review and test checklist
@@ -1319,24 +1323,36 @@ def evaluate_ssd_caching_policy(
                       +---------- JUAN contract tests --+
 ```
 
-### 06.1 | Dashboard HTTP endpoints (initial proposals)
+### 06.1 | Dashboard HTTP endpoints
 
-| ID | Verb | Endpoint | UI use case | Owner / reviewer |
-|---|---|---|---|---|
-| HTTP-01a | GET | `/api/v1/health` | service/agent availability | Shengrong -> Danny |
-| HTTP-01b | GET | `/api/v1/capabilities` | disable unsupported controls | Shengrong -> Danny |
-| HTTP-01c | GET | `/api/v1/devices` | device list / disk usage | Shengrong -> Danny |
-| HTTP-01d | GET | `/api/v1/metrics/latest` | realtime device charts | Shengrong -> Danny |
-| HTTP-01e | GET | `/api/v1/processes/latest` | process I/O list | Shengrong -> Danny |
-| HTTP-01f | GET | `/api/v1/metrics/history?...` | device history chart | Shengrong -> Danny |
-| HTTP-01g | GET | `/api/v1/recommendations?mode=...` | action suggestions | Shengrong -> Danny |
-| HTTP-01h | POST | `/api/v1/recommendations/refresh` | request recalculation, **read-only** | Shengrong -> Danny |
-| HTTP-01i | GET/PATCH | `/api/v1/settings` | mode settings / workload priority | Shengrong -> Danny |
-| HTTP-01j | POST | `/api/v1/actions/preview` | show safe preview (later) | Shengrong -> Danny |
-| HTTP-01k | POST | `/api/v1/actions/execute` | require approval (later) | Shengrong -> Danny |
-| HTTP-01l | GET | `/api/v1/actions/{action_id}` | action progress/status (later) | Shengrong -> Danny |
-| HTTP-01m | GET | `/api/v1/processes/history?process_instance_id=...&start_utc=...&end_utc=...` | **US-02**: individual application's historical I/O; source DB-01 | Shengrong -> Danny |
-| HTTP-01n | GET | `/api/v1/impact/estimate?...` | **US-07**: evidence-based estimate of time saved; `unavailable` without baseline/comparison | Shengrong -> Danny; Juan reviews metric definition |
+| ID | Verb | Endpoint | UI use case | Status | Owner / reviewer |
+|---|---|---|---|---|---|
+| HTTP-01a | GET | `/api/v1/health` | service/agent availability | Proposed | Shengrong -> Danny |
+| HTTP-01b | GET | `/api/v1/capabilities` | disable unsupported controls | Implemented | Shengrong -> Danny |
+| HTTP-01c | GET | `/api/v1/devices` | device list / disk usage | Implemented | Shengrong -> Danny |
+| HTTP-01d | GET | `/api/v1/metrics/latest` | realtime device charts | Implemented | Shengrong -> Danny |
+| HTTP-01e | GET | `/api/v1/processes/latest` | process I/O list | Implemented | Shengrong -> Danny |
+| HTTP-01f | GET | `/api/v1/metrics/history?...` | device history chart | Proposed | Shengrong -> Danny |
+| HTTP-01g | GET | `/api/v1/recommendations?mode=...` | saved recommendations | Implemented | Shengrong -> Danny |
+| HTTP-01h | POST | `/api/v1/recommendations/refresh?mode=...` | generate and save recommendations without moving files | Implemented | Shengrong -> Danny |
+| HTTP-01i | GET/PATCH | `/api/v1/settings` | mode settings / workload priority | Proposed | Shengrong -> Danny |
+| HTTP-01j | POST | `/api/v1/actions/preview` | show safe preview | Proposed | Shengrong -> Danny |
+| HTTP-01k | POST | `/api/v1/actions/execute` | request a file move | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01l | GET | `/api/v1/actions/{action_id}` | action progress/status | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01m | GET | `/api/v1/processes/history?process_instance_id=...&start_utc=...&end_utc=...` | **US-02**: individual application's historical I/O; source DB-01 | Implemented | Shengrong -> Danny |
+| HTTP-01n | GET | `/api/v1/impact/estimate?...` | **US-07**: evidence-based estimate of time saved | Proposed | Shengrong -> Danny; Juan reviews metric definition |
+| HTTP-01o | GET | `/api/v1/files/activity/latest` | latest `FileActivity` records | Implemented | Shengrong -> Danny |
+| HTTP-01p | GET | `/api/v1/files/subscriptions` | active file/folder subscriptions | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01q | POST | `/api/v1/files/subscriptions` | track a file/folder | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01r | DELETE | `/api/v1/files/subscriptions` | stop tracking a file/folder | Implemented (Linux) | Shengrong -> Danny |
+
+Implemented routes return `{"status": "success", "data": ..., "error": null}` or the error envelope in §06.2. `mode` accepts `raid0` or `ssd_caching`; refresh defaults to `raid0` when omitted.
+
+- **File activity:** `data` is a list of §02.1 `FileActivity` records; no activity returns `[]`.
+- **Subscriptions:** POST and DELETE accept `{"path": "/absolute/path"}` and return that path in `data`. GET returns active subscription records with ID, host, path, target type, status and timestamps.
+- **Linux moves:** POST accepts `{"recommendation_id": "..."}` or `{"file_path": "/pool/file", "destination_mount": "/ssd"}` and returns the move ID in `data`. The status route returns `progress`, `is_running` and `result`.
+
+Invalid file/action requests can currently return `CORE_ERROR` with HTTP 500. The proposed 4xx/unsupported behaviour below is not implemented for every case.
 
 ### 06.2 | SHENGRONG — INTEGRATION PRODUCER CHECKLIST
 
