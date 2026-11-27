@@ -138,9 +138,7 @@ The published D2 Linux package does not include the later D3 Windows integration
 
 Team development is organized using feature branches and pull requests.
 
-Changes are reviewed before being merged into `main`. GitHub Actions runs automated Python tests on Windows and Linux using Python 3.10 and 3.12. These include ALGO-01 and ALGO-02 unit tests, HTTP and database contract tests, and integration tests.
-
-Frontend JavaScript unit tests can also be run using `npm test`.
+Changes are reviewed before being merged into main. GitHub Actions runs the automated tests on every pull request: ALGO-01 and ALGO-02 unit tests, HTTP and algorithm contract tests, database tests, CORE tests, Linux backend tests and integration tests on Windows and Ubuntu with Python 3.10 and 3.12, plus the frontend tests (npm test). The Linux backend's real eBPF side is tested on a real Linux machine with sudo bash scripts/linux_local_test.sh. See Testing for how to run the tests and what they cover.
 
 The D3 frontend improvements include better accessibility, semantic HTML, keyboard navigation, improved color contrast, and process search functionality. The tested frontend pages achieved a Lighthouse accessibility score of 100.
 
