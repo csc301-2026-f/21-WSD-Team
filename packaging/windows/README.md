@@ -29,6 +29,7 @@ Open PowerShell in the repository root: the folder containing `backend/` and
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\python.exe -m pip install Flask WMI pywin32 pywintrace psutil
+.\.venv\Scripts\python.exe -m pip install "scikit-learn>=1.5,<2"
 ```
 
 Start the same launcher:
