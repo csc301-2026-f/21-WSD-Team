@@ -1,21 +1,29 @@
 name: tests
 
+# When this runs:
+#   - every pull request          -> tests, lint, build (nothing is deployed)
+#   - every merge to main         -> same checks, then deploy to the DEV environment (pre-release)
+#   - every merge to release      -> same checks, then deploy to the RELEASE/PROD environment (Latest release)
+#   - a new tag "v*" or "D*"      -> same checks, then attach the tested packages to that release
+#                                   (e.g. D4 when the deliverable release is published on the Releases page)
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, release]
+    tags: ["v*", "D*"]
 
-# Least privilege by default; only the deploy job may write (to Releases).
+# Least privilege by default; only the two deploy jobs may write (to Releases).
 permissions:
   contents: read
 
-# A newer push to the same PR cancels the older run; runs on main are never cancelled.
+# A newer push to the same PR cancels the older run; runs on main, release and tags are never cancelled.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # 1. Tests: Windows + Linux, Python 3.10 / 3.12
+  # 1. Backend tests: Windows + Linux, Python 3.10 / 3.12
+  #    (job name kept as "algo01-unit-tests" so any required status checks on main keep working)
   algo01-unit-tests:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
@@ -31,19 +39,34 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install test dependencies
         run: python -m pip install pytest flask numpy scikit-learn joblib
+        run: python -m pip install pytest flask "scikit-learn>=1.5,<2"
 
       - name: Install Windows collector test dependencies
         if: runner.os == 'Windows'
         run: python -m pip install WMI pywin32 pywintrace psutil
 
       - name: Run ALGO-01 unit tests
-        run: python -B -m pytest backend/algorithms/algo01/tests -q
+        run: python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
       - name: Run ALGO-02 unit tests
         run: python -B -m pytest backend/algorithms/algo02/tests -q
-      - name: Run all tests in tests/ (QA contract, HTTP, US-02 integration, DB, demo, collector)
+      - name: Run all tests in tests/ (QA contract, HTTP, US-02 integration, DB, demo, collector, Linux backend)
         run: python -B -m pytest tests -v
+      - name: Run Windows launcher tests
+        run: python -B -m pytest packaging/windows/tests -q
 
-  # 2. Quality check: lint (syntax errors, undefined names, broken comparisons)
+  # 2. Frontend tests: the JavaScript tests in tests/*.test.js (package.json -> "node --test")
+  frontend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run frontend tests
+        run: npm test
+
+  # 3. Quality check: lint (syntax errors, undefined names, broken comparisons)
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -57,7 +80,7 @@ jobs:
       - name: Lint Python code
         run: ruff check . --select E9,F63,F7,F82 --output-format=github
 
-  # 3. Quality check: build verification (build the release package and smoke-test it)
+  # 4a. Build the Linux package and smoke-test it
   build:
     runs-on: ubuntu-24.04   # release target is Ubuntu 24.04 x86-64 (glibc 2.39)
     timeout-minutes: 15
@@ -75,7 +98,7 @@ jobs:
           tar -xzf dist/linux/wsd-*.tar.gz -C "$RUNNER_TEMP"
           sh "$RUNNER_TEMP"/wsd-*-linux-x86_64-ubuntu24.04/install.sh --prefix "$prefix"
           "$prefix/bin/wsd" --demo > "$RUNNER_TEMP/wsd.log" 2>&1 &
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -fsS http://127.0.0.1:5000/api/v1/devices > /dev/null 2>&1 && break
             sleep 1
           done
@@ -94,30 +117,112 @@ jobs:
             dist/linux/*.sha256
           retention-days: 7
 
-  # 4. Deploy: only after a merge to main, and only if tests, lint and build all passed
-  deploy:
+  # 4b. Build the Windows package (WSD.exe in a portable zip)
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build dependencies
+        run: python -m pip install -r packaging/windows/requirements-build.txt
+      - name: Build release package
+        run: python packaging/windows/build_release.py
+      - name: Check the package was created
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/windows/WSD-windows-x86_64.zip)) { throw "Windows package was not built" }
+          Get-ChildItem dist/windows
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: wsd-windows-package
+          path: |
+            dist/windows/*.zip
+            dist/windows/*.sha256
+          retention-days: 7
+
+  # 5. Deploy to DEV: every merge to main, only if every check above passed.
+  #    Published as a pre-release, so "Latest" keeps pointing at the last real release.
+  deploy-dev:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [algo01-unit-tests, lint, build]
+    needs: [algo01-unit-tests, frontend-tests, lint, build, build-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: dev
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/dev-${{ github.run_number }}.${{ github.run_attempt }}
     permissions:
       contents: write   # needed to publish the GitHub Release
     steps:
-      - name: Download package built in this run
+      - name: Download the Linux and Windows packages built in this run
         uses: actions/download-artifact@v4
         with:
-          name: wsd-linux-package
+          pattern: wsd-*-package
+          merge-multiple: true
           path: release
-      - name: Publish a new release for this build (marked as Latest)
+      - name: Publish a dev pre-release for this build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          # Unique tag per build: nothing is ever deleted, so if publishing fails
-          # the previous release stays in place and remains "Latest".
-          tag="build-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+          # Unique tag per build: nothing is ever deleted, so a failed publish never breaks an older build.
+          tag="dev-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
           gh release create "$tag" release/* \
             --target "$GITHUB_SHA" \
-            --latest \
-            --title "WSD build ${GITHUB_RUN_NUMBER} (main @ ${GITHUB_SHA::7})" \
-            --notes "Built and published automatically from main after tests, lint and build verification passed. Install guide: packaging/linux/README.md"
+            --prerelease \
+            --title "WSD dev build ${GITHUB_RUN_NUMBER} (main @ ${GITHUB_SHA::7})" \
+            --notes "DEV environment: built automatically from main after backend tests, frontend tests, lint and both builds passed. Not a stable release. Install guides: packaging/linux/README.md and packaging/windows/README.md"
+
+  # 6. Deploy to RELEASE/PROD: automatically on every merge into the "release" branch
+  #    (and when a release tag such as D4 is created), only if every check passed.
+  #    Marked as the Latest release. Add a required reviewer to the "production" environment
+  #    in Settings -> Environments if the team wants a manual approval step before it goes out.
+  deploy-release:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/release' || startsWith(github.ref, 'refs/tags/'))
+    needs: [algo01-unit-tests, frontend-tests, lint, build, build-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/latest
+    permissions:
+      contents: write   # needed to publish the GitHub Release
+    steps:
+      - name: Download the Linux and Windows packages built in this run
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wsd-*-package
+          merge-multiple: true
+          path: release
+      - name: Publish the production release (marked as Latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ "$GITHUB_REF" = "refs/heads/release" ]; then
+            # Merge into the release branch: publish a new production release automatically.
+            # Unique tag per build: nothing is ever deleted, so a failed publish keeps the previous Latest.
+            tag="release-${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
+            gh release create "$tag" release/* \
+              --target "$GITHUB_SHA" \
+              --latest \
+              --title "WSD release ${GITHUB_RUN_NUMBER} (release @ ${GITHUB_SHA::7})" \
+              --notes "RELEASE/PROD environment: built automatically from the release branch after backend tests, frontend tests, lint and both builds passed. Install guides: packaging/linux/README.md and packaging/windows/README.md"
+            exit 0
+          fi
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            # The release was created by hand on the Releases page: attach the tested packages to it.
+            gh release upload "$tag" release/* --clobber
+            gh release edit "$tag" --latest
+          else
+            # Only the tag was pushed: create the release.
+            gh release create "$tag" release/* \
+              --verify-tag \
+              --latest \
+              --title "WSD ${tag}" \
+              --generate-notes
+          fi

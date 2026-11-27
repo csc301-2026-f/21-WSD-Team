@@ -3,7 +3,7 @@
 from flask import Flask, jsonify, request
 from .response import success_response, fail_response
 from datetime import datetime
-
+import os
 
 def is_valid_utc(value):
     """
@@ -45,7 +45,8 @@ def create_http_api(core_service):
 
     @http_api.post("/api/v1/recommendations/refresh")
     def refresh_recommendation():
-        recommendations = core_service.refresh_recommendation()
+        mode = request.args.get("mode")
+        recommendations = core_service.refresh_recommendation(mode)
         response = success_response(recommendations)
         return jsonify(response)
 
@@ -87,6 +88,67 @@ def create_http_api(core_service):
             end_utc,
             bucket_seconds)
         response = success_response(process_history)
+        return jsonify(response)
+
+    @http_api.get("/api/v1/files/activity/latest")
+    def get_latest_file_activity():
+        latest_activity = core_service.get_current_file_activity()
+        response = success_response(latest_activity)
+        return jsonify(response)
+
+    @http_api.post("/api/v1/actions/execute")
+    def execute_move_action():
+        action = request.get_json()
+        file_path = action.get("file_path")
+        destination_mount = action.get("destination_mount")
+        recommendation_id = action.get("recommendation_id")
+        move_id = core_service.execute_movement(file_path, destination_mount, recommendation_id)
+        response = success_response(move_id)
+        return jsonify(response)
+
+    @http_api.get("/api/v1/actions/<action_id>")
+    def get_action_status(action_id):
+        status = core_service.get_action_status(action_id)
+        response = success_response(status)
+        return jsonify(response)
+
+    @http_api.post("/api/v1/files/subscriptions")
+    def track_file_folder():
+        action = request.get_json()
+        path = action.get("path")
+        if os.path.isfile(path):
+            file = core_service.track_file(path)
+        elif os.path.isdir(path):
+            file = core_service.track_folder(path)
+        else:
+            response = fail_response("INVALID_PATH", "Tracking path is invalid")
+            return jsonify(response)
+        response = success_response(path)
+        return jsonify(response)
+
+    @http_api.delete("/api/v1/files/subscriptions")
+    def untrack_file_folder():
+        action = request.get_json()
+        path = action.get("path")
+        if os.path.isfile(path):
+            file = [file for file in core_service.agent.list_tracked_files() if file.absolute_path == path]
+            if not file:
+                response = fail_response("NOT_FOUND", "File is not tracked")
+                return jsonify(response)
+            core_service.untrack_file(file[0])
+        elif os.path.isdir(path):
+            folder = core_service.track_folders[path]
+            core_service.untrack_folder(folder)
+        else:
+            response = fail_response("INVALID_PATH", "Untracking path is invalid")
+            return jsonify(response)
+        response = success_response(path)
+        return jsonify(response)
+
+    @http_api.get("/api/v1/files/subscriptions")
+    def list_subscriptions():
+        subscriptions = core_service.list_file_subscriptions()
+        response = success_response(subscriptions)
         return jsonify(response)
 
     @http_api.errorhandler(404)

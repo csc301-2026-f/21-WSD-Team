@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Review physical devices and their current capacity and performance measurements.">
+    <title>Drive Management | WSD</title><link rel="stylesheet" href="../css/style.css">
+</head><body>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button><nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <main><header class="page-intro"><h1>Drive Management</h1><p>Compare detected devices, capacity, and the latest available performance measurements.</p></header>
+        <section class="data-panel"><p class="notice">This view is informational. WSD does not expose drive formatting, partitioning, repair, or other physical management actions.</p><p id="drives-status" role="status" class="status-note">Loading drives…</p>
+            <div class="data-table-wrap"><table class="data-table"><thead><tr><th>Drive</th><th>Device ID</th><th>Type</th><th>Capacity</th><th>Used</th><th>Available</th><th>Utilization</th><th>Read</th><th>Write</th><th>Read IOPS</th><th>Write IOPS</th><th>Latency</th></tr></thead><tbody id="drives-body"></tbody></table></div>
+        </section>
+        <section class="data-panel"><h2>Selected drive details</h2><p id="drive-detail" class="status-note">Select a drive row to inspect its available device information.</p></section>
+    </main><script type="module" src="../js/ui.js"></script><script type="module" src="../js/expandedPages.js"></script>
+</body></html>

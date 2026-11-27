@@ -92,7 +92,8 @@ def prepare_frontend(stage, licenses):
 
 
 def copy_licenses(directory):
-    packages = ("Flask", "Werkzeug", "Jinja2", "MarkupSafe", "click", "itsdangerous", "blinker", "PyInstaller", "setuptools")
+    # Include transitive ML dependencies as well as the original runtime packages.
+    packages = sorted({dist.metadata["Name"] for dist in importlib.metadata.distributions()})
     versions = {}
     for name in packages:
         distribution = importlib.metadata.distribution(name)
@@ -102,6 +103,8 @@ def copy_licenses(directory):
                 source = Path(distribution.locate_file(item))
                 if source.is_file():
                     target = directory / name / Path(str(item))
+                    if not target.resolve().is_relative_to(directory.resolve()):
+                        continue
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(source, target)
     for name in ("libc6", "libssl3t64", "libsqlite3-0", "zlib1g", "libffi8", "libbz2-1.0", "liblzma5", "libexpat1",

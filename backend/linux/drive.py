@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from datetime import datetime, timezone
+import os
 import subprocess
 import json
 import shutil
@@ -59,7 +60,7 @@ def _get_all_partition(drive_name: str) -> list[str]:
     return partitions
 
 
-def _get_partition_storage(partition_name: str) -> tuple[int, int]:
+def _get_partition_storage(partition_name: str) -> tuple[int, int, str | None]:
     try:
         output = subprocess.check_output(
             ["lsblk", "-J", "-o", "MOUNTPOINTS", f"/dev/{partition_name}"],
@@ -70,15 +71,18 @@ def _get_partition_storage(partition_name: str) -> tuple[int, int]:
 
         for device in data.get("blockdevices", []):
             for mount_point in device.get("mountpoints") or []:
-                if not mount_point:
+                if not mount_point or not os.path.isabs(mount_point):
                     continue
-                usage = shutil.disk_usage(mount_point)
-                return usage.total, usage.free
+                try:
+                    usage = shutil.disk_usage(mount_point)
+                except OSError:
+                    return 0, 0, mount_point
+                return usage.total, usage.free, mount_point
 
     except (subprocess.SubprocessError, FileNotFoundError, json.JSONDecodeError, OSError):
         pass
 
-    return 0, 0
+    return 0, 0, None
 
 
 def get_all_drive() -> list[Drive]:
@@ -113,12 +117,13 @@ def get_all_drive() -> list[Drive]:
 
         partitions = []
         for partition_name in _get_all_partition(name):
-            total, available = _get_partition_storage(partition_name)
+            total, available, mount_point = _get_partition_storage(partition_name)
             partitions.append(
                 Partition(
                     name=partition_name,
                     size_bytes=total,
-                    available_bytes=available
+                    available_bytes=available,
+                    mount_point=mount_point,
                 )
             )
 

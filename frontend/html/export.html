@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Export current WSD drive, process, and recommendation data as CSV files.">
+    <title>Data Export | WSD</title><link rel="stylesheet" href="../css/style.css">
+</head><body>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button><nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <main><header class="page-intro"><h1>Data Export</h1><p>Download the information currently available from WSD as CSV files.</p></header>
+        <section class="data-panel"><p class="notice">Exports use the latest API response available when you click a download button. Device history is limited to samples collected in this browser session; this page exports current device metrics only.</p><div class="export-actions"><button type="button" data-export="drives">Export drive statistics</button><button type="button" data-export="processes">Export process statistics</button><button type="button" data-export="recommendations">Export recommendations</button><button type="button" data-export="all">Export current snapshot</button></div><p id="export-status" role="status" class="status-note">Waiting to load available data…</p></section>
+    </main><script type="module" src="../js/ui.js"></script><script type="module" src="../js/expandedPages.js"></script>
+</body></html>

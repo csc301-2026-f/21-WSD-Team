@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 import {
+    getLatestFileActivity,
     getRecommendations,
     refreshRecommendations
 } from "./api.js";
+import { normalizeFileActivity } from "./fileIoApi.js";
 
 const container = document.getElementById("recommendations-container");
 const statusElement = document.getElementById("recommendations-status");
@@ -13,6 +15,20 @@ const refreshButton = document.getElementById(
 );
 
 let isRefreshing = false;
+let currentRecommendations = [];
+let currentFileActivity = [];
+const filterInput = document.getElementById("recommendation-filter");
+const sortSelect = document.getElementById("recommendation-sort");
+const modeSelect = document.getElementById("recommendation-mode");
+
+function updateRefreshAvailability() {
+    refreshButton.disabled = isRefreshing;
+    const mode = modeSelect?.value;
+    const label = mode === "ssd_caching"
+        ? "SSD Caching"
+        : "RAID 0 / file-level pooling";
+    refreshButton.title = `Generate ${label} recommendations from current backend data.`;
+}
 
 /* ELEMENT CREATION */
 
@@ -91,6 +107,28 @@ function sortRecommendations(recommendations) {
     });
 }
 
+async function loadFileActivityLookup() {
+    try {
+        const records = await getLatestFileActivity();
+        currentFileActivity = normalizeFileActivity(records);
+    } catch (error) {
+        currentFileActivity = [];
+        console.warn("Could not load file paths for recommendations:", error);
+    }
+}
+
+function getRecommendationFile(recommendation) {
+    if (recommendation.file_id === null || recommendation.file_id === undefined || recommendation.file_id === "") {
+        return null;
+    }
+
+    const fileId = String(recommendation.file_id);
+    const candidates = currentFileActivity.filter(file => file.fileId === fileId && file.path);
+    return candidates.find(file => file.deviceId === String(recommendation.source_device_id))
+        ?? candidates[0]
+        ?? null;
+}
+
 /* EMPTY AND ERROR STATES */
 
 function showMessage(
@@ -116,8 +154,24 @@ function renderRecommendations(recommendations) {
             !Array.isArray(recommendation)
     );
 
-    const sortedRecommendations =
-        sortRecommendations(validRecommendations);
+    currentRecommendations = validRecommendations;
+    let sortedRecommendations = sortRecommendations(validRecommendations);
+    if (sortSelect?.value === "benefit") {
+        sortedRecommendations.sort((a, b) => {
+            const av = typeof a.estimated_benefit === "number" ? a.estimated_benefit : null;
+            const bv = typeof b.estimated_benefit === "number" ? b.estimated_benefit : null;
+            if (av === null && bv === null) return 0;
+            if (av === null) return 1;
+            if (bv === null) return -1;
+            return bv - av;
+        });
+    }
+    const query = (filterInput?.value ?? "").trim().toLowerCase();
+    if (query) {
+        sortedRecommendations = sortedRecommendations.filter(item =>
+            JSON.stringify(item).toLowerCase().includes(query)
+        );
+    }
 
     container.replaceChildren();
 
@@ -151,9 +205,10 @@ function renderRecommendations(recommendations) {
             recommendation.file_id !== undefined &&
             recommendation.file_id !== "";
 
-        const title = hasFile
+        const file = getRecommendationFile(recommendation);
+        const title = file?.name || file?.path || (hasFile
             ? `File ID: ${recommendation.file_id}`
-            : "Storage recommendation";
+            : "Storage recommendation");
 
         const mode = recommendation.mode ?? "Unknown mode";
         const action = recommendation.action ?? "Unknown action";
@@ -186,6 +241,7 @@ function renderRecommendations(recommendations) {
         /* DETAILS */
 
         addDetail(card, "Reason", recommendation.reason);
+        if (file?.path) addDetail(card, "File path", file.path);
         addDetail(card, "Source device", recommendation.source_device_id);
         addDetail(card, "Target device", recommendation.target_device_id);
         addDetail(card, "Estimated benefit", recommendation.estimated_benefit);
@@ -243,19 +299,26 @@ async function loadRecommendations() {
         "Loading saved recommendations...";
 
     try {
-        const recommendations = await getRecommendations();
+        const mode = modeSelect?.value || undefined;
+        const [recommendations] = await Promise.all([
+            getRecommendations(mode),
+            loadFileActivityLookup()
+        ]);
 
         const displayedCount =
             renderRecommendations(recommendations);
 
+        const modeLabel = mode === "raid0"
+            ? "RAID 0 / file-level pooling"
+            : mode === "ssd_caching" ? "SSD caching" : "all modes";
         statusElement.textContent =
-            `${displayedCount} saved recommendation(s).`;
+            `${displayedCount} saved recommendation(s) for ${modeLabel}.`;
 
     } catch (error) {
         console.error("Failed to load recommendations:", error);
 
         statusElement.textContent =
-            "Could not load recommendations. Check that Flask is running.";
+            `Could not load recommendations: ${error.message}`;
 
         showMessage(
             "Unable to load recommendations. Please try again.",
@@ -270,14 +333,16 @@ async function handleRefresh() {
     if (isRefreshing) return;
 
     isRefreshing = true;
-
-    refreshButton.disabled = true;
+    updateRefreshAvailability();
     refreshButton.textContent = "Refreshing...";
     statusElement.textContent = "Generating recommendations...";
 
     try {
         // The backend generates and saves recommendations before returning.
-        const generated = await refreshRecommendations();
+        // “All modes” filters saved results; the backend defaults refresh to
+        // RAID 0, so make the generated mode explicit in that case.
+        const mode = modeSelect?.value || "raid0";
+        const generated = await refreshRecommendations(mode);
 
         if (!Array.isArray(generated)) {
             throw new Error(
@@ -285,17 +350,22 @@ async function handleRefresh() {
             );
         }
 
+        await loadFileActivityLookup();
+
         const generatedCount =
             renderRecommendations(generated);
 
+        const modeLabel = mode === "ssd_caching"
+            ? "SSD Caching"
+            : "RAID 0 / file-level pooling";
         statusElement.textContent =
-            `${generatedCount} new recommendation(s) generated and saved.`;
+            `${generatedCount} ${modeLabel} recommendation(s) generated and saved.`;
 
     } catch (error) {
         console.error("Failed to refresh recommendations:", error);
 
         statusElement.textContent =
-            "Could not generate recommendations. Check the backend and try again.";
+            `Could not generate recommendations: ${error.message}`;
 
         // Do not erase previously displayed recommendations on failure.
         if (container.childElementCount === 0) {
@@ -307,7 +377,7 @@ async function handleRefresh() {
 
     } finally {
         isRefreshing = false;
-        refreshButton.disabled = false;
+        updateRefreshAvailability();
         refreshButton.textContent = "Refresh Recommendations";
     }
 }
@@ -320,5 +390,12 @@ if (!container || !statusElement || !refreshButton) {
     );
 } else {
     refreshButton.addEventListener("click", handleRefresh);
+    modeSelect?.addEventListener("change", () => {
+        updateRefreshAvailability();
+        loadRecommendations();
+    });
+    filterInput?.addEventListener("input", () => renderRecommendations(currentRecommendations));
+    sortSelect?.addEventListener("change", () => renderRecommendations(currentRecommendations));
+    updateRefreshAvailability();
     loadRecommendations();
 }

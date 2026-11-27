@@ -2,143 +2,120 @@
 <!-- SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
      SPDX-License-Identifier: GPL-3.0-only -->
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Customize Wise Storage Director to suit your needs. Manage application preferences and configure available storage monitoring and optimization settings.">
-
-    <title>WSD App</title>
-
+    <meta name="description" content="Review storage optimization modes and their implementation status in Wise Storage Director.">
+    <title>Storage Configuration | WSD</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="icon" type="image/png" href="../assets/img/konpyuuta.png">
 </head>
-
 <body>
-    <span id="navOpenButton">&#9776;</span>
-
-    <div id="mainSidenav" class="sidenav">
-        <a href="#" id="navCloseButton" class="closebtn">&times;</a>
-        <a href="index.html">Main Dashboard</a>
-        <a href="task_priority.html">Task Priority</a>
-        <a href="stats.html">Disk Usage Statistics</a>
-        <a href="about.html">About</a>
-        <a href="settings.html">Settings</a>
-        <a href="authors.html">Group Info</a>
+    <button id="navOpenButton" type="button" aria-label="Open navigation">☰</button>
+    <nav id="mainSidenav" class="sidenav" aria-label="Main navigation"></nav>
+    <div id="mode-selection-toast" class="mode-toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+        <span class="mode-toast-icon" aria-hidden="true">✓</span>
+        <span id="mode-selection-toast-message"></span>
     </div>
-
-    <!-- OLD HEADER NAVIGATION MENU
-
-    <div class="header-box">
-        <ul>
-            <li>
-                <p><a href="index.html">Main Dashboard</a></p>
-            </li>
-            <li>
-                <p><a href="task_priority.html">Task Priority</a></p>
-            </li>
-            <li>
-                <p><a href="stats.html">Disk Usage Statistics</a></p>
-            </li>
-            <li>
-                <p><a href="about.html">About</a></p>
-            </li>
-            <li>
-                <p><a href="settings.html">Settings</a></p>
-            </li>
-            <li>
-                <p><a href="authors.html">Group Info</a></p>
-            </li>
-        </ul>
-    </div>
-    -->
-
     <main>
-        <div class="header-box">
-            <h1>Wise Storage Director - Settings</h1>
-        </div>
+        <header class="page-intro">
+            <h1>Storage Configuration</h1>
+            <p>Compare storage optimization modes and review what this WSD backend supports.</p>
+        </header>
 
-        <div class="box-container">
-            <div class="box">
-                <h2>Optimize "Auto-Mode" Settings For Me</h2>
-                <p title="Chooses user-safe default settings.">(?)</p>
-
-                <input type="checkbox" id="auto-settings">
-                <label for="auto-settings">Auto-Mode</label>
-            </div>
-        </div>
-
-        <div class="box-container">
-
-            <!-- SETTINGS BOX 1 -->
-            <div class="box" id="settings">
-
-                <h2>SSD Caching</h2>
-                <p title="SSD Caching Mode is recommended primarily for default users.">(?)</p>
-                <ul>
-                    <li>
-                        <input type="checkbox" id="enable-cache" checked>
-                        <label for="enable-cache">Enable SSD caching</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="cache-read">
-                        <label for="cache-read">Cache frequently read data</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="cache-write">
-                        <label for="cache-write">Cache frequently written data</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="auto-cache">
-                        <label for="auto-cache">Automatically manage cached data</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="clear-cache">
-                        <label for="clear-cache">Clear cache before operation</label>
-                    </li>
-                </ul>
+        <section class="mode-panel" aria-labelledby="mode-selector-title">
+            <div class="mode-panel-heading">
+                <div>
+                    <p class="mode-eyebrow">STORAGE OPTIMIZATION</p>
+                    <h2 id="mode-selector-title">Choose a mode</h2>
+                    <p>Select a card to preview your preference. Switching is not connected to the backend yet.</p>
+                </div>
+                <span class="mode-preview-tag">Local preview</span>
             </div>
 
-            <!-- SETTINGS BOX 2 -->
-            <div class="box" id="settings">
+            <fieldset class="mode-options" aria-describedby="mode-selection-note">
+                <legend class="visually-hidden">Storage optimization mode</legend>
+                <label class="mode-card mode-card-pooling" for="mode-raid0">
+                    <input class="mode-radio" type="radio" name="storage-mode" id="mode-raid0" value="raid0" checked>
+                    <span class="mode-card-content">
+                        <span class="mode-card-topline">
+                            <span class="mode-icon" aria-hidden="true">⇄</span>
+                            <span class="mode-selection-mark" aria-hidden="true">✓</span>
+                        </span>
+                        <span class="mode-title">RAID 0 <span>/ File-Level Pooling</span></span>
+                        <span class="mode-description">Conceptually, mergerfs would expose several independent filesystems through one namespace. Files stay whole on an underlying drive; a mergerfs policy determines placement. This is not block-level striping.</span>
+                        <span class="storage-diagram pooling-diagram" role="img" aria-label="Conceptual mergerfs namespace: three separate drives each store different files and are accessible through the unified mount point slash pool. Files are not striped across drives.">
+                            <span class="pooling-visual">
+                                <span class="pooling-sources">
+                                    <span class="pooling-drive"><strong>Drive A</strong><code>notes.txt</code></span>
+                                    <span class="pooling-drive"><strong>Drive B</strong><code>photo.jpg</code></span>
+                                    <span class="pooling-drive"><strong>Drive C</strong><code>archive.zip</code></span>
+                                </span>
+                                <span class="pooling-join" aria-hidden="true"><i></i><i></i><i></i></span>
+                                <span class="pooling-mount"><code>/pool</code><small>Unified namespace</small></span>
+                            </span>
+                            <span class="pooling-caption">Concept only · files remain on their drives · placement follows policy</span>
+                        </span>
+                        <span class="mode-status-row">
+                            <span id="raid0-status-badge" class="mode-status-badge" data-state="loading">Checking backend…</span>
+                            <span class="mode-status-copy" id="raid0-status-detail">Loading reported capability.</span>
+                        </span>
+                    </span>
+                </label>
 
-                <h2>RAID 0 Mode</h2>
-                <p title="RAID 0 Mode is an experimental mode. In the context of WSD, RAID 0 refers to the usage of performance-oriented file-level storage pooling, not traditional block-level striping.">(?)</p>
-                <ul>
-                    <li>
-                        <input type="checkbox" id="enable-raid">
-                        <label for="enable-raid">Enable RAID 0</label>
-                    </li>
+                <label class="mode-card mode-card-cache" for="mode-cache">
+                    <input class="mode-radio" type="radio" name="storage-mode" id="mode-cache" value="ssd_caching">
+                    <span class="mode-card-content">
+                        <span class="mode-card-topline">
+                            <span class="mode-icon" aria-hidden="true">⚡</span>
+                            <span class="mode-selection-mark" aria-hidden="true">✓</span>
+                        </span>
+                        <span class="mode-title">SSD Caching</span>
+                        <span class="mode-description">An SSD cache could keep frequently accessed data for faster access. WSD does not currently route requests to a cache or execute caching.</span>
+                        <span class="storage-diagram cache-diagram" role="img" aria-label="Conceptual SSD cache, planned only; WSD does not currently implement cache routing or execution.">
+                            <span class="cache-concept-ssd" aria-hidden="true"><span class="ssd-glyph">SSD</span></span>
+                            <span class="cache-concept-label">Concept only · not active in WSD</span>
+                        </span>
+                        <span class="mode-status-row">
+                            <span id="cache-status-badge" class="mode-status-badge" data-state="loading">Checking backend…</span>
+                            <span class="mode-status-copy" id="cache-status-detail">Loading reported capability.</span>
+                        </span>
+                    </span>
+                </label>
+            </fieldset>
 
-                    <li>
-                        <input type="checkbox" id="auto-select-drives">
-                        <label for="auto-select-drives">Automatically select drives</label>
-                    </li>
+            <p id="mode-selection-note" class="mode-selection-note" role="status" aria-live="polite">RAID 0 / File-Level Pooling selected for this page preview. This does not change system configuration.</p>
+            <p class="mode-capability-note">A selected card is only a local interface preference. WSD currently has no storage-mode configuration endpoint, so neither selection activates or changes a storage mode.</p>
+            <p id="configuration-status" role="status" class="status-note mode-load-status">Checking backend capabilities…</p>
+        </section>
 
-                    <li>
-                        <input type="checkbox" id="balance-drives">
-                        <label for="balance-drives">Balance data across drives</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="performance-mode">
-                        <label for="performance-mode">Prioritize performance</label>
-                    </li>
-
-                    <li>
-                        <input type="checkbox" id="monitor-raid">
-                        <label for="monitor-raid">Monitor RAID status</label>
-                    </li>
-                </ul>
+        <section class="data-panel">
+            <h2>Implementation details</h2>
+            <div class="implementation-grid">
+                <article class="implementation-item">
+                    <h3>File-level pooling</h3>
+                    <p>WSD includes RAID 0 placement recommendation logic. The backend does not integrate mergerfs or expose pool mount configuration, so a unified pool is not currently provided.</p>
+                </article>
+                <article class="implementation-item">
+                    <h3>SSD caching</h3>
+                    <p>A caching selection helper exists in the algorithm code, but cache routing, coherency, and execution are not implemented or wired into the active API.</p>
+                </article>
             </div>
+        </section>
 
-        </div>
+        <section class="data-panel">
+            <h2>Backend capabilities</h2>
+            <p class="status-note">These values come from the connected backend’s <code>/api/v1/capabilities</code> response.</p>
+            <div class="data-table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Feature</th><th>Status</th><th>Details</th></tr></thead>
+                    <tbody id="capabilities-body"></tbody>
+                </table>
+            </div>
+        </section>
+
     </main>
-
     <script type="module" src="../js/ui.js"></script>
+    <script type="module" src="../js/configuration.js"></script>
 </body>
 </html>

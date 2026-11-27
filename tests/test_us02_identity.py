@@ -58,8 +58,11 @@ def test_evaluation_time_is_after_file_collection():
         captured.update(realtime=realtime, history=history)
         return []
     agent = SimpleNamespace(get_devices=lambda: [{"host_id": "host"}], get_file_activity=collect)
-    core = CoreService(agent, SimpleNamespace(evaluate_raid0=evaluate),
-        SimpleNamespace(save_recommendations=lambda rows: None))
+    # D4: CORE reads the last hour of file activity from the database instead of the agent.
+    # Both are wired to the same collect(), so this works before and after that change.
+    database = SimpleNamespace(save_recommendations=lambda rows: None,
+        query_file_activity_windows=lambda start_utc, end_utc, *args, **kwargs: collect(60))
+    core = CoreService(agent, SimpleNamespace(evaluate_raid0=evaluate), database)
     with patch("backend.core.service.datetime") as mocked:
         mocked.now.side_effect = lambda tz: clock[0]
         core.refresh_recommendation()

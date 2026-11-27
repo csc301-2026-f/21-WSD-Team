@@ -257,3 +257,32 @@ export function getMockProcessHistory({
 
     return records;
 }
+
+/* MOCK FILE ACTIVITY */
+
+const mockFileActivityBase = [
+    { file_id: "mock-file-chrome-cache-001", path: "C:\\Users\\Danny\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Cache\\Cache_Data\\f_000123", device_id: "disk_123", read_bytes: 18432000, write_bytes: 131072, read_ops: 180, write_ops: 8, file_size_bytes: 20971520 },
+    { file_id: "mock-file-chrome-history-002", path: "C:\\Users\\Danny\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\History", device_id: "disk_123", read_bytes: 61440, write_bytes: 8192, read_ops: 49, write_ops: 14, file_size_bytes: 8388608 },
+    { file_id: "mock-file-meeting-doc-003", path: "C:\\Users\\Danny\\Documents\\Project\\Sprint Planning.docx", device_id: "disk_123", read_bytes: 1258291, write_bytes: 32768, read_ops: 18, write_ops: 4, file_size_bytes: 870400 },
+    { file_id: "mock-file-installer-004", path: "D:\\Downloads\\VisualStudioSetup.exe", device_id: "disk_456", read_bytes: 268435456, write_bytes: 0, read_ops: 1024, write_ops: 0, file_size_bytes: 536870912 },
+    { file_id: "mock-file-vscode-log-005", path: "C:\\Users\\Danny\\AppData\\Roaming\\Code\\logs\\20261124T101500\\window1\\renderer.log", device_id: "disk_123", read_bytes: 460800, write_bytes: 3211264, read_ops: 120, write_ops: 840, file_size_bytes: 2293760 },
+    { file_id: "mock-file-project-source-006", path: "D:\\Projects\\WSD\\frontend\\js\\fileIoMonitoring.js", device_id: "disk_456", read_bytes: 8388608, write_bytes: 204800, read_ops: 100, write_ops: 7, file_size_bytes: 36864 },
+    { file_id: "mock-file-app-database-007", path: "C:\\Users\\Danny\\AppData\\Local\\WSD\\metrics.sqlite", device_id: "disk_123", read_bytes: 12582912, write_bytes: 5242880, read_ops: 420, write_ops: 190, file_size_bytes: 125829120 },
+    { file_id: "mock-file-game-archive-008", path: "E:\\SteamLibrary\\steamapps\\common\\Example Game\\Content\\pakchunk0-Windows.pak", device_id: "disk_789", read_bytes: 707788800, write_bytes: 524288, read_ops: 1280, write_ops: 12, file_size_bytes: 1932735283 },
+    { file_id: "mock-file-user-settings-009", path: "C:\\Users\\Danny\\AppData\\Roaming\\Code\\User\\settings.json", device_id: "disk_123", read_bytes: 16384, write_bytes: 4096, read_ops: 8, write_ops: 2, file_size_bytes: 9216 },
+    { file_id: "mock-file-npm-cache-010", path: "D:\\Users\\Danny\\AppData\\Local\\npm-cache\\_cacache\\content-v2\\sha512\\8f\\package.tgz", device_id: "disk_456", read_bytes: 4194304, write_bytes: 1048576, read_ops: 32, write_ops: 10, file_size_bytes: 7340032 },
+    { file_id: "mock-file-cloud-document-011", path: "C:\\Users\\Danny\\OneDrive\\Research\\Storage Benchmark.xlsx", device_id: "disk_123", read_bytes: 32768, write_bytes: 0, read_ops: 3, write_ops: 0, file_size_bytes: 524288 },
+    { file_id: "mock-file-app-log-012", path: "C:\\ProgramData\\WSD\\Logs\\collector.log", device_id: "disk_456", read_bytes: 4096, write_bytes: 28672, read_ops: 2, write_ops: 18, file_size_bytes: 131072 }
+];
+
+export function getMockFileActivity() {
+    const windowEnd = new Date();
+    const windowStart = new Date(windowEnd.getTime() - 8000);
+    return mockFileActivityBase.map(record => ({
+        host_id: "host_mock",
+        ...record,
+        window_start_utc: windowStart.toISOString(),
+        window_end_utc: windowEnd.toISOString(),
+        source: "mock:file-io-preview"
+    }));
+}
