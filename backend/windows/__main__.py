@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 from time import sleep
-import pythoncom
 from . import create_backend
 
 if __name__ =="__main__":
@@ -15,7 +14,7 @@ if __name__ =="__main__":
             print(backend.get_file_activity(1))
             print(f"\n\n\n")
             sleep(1)"""
-        """backend.file_mover.move_file(
+        r"""backend.file_mover.move_file(
                 "C:\[...]\21-WSD-Team\backend\windows\__main__.py"
                 ,"D:"
                 ,progress_callback

@@ -7,7 +7,7 @@ import shutil
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Callable
+from typing import Callable,Any
 
 from .device_provider import DeviceProvider
 
@@ -22,6 +22,8 @@ class MoveErrorCode(str, Enum):
     DESTINATION_EXISTS = "destination_exists"
     DESTINATION_PARENT_MISSING = "destination_parent_missing"
     MOVE_FAILED = "move_failed"
+    MOVE_CANCELLED = "move_cancelled"
+    COPPIED_BUT_ERRORED = "coppied_but_errored"
 
 
 class MoveStatus(str, Enum):
@@ -39,12 +41,13 @@ class MoveError(Exception):
         self.code = code
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True)#field may be none if move_error is not none
 class MoveResult:
-    source_path: str
-    destination_path: str
-    bytes_moved: int
-    total_bytes: int
+    move_error: MoveError | None = None
+    source_path: str | None = None
+    destination_path: str | None = None
+    bytes_moved: int | None = None
+    total_bytes: int | None = None
 
 
 @dataclass(frozen=True)
@@ -74,21 +77,26 @@ class WindowsFileMover:
         self,
         source_path: str | os.PathLike[str],
         destination_mount: str,
-    ) -> MoveHandle:
+    ) -> tuple[MoveHandle|None , MoveError|None]:
         """Validate a move and start it on a background thread"""
-        source, source_stat = self._resolve_source(source_path)
-        destination_root, destination_device_id = self._resolve_destination_mount(destination_mount)
+        src, mve = self._resolve_source(source_path)
+        if mve is not None: return (None,mve)
+        else: source, source_stat = src
+        dst, mve = self._resolve_destination_mount(destination_mount)
+        if mve is not None: return (None,mve)
+        destination_root, destination_device_id = dst
         destination = destination_root / source.relative_path #root/path
-        self._check_destination(destination,destination_root,source) #error checks
+        mve = self._check_destination(destination,destination_root,source) #error checks
+        if mve is not None: return (None,mve)
         if source.device_id == destination_device_id: pass
         # A same-volume move is still supported, but it is unnecessary
         # to copy the file to another physical device.
-        return MoveHandle(
+        return (MoveHandle(
             source_path=source.path,
             destination_path=destination,
             total_bytes=source_stat.st_size,
             chunk_size=self._chunk_size,
-        )
+        ),None)
 
     def move_file(
         self,
@@ -101,7 +109,8 @@ class WindowsFileMover:
             pass in a progress callback function to receive 
             completion percentages and a cancel callable that you
             set to true when cancelling, it is checked once every 0.1 seconds."""
-        handle = self.start_move(source_path, destination_mount)
+        handle, mve = self.start_move(source_path, destination_mount)
+        if mve is not None: return MoveResult(move_error=mve)
         while not handle.wait(timeout=0.1):
             if progress_callback is not None: progress_callback(handle.progress)
             if cancel_call is not None and cancel_call(): handle.cancel(0.1)
@@ -109,49 +118,58 @@ class WindowsFileMover:
         if handle.status == MoveStatus.COPPIED:
             try:
                 handle.switch()
-            except Exception as exc:
-                raise MoveError(
-                    MoveErrorCode.MOVE_FAILED,
+            except Exception:
+                return MoveResult(move_error=MoveError(
+                    MoveErrorCode.COPPIED_BUT_ERRORED,
                     "Could not swap file ownership."
-                ) from exc
-        if handle.error is not None: raise handle.error
+                ))
+        if handle.error is not None: 
+            if handle.status != MoveStatus.COPPIED:
+                return MoveResult(move_error=
+                    MoveError(MoveErrorCode.MOVE_FAILED, handle.error.code))
+            else:
+                return MoveResult(move_error=
+                    MoveError(MoveErrorCode.COPPIED_BUT_ERRORED, handle.error.code))
         if handle.status == MoveStatus.CANCELLED:
             return MoveResult(
+            move_error=MoveError(
+                MoveErrorCode.MOVE_CANCELLED,
+                "Move cancelled."),
             source_path=str(handle.source_path),
             destination_path=str(handle.destination_path),
-            bytes_moved=0,
+            bytes_moved=handle.bytes_moved,
             total_bytes=handle.total_bytes,
             )
         result = handle.result
         if result is None:
-            raise MoveError(
+            return MoveResult(move_error=MoveError(
                 MoveErrorCode.MOVE_FAILED,
                 "Move ended without producing a result.",
-            )
+            ))
         return result
 
     def _resolve_source(
         self,
         source_path: str | os.PathLike[str],
-    ) -> _ResolvedPath:
+    ) -> tuple[tuple[_ResolvedPath,Any]|None,MoveError|None]:
         raw_path = Path(source_path)
 
         if not raw_path.is_absolute():
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.INVALID_SOURCE,
                 "Source path must be absolute.",
-            )
+            ))
         if raw_path.is_symlink():
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.INVALID_SOURCE,
                 "Unsupported symlink source.",
-            )
+            ))
         try: resolved_path = raw_path.resolve(strict=True)
-        except OSError as exc:
-            raise MoveError(
+        except OSError:
+            return (None,MoveError(
                 MoveErrorCode.INVALID_SOURCE,
                 f"Source file does not exist: {raw_path}",
-            ) from exc
+            ))
         matches: list[_ResolvedPath] = []
         for device in self._device_provider.list_devices():
             for mount_point in device.mount_points:
@@ -168,35 +186,40 @@ class WindowsFileMover:
                     )
                 )
         if not matches:
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.SOURCE_NOT_ON_MANAGED_DEVICE,
                 f"Source is not on a managed device: {resolved_path}",
-            )
+            ))
         device_ids = {match.device_id for match in matches}
         if len(device_ids) != 1:
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.AMBIGUOUS_DEVICE,
                 f"Source maps to multiple physical devices: {resolved_path}",
-            )
+            ))
         # Prefer the longest match, assumed most specific
         source = max(matches,key=lambda match: len(str(match.mount_point)))
-        source_stat = self._get_stat(source)
+        try: source_stat = source.path.stat()
+        except OSError:
+            return (None,MoveError(
+                MoveErrorCode.INVALID_SOURCE,
+                f"Unable to inspect source file: {source.path}",
+            ))
         if not source.path.is_file():
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.INVALID_SOURCE,
                 "Source path must be a regular file.",
-            )
-        return (source,source_stat)
+            ))
+        return ((source,source_stat),None)
 
     def _resolve_destination_mount(
         self,
         destination_mount: str,
-    ) -> tuple[Path, int]:
+    ) -> tuple[tuple[Path, int]|None,MoveError|None]:
         if not isinstance(destination_mount, str) or not destination_mount:
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.INVALID_DESTINATION,
                 "A destination drive letter is required.",
-            )
+            ))
         matches: list[tuple[Path, int]] = []
         for device in self._device_provider.list_devices():
             for mount_point in device.mount_points:
@@ -204,28 +227,18 @@ class WindowsFileMover:
                     matches.append((self._normalise_mount_point(mount_point),
                                     device.device_id,))
         if not matches:
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.DESTINATION_NOT_ON_MANAGED_DEVICE,
                 f"Destination is not a managed mount point: {destination_mount}",
-            )
+            ))
         device_ids = {device_id for _, device_id in matches}
         if len(device_ids) != 1:
-            raise MoveError(
+            return (None,MoveError(
                 MoveErrorCode.AMBIGUOUS_DEVICE,
                 f"Destination maps to multiple physical devices: {destination_mount}",
-            )
+            ))
 
-        return matches[0]
-
-    @staticmethod
-    def _get_stat(source:Path):
-        try: source_stat = source.path.stat()
-        except OSError as exc:
-            raise MoveError(
-                MoveErrorCode.INVALID_SOURCE,
-                f"Unable to inspect source file: {source.path}",
-            ) from exc
-        return source_stat
+        return (matches[0],None)
 
     @staticmethod
     def _normalise_mount_point(mount_point: str) -> Path:
@@ -236,26 +249,27 @@ class WindowsFileMover:
         return Path(root_text).resolve()
 
     @staticmethod
-    def _check_destination(destination:Path,destination_root:Path,source:_ResolvedPath):
+    def _check_destination(destination:Path, destination_root:Path, 
+                           source:_ResolvedPath)-> MoveError | None:
         """destination error checks, returns nothing"""
         try: destination_parent = destination.parent.resolve(strict=True)
-        except OSError as exc:
-            raise MoveError(
+        except OSError:
+            return MoveError(
                 MoveErrorCode.DESTINATION_PARENT_MISSING,
                 f"Destination directory does not exist: {destination.parent}",
-            ) from exc
+            )
         if not destination_parent.is_relative_to(destination_root):
-            raise MoveError(
+            return MoveError(
                 MoveErrorCode.INVALID_DESTINATION,
                 "Destination resolves outside the selected volume.",
             )
         if os.path.normcase(str(source.path)) == os.path.normcase(str(destination)):
-            raise MoveError(
+            return MoveError(
                 MoveErrorCode.SAME_FILE,
                 "Source and destination are the same path.",
             )
         if os.path.lexists(destination):
-            raise MoveError(
+            return MoveError(
                 MoveErrorCode.DESTINATION_EXISTS,
                 f"Destination already exists: {destination}",
             )
@@ -322,11 +336,13 @@ class MoveHandle:
         except Exception as exc:
             self.error = exc
             self.status = MoveStatus.FAILED
+            return
         #only reaches this when file is on both disks, failing now is recoverable
         if self.status != MoveStatus.COPPIED: return
         try: self.switch()
         except Exception as exc:
             self.error = exc
+            return
 
     
     def switch(self):
