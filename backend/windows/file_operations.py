@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
+from __future__ import annotations
 import os
 import threading
 import shutil
@@ -81,10 +82,10 @@ class WindowsFileMover:
     ) -> tuple[MoveHandle|None , MoveError|None]:
         """Validate a move and start it on a background thread"""
         src, mve = self._resolve_source(source_path)
-        if mve is not None: return (None,mve)
+        if src is None: return (None,mve)
         else: source, source_stat = src
         dst, mve = self._resolve_destination_mount(destination_mount)
-        if mve is not None: return (None,mve)
+        if dst is None: return (None,mve)
         destination_root, destination_device_id = dst
         if destination_rel_path is not None:
             destination = destination_root / destination_rel_path
@@ -114,7 +115,7 @@ class WindowsFileMover:
             pass in a relative destination path to move it to dst_mnt//dst_path instead of
             dst_mnt//src_path"""
         handle, mve = self.start_move(source_path, destination_mount, destination_rel_path)
-        if mve is not None: return MoveResult(move_error=mve)
+        if handle is None: return MoveResult(move_error=mve)
         while not handle.wait(timeout=0.1):
             if progress_callback is not None: progress_callback(handle.progress)
             if cancel_call is not None and cancel_call(): handle.cancel(0.1)
