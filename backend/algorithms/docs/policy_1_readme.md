@@ -50,7 +50,7 @@ Dominated-state pruning reduces the number of states explored. If the DP budget 
 Use Python 3.10 or later and install the project dependencies. For standalone algorithm development, install scikit-learn and pytest in your Python environment:
 
 ```bash
-python -m pip install scikit-learn pytest
+python -m pip install "scikit-learn>=1.5,<2" pytest
 ```
 
 From the repository root, try the existing mock example:
@@ -64,9 +64,11 @@ The example uses a file read 120 times in one minute and returns a labelled samp
 Run the algorithm and integration contract tests with:
 
 ```bash
-python -m pytest backend/algorithms/algo01/tests -v
+python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
 python -m pytest tests/contract/test_algorithm_contract.py -v
 ```
+
+Run the eight performance experiments separately with `python -B -m pytest backend/algorithms/algo01/tests -q -m benchmark`.
 
 ### Code structure
 
@@ -203,7 +205,7 @@ migration_score = estimated_read_rate * spatial_factor
 使用 Python 3.10 或更高版本并安装项目依赖。独立开发算法时，可以在 Python 环境中安装 scikit-learn 和 pytest：
 
 ```bash
-python -m pip install scikit-learn pytest
+python -m pip install "scikit-learn>=1.5,<2" pytest
 ```
 
 在仓库根目录运行已有的模拟数据示例：
@@ -217,9 +219,11 @@ python -B -m backend.algorithms.algo01.demo --mock-input backend/algorithms/algo
 运行算法测试和接口契约测试：
 
 ```bash
-python -m pytest backend/algorithms/algo01/tests -v
+python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
 python -m pytest tests/contract/test_algorithm_contract.py -v
 ```
+
+八个性能实验按需单独运行：`python -B -m pytest backend/algorithms/algo01/tests -q -m benchmark`。
 
 ### 代码结构
 
