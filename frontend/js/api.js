@@ -65,6 +65,13 @@ async function getJson(path, options = {}) {
     return result.data;
 }
 
+function withActionTimeout(options = {}) {
+    if (options.signal || typeof AbortSignal === "undefined" || typeof AbortSignal.timeout !== "function") {
+        return options;
+    }
+    return { ...options, signal: AbortSignal.timeout(15_000) };
+}
+
 /* DEVICES */
 
 export async function getDevices() {
@@ -217,16 +224,24 @@ export async function deleteFileSubscription(path) {
 /* MERGERFS FILE MOVE ACTIONS */
 
 export async function executeFileMove(filePath, destinationMount) {
-    return getJson("/api/v1/actions/execute", {
+    return getJson("/api/v1/actions/execute", withActionTimeout({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             file_path: filePath,
             destination_mount: destinationMount
         })
-    });
+    }));
+}
+
+export async function executeRecommendedFileMove(recommendationId) {
+    return getJson("/api/v1/actions/execute", withActionTimeout({
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recommendation_id: recommendationId })
+    }));
 }
 
 export async function getFileActionStatus(actionId) {
-    return getJson(`/api/v1/actions/${encodeURIComponent(actionId)}`);
+    return getJson(`/api/v1/actions/${encodeURIComponent(actionId)}`, withActionTimeout());
 }
