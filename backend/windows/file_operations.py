@@ -77,6 +77,7 @@ class WindowsFileMover:
         self,
         source_path: str | os.PathLike[str],
         destination_mount: str,
+        destination_rel_path: Path | None = None
     ) -> tuple[MoveHandle|None , MoveError|None]:
         """Validate a move and start it on a background thread"""
         src, mve = self._resolve_source(source_path)
@@ -85,12 +86,12 @@ class WindowsFileMover:
         dst, mve = self._resolve_destination_mount(destination_mount)
         if mve is not None: return (None,mve)
         destination_root, destination_device_id = dst
-        destination = destination_root / source.relative_path #root/path
+        if destination_rel_path is not None:
+            destination = destination_root / destination_rel_path
+        else:
+            destination = destination_root / source.relative_path 
         mve = self._check_destination(destination,destination_root,source) #error checks
         if mve is not None: return (None,mve)
-        if source.device_id == destination_device_id: pass
-        # A same-volume move is still supported, but it is unnecessary
-        # to copy the file to another physical device.
         return (MoveHandle(
             source_path=source.path,
             destination_path=destination,
@@ -102,14 +103,17 @@ class WindowsFileMover:
         self,
         source_path: str | os.PathLike[str],
         destination_mount: str,
+        destination_rel_path: Path | None = None,
         progress_callback: Callable[[float], None] | None = None,
-        cancel_call: Callable[[None],bool] | None = None,
+        cancel_call: Callable[[None],bool] | None = None
     ) -> MoveResult:
         """Blocking convenience wrapper around start_move(), 
             pass in a progress callback function to receive 
             completion percentages and a cancel callable that you
-            set to true when cancelling, it is checked once every 0.1 seconds."""
-        handle, mve = self.start_move(source_path, destination_mount)
+            set to true when cancelling, it is checked once every 0.1 seconds.
+            pass in a relative destination path to move it to dst_mnt//dst_path instead of
+            dst_mnt//src_path"""
+        handle, mve = self.start_move(source_path, destination_mount, destination_rel_path)
         if mve is not None: return MoveResult(move_error=mve)
         while not handle.wait(timeout=0.1):
             if progress_callback is not None: progress_callback(handle.progress)
