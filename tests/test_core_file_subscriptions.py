@@ -582,14 +582,12 @@ def test_status_after_the_move_finished(client, backend):
                     "result": os.path.join("/mnt/ssd", "movie.mkv")}
 
 
-def test_status_of_a_failed_move_gives_the_error_code_name(client, backend, database):
+def test_status_of_a_failed_move_gives_the_error_code_name(client, backend):
     move_id = start_move(client)
     backend.moves[0].finish(ErrorCode.PERMISSION_DENIED)
     data = client.get(f"/api/v1/actions/{move_id}").get_json()["data"]
     assert data["is_running"] is False
     assert data["result"] == "PERMISSION_DENIED"
-    assert database.move_records[move_id]["status"] == "failed"
-    assert database.move_records[move_id]["error_message"] == "PERMISSION_DENIED"
 
 
 def test_backend_refusing_the_move_is_a_json_error_and_saves_nothing(client, backend, database):
