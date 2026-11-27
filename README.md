@@ -8,7 +8,7 @@ Wise Storage Director (WSD) is a storage monitoring and optimization application
 
 Different storage devices provide different levels of performance, yet users often lack the information needed to decide which files and workloads should benefit from faster storage.
 
-Our project addresses this problem by monitoring disk and process I/O activity, presenting performance information through a web interface, and providing recommendations for storage optimization.
+Our project addresses this problem by monitoring disk, process, and file I/O activity, presenting performance information through a web interface, and providing recommendations for storage optimization.
 
 **Partner Information:** WSD is a student-proposed CSC301 project without an external partner organization.
 
@@ -37,6 +37,10 @@ The development version supports real disk and process I/O monitoring on Linux a
 - Display historical process I/O activity.
 - Visualize disk throughput and IOPS over time.
 
+### US-03: RAID0 mode
+
+- On Linux, support and manage mergerfs filesystem as raid0.
+
 ### US-05: Storage Optimization Recommendations
 
 - Analyze file access patterns and available storage capacity.
@@ -45,12 +49,13 @@ The development version supports real disk and process I/O monitoring on Linux a
 - ALGO-02 implements a Greedy-based SSD caching recommendation algorithm.
 - Display recommended source and target devices, reasons, and constraints.
 - On Windows, evaluate real file activity for eligible HDD-to-SSD/NVMe placement recommendations.
+- On Linux, select files to track through frontend for activity tracking and HDD-to-SSD/NVMe placement recommendations.
 
 ALGO-02 is implemented at the algorithm level but is not yet integrated into CORE's recommendation refresh workflow.
 
 Demo mode uses clearly marked sample file activity. Real recommendations depend on qualifying read-heavy HDD files and available SSD/NVMe capacity; WSD may return no suggestion.
 
-Recommendations are advisory only. WSD does not automatically move or cache files.
+Recommendations are advisory only. WSD does not automatically move or cache files without user input.
 
 ## Installation and Usage
 
@@ -62,7 +67,9 @@ The D2 package targets **Ubuntu 24.04 x86-64 Linux** and predates the Windows su
 
 The package includes a standalone executable and an installation script.
 
-For complete installation instructions, system requirements, and remote-access instructions, see the **[Linux Installation Guide](packaging/linux/README.md)**.
+Manual installation of mergerfs is required, instructions can be found in the **[mergerfs_setup.txt](backend/linux/mergerfs_setup.txt)**.
+
+For complete installation instructions, system requirements, and remote-access instructions, including mergerfs installation, see the **[Linux Installation Guide](packaging/linux/README.md)**.
 
 ### Windows
 
@@ -124,19 +131,21 @@ For detailed component interfaces and data structures, see [API Contracts](docs/
 
 Windows ETW monitoring, process history, and file-level activity collection are integrated with CORE. However, real recommendations depend on complete file activity data, reliable source-device identification, qualifying read-heavy workloads, and sufficient SSD/NVMe capacity.
 
-Linux supports real disk and process I/O monitoring. Kernel-level file I/O monitoring has been implemented in [PR #48](https://github.com/csc301-2026-f/21-WSD-Team/pull/48)and is awaiting merge. However, integration with the CORE recommendation workflow is not yet complete.
+Windows does not yet support raid0 mode or ssd caching, but is still able to make accurate recommendations and execute changes.
+
+Linux file IO tracking is done only on user selected files selected through the frontend.
+
+Linux does not yet implement ssd caching, but does manage a raid0 filesystem through mergerfs.
 
 ALGO-02 supports SSD caching recommendations at the algorithm level, but its integration into CORE and the frontend remains incomplete.
 
-Automatic file migration, physical RAID creation, and executable SSD caching are not implemented.
-
-The published D2 Linux package does not include the later D3 Windows integration or launcher.
-
-## Development and GitHub Workflow
+Automatic RAID creation and file migration, and executable SSD caching are not implemented.
 
 ## Development and GitHub Workflow
 
 Team development is organized using feature branches and pull requests.
+
+Changes to the API are agreed upon by the concerned actors and documented in the [API Contracts](docs/api-contracts.md)
 
 Changes are reviewed before being merged into `main`. GitHub Actions runs automated Python tests on Windows and Linux using Python 3.10 and 3.12. These include ALGO-01 and ALGO-02 unit tests, HTTP and database contract tests, and integration tests.
 
@@ -144,13 +153,14 @@ Frontend JavaScript unit tests can also be run using `npm test`.
 
 The D3 frontend improvements include better accessibility, semantic HTML, keyboard navigation, improved color contrast, and process search functionality. The tested frontend pages achieved a Lighthouse accessibility score of 100.
 
-Automated deployment has been implemented in [PR #49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49) and is awaiting merge into `main`. The CI/CD pipeline includes automated testing, linting, and build verification. Once merged, successful checks on pushes to `main` will automatically publish the Linux package as a GitHub Release tagged `latest`.
+Automated deployment has been implemented in [PR #49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49). The CI/CD pipeline includes automated testing, linting, and build verification. Once merged, successful checks on pushes to `main` will automatically publish the Linux package as a GitHub Release under one of two environments: `dev` and `build`.
 
 Team coordination takes place through regular meetings, GitHub Issues, and Discord.
 
 ## Documentation
 
 - [Linux Installation Guide](packaging/linux/README.md)
+- [Mergerfs setup](backend/linux/mergerfs_setup.txt)
 - [Windows Setup Guide](packaging/windows/README.md)
 - [D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)
 - [API Contracts](docs/api-contracts.md)
