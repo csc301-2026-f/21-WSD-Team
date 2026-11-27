@@ -265,8 +265,8 @@ From D1, the **two core storage modes** are:
 
 - [ ] **TODO · ENRIQUE + MOHAN + SHENGRONG** — Confirm whether OS-02 supports per-process real-time I/O (US-01) on each platform; include one response and unavailable-field behavior.
   - **Answer / evidence:** _Write here, or link an API sample / PR._
-- [ ] **TODO · SAHIL + SHENGRONG + DANNY** — Agree on process-history API fields, stable process identity and the history UI path (US-02).
-  - **Answer / evidence:** _Write here, or link an API sample / PR._
+- [x] **TODO · SAHIL + SHENGRONG + DANNY** — Agree on process-history API fields, stable process identity and the history UI path (US-02).
+  - **Answer / evidence:** Composite process-instance identity `f"{pid}_{start_time_utc}"` implemented in DB `process_metrics` table; queried via `query_process_history` (raw or time-bucketed) and surfaced via `/api/v1/processes/history` (HTTP-01m). Verified in `tests/integration/test_us02_history.py`.
 - [ ] **TODO · ENRIQUE + MOHAN + JOHN/JESSLYN** — Record what file placement and caching operations are technically feasible and safe (US-03 / US-04 / US-05).
   - **Answer / evidence:** _Write here, or link an API sample / PR._
 - [ ] **TODO · SHENGRONG + DANNY + ENRIQUE + MOHAN** — Specify explicit Auto Mode authorization and safe-execution restrictions (US-06).
@@ -490,7 +490,28 @@ PR: Pending. CORE integration has not been completed.
     "window_end_utc": str, "read_bytes": int | None,
     "write_bytes": int | None, "read_ops": int | None,
     "write_ops": int | None, "file_size_bytes": int | None,
+    "read_average_gap": float | None,
+    "write_average_gap": float | None,
     "source": str,
+}
+
+# FileSubscription (Monitored file/folder paths across restarts)
+{
+    "subscription_id": str, "host_id": str, "path": str,
+    "target_type": str,               # "file" or "folder"
+    "status": str,                    # "active", "paused", "removed"
+    "created_at_utc": str, "updated_at_utc": str,
+}
+
+# FileMoveRecord (Migration tracking and resume state)
+{
+    "move_id": str, "recommendation_id": str | None, "host_id": str,
+    "file_id": str | None, "source_path": str, "target_path": str,
+    "source_device_id": str | None, "target_device_id": str | None,
+    "bytes_total": int | None, "bytes_moved": int,
+    "status": str,                    # "pending", "approved", "in_progress", "completed", "failed", "cancelled"
+    "error_message": str | None, "started_at_utc": str | None,
+    "completed_at_utc": str | None, "updated_at_utc": str,
 }
 ```
 
@@ -1052,20 +1073,32 @@ Remaining Work:
                           exact call route to be agreed)
 ```
 
-### Initial signatures (PROPOSAL)
+### Current signatures (IMPLEMENTED)
 
 ```python
 def upsert_devices(devices: list[dict]) -> None: ...
 def ingest_device_metrics(samples: list[dict]) -> None: ...
 def ingest_process_metrics(samples: list[dict]) -> None: ...
-def ingest_file_activity(samples: list[dict]) -> None: ...  # OPTIONAL
+def ingest_file_activity(samples: list[dict]) -> None: ...
 
 def query_device_history(device_ids: list[str], start_utc: str,
                          end_utc: str, bucket_seconds: int | None = None) -> list[dict]: ...
 def query_process_history(process_instance_ids: list[str], start_utc: str,
                           end_utc: str, bucket_seconds: int | None = None) -> list[dict]: ...
 def query_file_heat(start_utc: str, end_utc: str, limit: int = 100,
-                    device_ids: list[str] | None = None) -> list[dict]: ...  # CONDITIONAL
+                    device_ids: list[str] | None = None,
+                    path: str | None = None) -> list[dict]: ...
+def query_file_activity_windows(start_utc: str, end_utc: str,
+                                path: str | None = None,
+                                device_ids: list[str] | None = None,
+                                limit: int = 5000) -> list[dict]: ...
+
+def upsert_file_subscription(sub: dict) -> None: ...
+def list_file_subscriptions(status: str | None = None) -> list[dict]: ...
+
+def save_file_move_record(record: dict) -> None: ...
+def get_incomplete_file_moves() -> list[dict]: ...
+def list_file_move_records(status: str | None = None, limit: int = 100) -> list[dict]: ...
 
 def get_settings() -> dict: ...
 def save_settings(settings: dict) -> None: ...
@@ -1079,13 +1112,13 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 > **IF YOU OWN THE DATABASE:** Please complete each **TODO** below, including query examples. **ALGO + CORE reviewers:** Confirm that the history queries meet our needs. **QA:** Test save/query round-trips.
 
 - [x] **TODO · SAHIL** — Database engine, table/schema approach, migrations
-  - **Answer / evidence:** Proposed design: Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema to be auto-initialized on startup via `CREATE TABLE IF NOT EXISTS`; migrations planned via a lightweight `schema_version` pragma table. (Status: Implemented).
+  - **Answer / evidence:** Embedded SQLite with Write-Ahead Logging (`PRAGMA journal_mode=WAL;`) for concurrent local access without external server dependencies. Schema auto-initialized on startup via `schema.sql` (`CREATE TABLE IF NOT EXISTS`). Tables: `devices`, `device_metrics`, `process_metrics`, `recommendations`, `app_settings`, `file_activity`, `file_subscriptions`, `file_move_records`. (Status: Implemented and Verified in CI).
 
 - [x] **TODO · SAHIL** — Concrete Python callable/module or service adapter
-  - **Answer / evidence:** Proposed interface: `wsd.db.repository.SQLiteHistoryRepository` implementing the abstract `HistoryRepository` protocol. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: Implemented).
+  - **Answer / evidence:** Interface: `backend.db.repository.SQLiteHistoryRepository` consumed directly or wrapped by Core's `backend.core.db_adapter.DataBaseAdaptor`. Core and Algorithm modules consume plain Python dictionaries/dataclasses—no SQL syntax or database connection handles leak across component boundaries. (Status: Implemented).
 
 - [x] **TODO · SAHIL** — Raw vs aggregated history; filter/time-window/bucket semantics
-  - **Answer / evidence:** Proposed design: Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
+  - **Answer / evidence:** Raw telemetry samples stored chronologically. History queries accept `bucket_seconds`:
     - `bucket_seconds=None`: Returns raw recorded samples within `[start_utc, end_utc]`.
     - `bucket_seconds > 0`: Aggregates samples using SQL `AVG(read_bytes_per_sec)`, `MAX()`, and `AVG(read_iops)` binned by timestamp intervals.
 
@@ -1101,18 +1134,31 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
     - Processes identified using composite strings: `f"{pid}_{start_time_utc}"` to prevent PID collision across restarts (US-02).
     - If the OS agent does not provide file activity, `query_file_heat()` returns an explicit empty list `[]` with status indicating file tracking is unsupported—heat scores are never guessed.
 
+- [x] **TODO · SAHIL** — File activity, sequential gap metrics, and query ordering
+  - **Answer / evidence:** 
+    - `file_activity` table stores historical file activity windows with `read_average_gap` and `write_average_gap` (`REAL`, nullable), representing sequential vs random I/O gap distance in bytes (`0.0` = fully sequential, `None` if no operations contributed a gap).
+    - `query_file_activity_windows()` queries non-overlapping telemetry windows ordered by `window_start_utc DESC` (most recent windows first) with default `limit=5000` to feed prediction algorithms with the freshest telemetry.
+    - `query_file_heat()` computes aggregated heat per file key (`total_read_bytes`, `total_write_bytes`, `total_bytes`, `sample_count`, `avg_read_average_gap`, `avg_write_average_gap`) with optional `path` filter for exact absolute filepath lookup.
+
+- [x] **TODO · SAHIL** — File monitoring subscriptions & move resume state persistence
+  - **Answer / evidence:**
+    - `file_subscriptions` persists watched files and folders across restarts (`subscription_id`, `host_id`, `path` UNIQUE, `target_type`, `status`, `created_at_utc`, `updated_at_utc`).
+    - `file_move_records` tracks file migration progress and lifecycle (`move_id`, `recommendation_id`, `source_path`, `target_path`, `bytes_total`, `bytes_moved`, `status`, `error_message`, timestamps).
+    - `get_incomplete_file_moves()` queries moves with `status IN ('approved', 'in_progress')` on startup to enable resilient resume of interrupted migrations.
+
 - [x] **TODO · SAHIL** — Expected query cost, indexes and batch limits
-  - **Answer / evidence:** Composite indexes planned for `(device_id, timestamp_utc)` and `(process_instance_id, timestamp_utc)`. Ingestion planned with batched transactions (`executemany`) up to 500 records per commit. **Performance note:** `<10ms` for 24-hour historical queries is an unverified design target, not an empirically measured benchmark. Actual latency will be verified in QA benchmarks.
+  - **Answer / evidence:** Composite indexes implemented: `(device_id, timestamp_utc)`, `(process_instance_id, timestamp_utc)`, `(window_start_utc, window_end_utc)`, `(path, window_start_utc)`, `(device_id, window_start_utc)`, and status indexes on subscriptions and move records. Ingestion executes with batched transactions (`executemany`).
 
 - [x] **TODO · SAHIL** — Document history needed for US-02 and benchmark comparison data retention/queries for US-07; do not generate a time-saved number from device IOPS alone.
   - **Answer / evidence:** US-02 historical process queries handled via `query_process_history`. US-07 (estimated time saved) delegates impact calculation to QA benchmark baselines: DB stores baseline run IDs and actual run durations, returning `{"status": "unavailable"}` if no direct baseline benchmark exists.
 
 - [x] **TODO · SAHIL** — Success + empty + invalid-input examples/fixtures
-  - **Answer / evidence:** Fixtures committed to repository branch under `tests/fixtures/`:
+  - **Answer / evidence:** Fixtures committed under `tests/fixtures/`:
     - Device History Success: `tests/fixtures/history_sample.json`
     - Empty Result: `tests/fixtures/history_empty.json`
     - Process History (US-02): `tests/fixtures/process_history_sample.json`
     - Unsupported File Heat: `tests/fixtures/file_heat_unsupported.json`
+    - Full DB unit tests in `tests/test_db_contract.py` (30 passed).
 
 ### 04.2 | DB CONSUMERS + JUAN — Review and test checklist
 
@@ -1715,7 +1761,7 @@ This example follows **US-05** and illustrates an **SSD-caching recommendation**
 ### 10.2 | Contract acceptance checkboxes — Separate from implementation
 
 - [ ] **TODO · OS-01/02** — Enrique + Mohan contract updates received; Shengrong + Algorithm consumer review recorded; Juan fixtures reviewed.
-- [ ] **TODO · DB-01** — Sahil contract received; John/Jesslyn + Shengrong agree; Juan fixtures reviewed.
+- [X] **TODO · DB-01** — Sahil contract received; John/Jesslyn + Shengrong agree; Juan fixtures reviewed.
 - [ ] **TODO · ALGO-01/02** — John/Jesslyn publish RAID0 and SSD-caching signatures/examples; Shengrong/OS owners/Danny review; Juan test plan recorded.
 - [ ] **TODO · HTTP-01** — Shengrong publishes endpoint shapes; Danny signs off on UI needs; Juan test plan recorded.
 - [ ] **TODO · QA-01/03** — Juan submits reusable test fixtures/scripts/CI draft; all relevant owners and John/Shengrong review.
@@ -1740,7 +1786,7 @@ This example follows **US-05** and illustrates an **SSD-caching recommendation**
 
 - [ ] **TODO · TEAM** — Fill in your assigned worksheet and request any missing data from the APIs you consume.
 - [ ] **TODO · SHENGRONG** — Confirm the normalization schema and transport after consumer review.
-- [ ] **TODO · SAHIL** — Provide historical query examples and documented empty-history behavior.
+- [x] **TODO · SAHIL** — Provide historical query examples and documented empty-history behavior.
 - [ ] **TODO · JOHN + JESSLYN** — Provide one explainable recommendation fixture for each storage mode.
 - [ ] **TODO · DANNY** — Connect the existing dashboard to mock API responses before switching to real data.
 - [ ] **TODO · JUAN** — Add baseline contract tests and CI to detect incompatible changes in PRs.
