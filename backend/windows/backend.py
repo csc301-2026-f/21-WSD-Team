@@ -10,7 +10,7 @@ from .contracts import (
 from .device_provider import DeviceProvider
 from .etw_source import EtwSource
 from .aggregation import EventAggregator
-
+from .file_operations import WindowsFileMover
 
 class WindowsBackend:
     def __init__(
@@ -18,11 +18,13 @@ class WindowsBackend:
         host_id: str,
         etw_source: EtwSource,
         device_provider: DeviceProvider,
+        file_mover: WindowsFileMover
     ):
         self.host_id = host_id
         self.etw_source = etw_source
         self.device_provider = device_provider
         self.aggregator = EventAggregator(host_id)
+        self.file_mover = file_mover
         self._started = False
 
     def start(self) -> None:
