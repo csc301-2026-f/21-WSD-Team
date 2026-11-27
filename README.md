@@ -156,17 +156,6 @@ The main implementation is organized under `backend/` and `frontend/`. CORE conn
 
 ## Documentation
 
-- [Linux Installation Guide](packaging/linux/README.md)
-- [Windows Setup Guide](packaging/windows/README.md)
-- [D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)
-- [API Contracts](docs/api-contracts.md)
-- [D2 Iteration Review](deliverables/D2/iteration-02-review.md)
-- [Individual Contributions](deliverables/D2/Individual_Contributions_Deliverable2.md)
-- [D2 AI Usage Disclosure](deliverables/D2/AI_usage.md)
-- [D3 Product Evolution Report](deliverables/D3/product-evolution.md)
-- [D3 Individual Contributions](deliverables/D3/Individual_Contributions_Deliverable3.md)
-- [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
-
 ### User Guides
 
 - [Linux Installation Guide](packaging/linux/README.md)
@@ -190,6 +179,7 @@ The main implementation is organized under `backend/` and `frontend/`. CORE conn
 - [D3 Product Evolution Report](deliverables/D3/product-evolution.md)
 - [D3 Individual Contributions](deliverables/D3/Individual_Contributions_Deliverable3.md)
 - [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
+- [D4 Individual Contributions](deliverables/D4/Individual_Contributions_Deliverable4.md)
 - [D4 AI Usage Disclosure](deliverables/D4/AI_usage.md)
 
 ## License

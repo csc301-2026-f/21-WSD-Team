@@ -29,3 +29,9 @@
 **Tools:** Claude
 
 **Usage:** Juan used Claude to help write the D4 test suites, identify the causes of CI failures in teammates' pull requests, and update tests to match their changes.
+
+## D4 Database Testing
+
+**Tools:** ChatGPT
+
+**Usage:** Sahil used ChatGPT to help create rigorous unit tests for added components to the database. Particularly the table related to tracking file moves and gaps between file activity.
