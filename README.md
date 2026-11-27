@@ -158,6 +158,7 @@ Team coordination takes place through regular meetings, GitHub Issues, and Disco
 - [D3 Product Evolution Report](deliverables/D3/product-evolution.md)
 - [D3 Individual Contributions](deliverables/D3/Individual_Contributions_Deliverable3.md)
 - [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
+- [Testing](docs/testing.md)
 ## License
 
 Wise Storage Director is licensed under the **GNU General Public License version 3 (GPLv3)**.
