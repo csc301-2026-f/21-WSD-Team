@@ -8,7 +8,7 @@ Wise Storage Director (WSD) is a storage monitoring and optimization application
 
 Different storage devices provide different levels of performance, yet users often lack the information needed to decide which files and workloads should benefit from faster storage.
 
-Our project addresses this problem by monitoring disk and process I/O activity, presenting performance information through a web interface, and providing recommendations for storage optimization.
+Our project addresses this problem by monitoring disk, process, and file I/O activity, presenting performance information through a web interface, and providing recommendations for storage optimization.
 
 **Partner Information:** WSD is a student-proposed CSC301 project without an external partner organization.
 
@@ -22,7 +22,7 @@ The project aims to improve storage performance while keeping storage-management
 
 ## Current Features
 
-The development version supports real disk and process I/O monitoring on Linux and Windows.
+WSD supports disk, process, and file I/O monitoring on Linux and Windows.
 
 ### US-01: Real-Time Process I/O Monitoring
 
@@ -37,32 +37,31 @@ The development version supports real disk and process I/O monitoring on Linux a
 - Display historical process I/O activity.
 - Visualize disk throughput and IOPS over time.
 
+### US-03: RAID0 Mode
+
+- On Linux, use an existing mergerfs pool to manage file placement across HDDs and SSDs.
+- Move selected files between pool branches through the backend's file migration interface.
+
 ### US-05: Storage Optimization Recommendations
 
-- Analyze file access patterns and available storage capacity.
-- Generate file-placement recommendations using ALGO-01.
-- ALGO-01 now uses a Knapsack-based selection algorithm with dynamic programming and state pruning, falling back to Greedy when computational limits are exceeded.
-- ALGO-02 implements a Greedy-based SSD caching recommendation algorithm.
+- Monitor file activity and analyze storage capacity. On Linux, users select files or folders to track; Windows collects file activity through ETW.
+- **ALGO-01 (RAID0):** Predicts future read activity by selecting among Ridge regression, moving average, and the latest observed read rate. It considers spatial locality and uses Knapsack optimization with state pruning to select files within the available SSD capacity. Greedy selection serves as a fallback when the DP budget is exceeded.
+- **ALGO-02 (SSD caching):** Generates cache recommendations using a greedy selection algorithm. CORE supports recommendation generation for both storage modes.
 - Display recommended source and target devices, reasons, and constraints.
-- On Windows, evaluate real file activity for eligible HDD-to-SSD/NVMe placement recommendations.
 
-ALGO-02 is implemented at the algorithm level but is not yet integrated into CORE's recommendation refresh workflow.
+Demo mode uses clearly labelled sample activity. Real recommendations depend on file activity and available SSD/NVMe capacity. ALGO-01 can use observed activity while historical data is still being collected.
 
-Demo mode uses clearly marked sample file activity. Real recommendations depend on qualifying read-heavy HDD files and available SSD/NVMe capacity; WSD may return no suggestion.
-
-Recommendations are advisory only. WSD does not automatically move or cache files.
+See the [ALGO-01 Developer Guide](backend/algorithms/docs/policy_1_readme.md) for algorithm details.
 
 ## Installation and Usage
 
-### Linux Release (D2)
+Download an appropriate Linux or Windows package from [GitHub Releases](https://github.com/csc301-2026-f/21-WSD-Team/releases). Development pre-releases include both packages.
 
-The D2 package targets **Ubuntu 24.04 x86-64 Linux** and predates the Windows support described below.
+### Linux
 
-**[Download WSD v1.0.0](https://github.com/csc301-2026-f/21-WSD-Team/releases/tag/v1.0.0)**
+The Linux package targets **Ubuntu 24.04 x86-64** and includes a standalone executable and installation script.
 
-The package includes a standalone executable and an installation script.
-
-For complete installation instructions, system requirements, and remote-access instructions, see the **[Linux Installation Guide](packaging/linux/README.md)**.
+See the [Linux Installation Guide](packaging/linux/README.md) for installation, dependencies, and remote access. For RAID0 mode, prepare an existing pool using the [mergerfs Setup Guide](backend/linux/mergerfs_setup.txt).
 
 ### Windows
 
@@ -101,9 +100,10 @@ Stop the current mode using `Ctrl+C` before switching modes.
 | US-01: Real-Time Process I/O | Real | Open **Disk Usage Statistics**, locate the **Application I/O** table, search by process name or PID, and observe read/write activity. |
 | US-02: Historical I/O | Real | Select a process in **Application I/O** or under **Process I/O History**, and observe its historical activity. |
 | US-05: Storage Recommendations | Demo | Open **Main Dashboard**, click **Refresh Recommendations**, and review the generated sample-data recommendations. |
-| US-05: Storage Recommendations | Windows Real | Run WSD with Administrator access, generate file read activity on an HDD, and click **Refresh Recommendations**. A recommendation requires qualifying activity and available SSD/NVMe capacity. |
+| US-05: Storage Recommendations | Windows Real | Run WSD with Administrator access, generate file read activity on an HDD, and refresh recommendations. |
+| US-05: Storage Recommendations | Linux Real | Configure a mergerfs pool for RAID0 mode, track a file or folder on the pool, generate read activity, and refresh recommendations after activity has been collected. |
 
-See the **[Windows Setup Guide](packaging/windows/README.md)** for startup screenshots. The **[D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)** documents the earlier D2 interface.
+For predictive recommendations, keep WSD running while it collects historical file activity. See the **[Windows Setup Guide](packaging/windows/README.md)** for startup screenshots. The **[D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)** documents the earlier D2 interface.
 
 ## System Architecture
 
@@ -113,8 +113,8 @@ WSD uses a modular architecture:
 
 - **OS Agent:** Collects storage device information and I/O statistics.
 - **CORE:** Coordinates communication and data processing across components.
-- **Database:** Stores devices, historical I/O measurements, and recommendations using SQLite.
-- **Algorithms:** Evaluate storage activity and generate optimization recommendations.
+- **Database:** Stores devices, historical I/O measurements, file subscriptions, recommendations, and file migration records using SQLite.
+- **Algorithms:** Generate file placement and caching recommendations using device information and historical file activity.
 - **HTTP API:** Exposes monitoring data and recommendations through Flask.
 - **Frontend:** Presents device information, performance charts, process statistics, and recommendations.
 
@@ -122,44 +122,66 @@ For detailed component interfaces and data structures, see [API Contracts](docs/
 
 ## Current Limitations
 
-Windows ETW monitoring, process history, and file-level activity collection are integrated with CORE. However, real recommendations depend on complete file activity data, reliable source-device identification, qualifying read-heavy workloads, and sufficient SSD/NVMe capacity.
-
-Linux supports real disk and process I/O monitoring. Kernel-level file I/O monitoring has been implemented in [PR #48](https://github.com/csc301-2026-f/21-WSD-Team/pull/48)and is awaiting merge. However, integration with the CORE recommendation workflow is not yet complete.
-
-ALGO-02 supports SSD caching recommendations at the algorithm level, but its integration into CORE and the frontend remains incomplete.
-
-Automatic file migration, physical RAID creation, and executable SSD caching are not implemented.
-
-The published D2 Linux package does not include the later D3 Windows integration or launcher.
-
-## Development and GitHub Workflow
+- Linux file I/O monitoring requires users to select files or folders to track. RAID0 file placement requires an existing mergerfs pool.
+- Windows supports file activity monitoring and recommendations. Recommended file moves are currently supported by the Linux backend.
+- SSD caching recommendations are available through the algorithm interface; cache execution is not implemented.
+- Predictive recommendations depend on the availability and quality of historical file activity.
+- Physical RAID creation is outside the current implementation.
 
 ## Development and GitHub Workflow
 
 Team development is organized using feature branches and pull requests.
 
-Changes are reviewed before being merged into `main`. GitHub Actions runs automated Python tests on Windows and Linux using Python 3.10 and 3.12. These include ALGO-01 and ALGO-02 unit tests, HTTP and database contract tests, and integration tests.
+Changes are reviewed before being merged into `main`. GitHub Actions runs automated Python tests on Windows and Ubuntu using Python 3.10 and 3.12, including algorithm, CORE, HTTP, database, and integration tests. Frontend tests run with `npm test`. The pipeline also runs lint and package build checks.
 
-Frontend JavaScript unit tests can also be run using `npm test`.
+The CI/CD workflow in [`.github/workflows/tests.yml`](.github/workflows/tests.yml) builds Linux and Windows packages. Successful pushes to `main` publish development pre-releases; successful pushes to `release` publish release builds.
 
-The D3 frontend improvements include better accessibility, semantic HTML, keyboard navigation, improved color contrast, and process search functionality. The tested frontend pages achieved a Lighthouse accessibility score of 100.
-
-Automated deployment has been implemented in [PR #49](https://github.com/csc301-2026-f/21-WSD-Team/pull/49) and is awaiting merge into `main`. The CI/CD pipeline includes automated testing, linting, and build verification. Once merged, successful checks on pushes to `main` will automatically publish the Linux package as a GitHub Release tagged `latest`.
+For local testing, see the [Testing Guide](docs/testing.md). The Linux real-machine test script is available at [`scripts/linux_local_test.sh`](scripts/linux_local_test.sh).
 
 Team coordination takes place through regular meetings, GitHub Issues, and Discord.
 
+## Developer Guide
+
+Use the platform setup guides below to install dependencies and run the application from source. The algorithms use scikit-learn, and the Python tests use pytest; the CI workflow records the dependencies used in automated checks.
+
+The main implementation is organized under `backend/` and `frontend/`. CORE connects the OS agents, database, algorithms, and HTTP API. When changing a shared interface, update the API documentation and the relevant contract tests. See the component guides and testing instructions below for development and maintenance.
+
+## Non-Functional Requirements
+
+- **Performance:** ALGO-01 uses dominated-state pruning and bounded computational budgets to control the cost of file selection.
+- **Reliability:** Input validation, sampling tolerance, and adaptive prediction and selection fallbacks help the algorithm handle incomplete history and varying workloads.
+- **Maintainability:** Candidate filtering, prediction, and file selection are separated into independent modules, with automated tests and a dedicated developer guide.
+- **Safety:** ALGO-01 reserves SSD capacity and includes approval and execution-validation requirements in its recommendations.
+- **Accessibility:** The D3 frontend introduced semantic HTML, labelled controls, keyboard navigation, and improved colour contrast. The pages tested in D3 achieved a Lighthouse accessibility score of 100.
+
 ## Documentation
+
+### User Guides
 
 - [Linux Installation Guide](packaging/linux/README.md)
 - [Windows Setup Guide](packaging/windows/README.md)
+- [mergerfs Setup Guide](backend/linux/mergerfs_setup.txt)
 - [D2 Frontend Walkthrough](deliverables/D2/WSD_TA_Frontend_Walkthrough.md)
+
+### Developer Guides
+
+- [ALGO-01: Adaptive File Placement](backend/algorithms/docs/policy_1_readme.md)
+- [File I/O Monitoring Frontend Design Notes](docs/file-io-monitoring-frontend.md)
 - [API Contracts](docs/api-contracts.md)
+- [Testing Guide](docs/testing.md)
+
+### Project Deliverables
+
+- [D1 Project Planning](deliverables/D1/planning.md)
 - [D2 Iteration Review](deliverables/D2/iteration-02-review.md)
-- [Individual Contributions](deliverables/D2/Individual_Contributions_Deliverable2.md)
+- [D2 Individual Contributions](deliverables/D2/Individual_Contributions_Deliverable2.md)
 - [D2 AI Usage Disclosure](deliverables/D2/AI_usage.md)
 - [D3 Product Evolution Report](deliverables/D3/product-evolution.md)
 - [D3 Individual Contributions](deliverables/D3/Individual_Contributions_Deliverable3.md)
 - [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
+- [D4 Individual Contributions](deliverables/D4/Individual_Contributions_Deliverable4.md)
+- [D4 AI Usage Disclosure](deliverables/D4/AI_usage.md)
+
 ## License
 
 Wise Storage Director is licensed under the **GNU General Public License version 3 (GPLv3)**.

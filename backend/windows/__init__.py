@@ -17,7 +17,9 @@ def create_backend(host_id: str):
     from .etw_source import EtwDecoder, EtwSource
     from .transport import EtwTransport
     from .backend import WindowsBackend
+    from .file_operations import WindowsFileMover
     device_provider = DeviceProvider(host_id)
+    file_mover = WindowsFileMover(device_provider=device_provider)
     decoder = EtwDecoder(device_provider=device_provider)
     transport = EtwTransport()
     source = EtwSource(
@@ -30,6 +32,7 @@ def create_backend(host_id: str):
         host_id=host_id,
         etw_source=source,
         device_provider=device_provider,
+        file_mover=file_mover
     )
 
 

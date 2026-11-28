@@ -36,7 +36,7 @@ These requirements are for the input CORE prepares. CORE can fill existing field
 
 `path`, `read_bytes` and `write_bytes` may be `null`. Unknown read/write **operation counts** cannot be used for ranking; they must not be converted to zero. Device or process totals do not describe an individual file's activity.
 
-By default, an observation covers 60–3,600 seconds and ended within five minutes of evaluation. Several windows per file are accepted; the algorithm chooses the latest valid one, removes equivalent duplicates and skips conflicts. It does not add overlapping counts. See the [reference](policy_1_reference.md) for settings and exact rules.
+By default, an observation covers 60–3,600 seconds and ended within five minutes of evaluation. For filtering, the algorithm chooses the latest valid window per file, removes equivalent duplicates and skips conflicts. It uses earlier windows for prediction without adding overlapping counts. See the [ALGO-01 guide](policy_1_readme.md) for settings and history requirements.
 
 For simulated activity, preserve `source="mock"` or `source="mock:<description>"`. The returned reason and conditions carry that label.
 
@@ -52,7 +52,7 @@ For simulated activity, preserve `source="mock"` or `source="mock:<description>"
 
 A `move` recommendation does not confirm that the OS can carry it out. Execution still needs approval and current checks of file identity, path compatibility, permissions and free space. ALGO-01 does not clean up files already on the SSD.
 
-For D2, each call uses one SSD destination. Two device IDs can refer to the same storage space; the current records do not identify that relationship, so the algorithm does not combine their reported free capacity.
+Each call uses one SSD destination. Two device IDs can refer to the same storage space; the current records do not identify that relationship, so the algorithm does not combine their reported free capacity.
 
 Start integration with a document or media file that can be moved independently. Application dependencies, whole-game relocation and anti-cheat detection are not implemented in this policy.
 
@@ -94,7 +94,7 @@ except PolicyInputError as error:
 
 `path`、`read_bytes` 和 `write_bytes` 可以为 `null`。未知的读写**操作次数**无法用于排序，不能改成零。整个设备或进程的总量也不能当作某个文件的活动。
 
-默认每条观察覆盖 60～3600 秒，结束时间距评估不超过五分钟。一个文件可以有多个窗口：算法选最新有效窗口，合并等价重复记录，遇到冲突则跳过；不累加重叠次数。设置和完整判断见[参考文档](policy_1_reference.md)。
+默认每条观察覆盖 60～3600 秒，结束时间距评估不超过五分钟。筛选时，算法为每个文件选最新有效窗口，合并等价重复记录，遇到冲突则跳过；较早的窗口用于预测，不累加重叠次数。设置和历史数据要求见 [ALGO-01 说明](policy_1_readme.md)。
 
 模拟活动保留 `source="mock"` 或 `source="mock:说明"`，返回的原因和条件也会带上标记。
 
@@ -110,6 +110,6 @@ except PolicyInputError as error:
 
 `move` 建议不代表 OS 已经能执行。真正移动时仍需批准，并检查当前文件身份、路径兼容性、权限和剩余空间。ALGO-01 不清理已经在 SSD 上的文件。
 
-D2 每轮只使用一个 SSD 目标。两个设备 ID 可能指向同一份存储空间，而现有记录无法识别这种关系，因此算法不把它们报告的剩余容量加起来使用。
+每轮只使用一个 SSD 目标。两个设备 ID 可能指向同一份存储空间，而现有记录无法识别这种关系，因此算法不把它们报告的剩余容量加起来使用。
 
 首次接入可以从能独立移动的文档或媒体文件开始。本策略尚未实现应用依赖检查、整个游戏迁移和反作弊识别。
