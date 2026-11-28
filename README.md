@@ -46,7 +46,7 @@ WSD supports disk, process, and file I/O monitoring on Linux and Windows.
 
 - Monitor file activity and analyze storage capacity. On Linux, users select files or folders to track; Windows collects file activity through ETW.
 - **ALGO-01 (RAID0):** Predicts future read activity by selecting among Ridge regression, moving average, and the latest observed read rate. It considers spatial locality and uses Knapsack optimization with state pruning to select files within the available SSD capacity. Greedy selection serves as a fallback when the DP budget is exceeded.
-- **ALGO-02 (SSD caching):** Generates cache recommendations using a greedy selection algorithm. CORE supports recommendation generation for both storage modes.
+- **ALGO-02 (SSD caching):** Uses logistic regression to estimate whether HDD files will remain useful in an SSD cache, then greedily selects eligible files by read activity per byte within the available capacity. It loads a saved model when available; otherwise it uses a cold-start model fitted to four synthetic examples. Training on recorded history is a separate developer step. CORE supports recommendation generation for both storage modes.
 - Display recommended source and target devices, reasons, and constraints.
 - On Windows, evaluate real file activity for eligible HDD-to-SSD/NVMe placement recommendations.
 
@@ -56,9 +56,14 @@ See the [ALGO-01 Developer Guide](backend/algorithms/docs/policy_1_readme.md) fo
 
 ## Installation and Usage
 
+Download a Linux or Windows package from [GitHub Releases](https://github.com/csc301-2026-f/21-WSD-Team/releases). Development pre-releases include both platforms.
+
+### Linux package
+
+Follow the [Linux Installation Guide](packaging/linux/README.md), then run `~/.local/bin/wsd` for monitoring or `~/.local/bin/wsd --demo` for sample recommendations. Open http://127.0.0.1:5000/ and press Ctrl+C to stop before switching modes.
+
 ### Linux D4 setup
 
-TODO: Add linux d4 release 
 On Ubuntu 24.04, run these commands from the D4 repository root. The virtual environment uses the system Python so it can load Ubuntu’s BCC bindings. Live file tracing also requires a kernel with BTF and fentry/fexit support. [Linux installation guide](packaging/linux/README.md)
 
 ```bash
@@ -80,6 +85,7 @@ See the **[Windows Setup Guide](packaging/windows/README.md)** for the desktop l
 2. **Observe reads.** Allow eight seconds for the first measurement window. In the same terminal, run `for i in {1..15}; do dd if="$sample" of=/dev/null bs=64K status=none; sleep 1; done` in Bash. During the loop, click **Refresh file activity** and check the file’s read bytes and operations.
 3. **Generate placement advice.** For a real RAID0 recommendation, configure one mergerfs pool with HDD and SSD branches. Repeat the tracking and read steps with a disposable file on the HDD accessed through its pool path. Keep it active through a complete 60-second collection window, then select **RAID 0 / File-Level Pooling** and **Generate recommendations**. The result depends on file activity, device identification and free SSD capacity. [mergerfs setup](backend/linux/mergerfs_setup.txt)
 4. **Verify a manual move.** For example, if the pool path is `/srv/pool/docs/sample.bin` and the SSD branch is `/mnt/ssd`, first confirm that `/mnt/ssd/docs` exists, the target filename is unused, and writers have closed the file. Select the file in **File I/O Monitoring**, enter `/mnt/ssd` as the destination branch and choose **Move selected file**. After completion, verify that `/mnt/ssd/docs/sample.bin` exists, the old HDD branch copy is gone, and `/srv/pool/docs/sample.bin` is still readable.
+5. **Move a recommendation.** On **Recommendations**, click **Move File** on an eligible RAID0 suggestion, review the source and destination, then choose **Confirm Move**. The card shows progress and whether the move completed or failed. **Show Move Preview** demonstrates the confirmation using a sample card without moving a file.
 
 ## Testing the Main Features
 
@@ -153,7 +159,11 @@ The main implementation is organized under `backend/` and `frontend/`. CORE conn
 
 ### Developer Guides
 
+- [Database Developer Guide](backend/db/README.md)
+- [CORE and HTTP API Guide](docs/core-and-http-api.md)
+- [Windows Backend Developer Guide](backend/windows/README.md)
 - [ALGO-01: Adaptive File Placement](backend/algorithms/docs/policy_1_readme.md)
+- [ALGO-02: ML-Assisted SSD Caching](backend/algorithms/docs/policy_2_readme.md)
 - [File I/O Monitoring Frontend Design Notes](docs/file-io-monitoring-frontend.md)
 - [API Contracts](docs/api-contracts.md)
 - [Testing Guide](docs/testing.md)
@@ -169,7 +179,6 @@ The main implementation is organized under `backend/` and `frontend/`. CORE conn
 - [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
 - [D4 Individual Contributions](deliverables/D4/Individual_Contributions_Deliverable4.md)
 - [D4 AI Usage Disclosure](deliverables/D4/AI_usage.md)
-- [D4 ALGO-02 README](backend/algorithms/docs/policy_2_readme.md)
 
 ## License
 

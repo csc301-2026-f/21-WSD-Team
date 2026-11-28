@@ -503,7 +503,7 @@ Merged implementation: [PR #63](https://github.com/csc301-2026-f/21-WSD-Team/pul
     "created_at_utc": str, "updated_at_utc": str,
 }
 
-# FileMoveRecord (Migration tracking and resume state)
+# FileMoveRecord (Stored migration status and byte counts)
 {
     "move_id": str, "recommendation_id": str | None, "host_id": str,
     "file_id": str | None, "source_path": str, "target_path": str,
@@ -792,52 +792,54 @@ The module-level helpers in [file_operation.py](../backend/linux/file_operation.
 
 Current access point:
 ```python
-__init__.py
-     def create_backend(host_id: str) -> WindowsBackend
+# backend/windows/__init__.py
+def create_backend(host_id: str) -> WindowsBackend: ...
 ```
 Current implemented interface:
 
 ```python
 class WindowsBackend:
-    # don't call __init__, call create_backend instead
-    def __init__(host_id: str,etw_source: EtwSource,device_provider: DeviceProvider): ...
+    # Use create_backend() to construct the wired backend.
+    def __init__(
+        self, host_id: str, etw_source: EtwSource,
+        device_provider: DeviceProvider, file_mover: WindowsFileMover,
+    ): ...
 
-    def start() -> None: ...
-    def close() -> None: ...
-
-    def get_devices() -> list[Device]: ...
+    def start(self) -> None: ...
+    def close(self) -> None: ...
+    def get_devices(self) -> list[Device]: ...
 
     def get_device_metrics(
-        sample_window_seconds: float = 10.0,
+        self, sample_window_seconds: float = 10.0,
     ) -> list[DeviceMetric]: ...
 
     def get_process_metrics(
-        sample_window_seconds: float = 10.0,
+        self, sample_window_seconds: float = 10.0,
     ) -> list[ProcessMetric]: ...
 
     def get_file_activity(
-        sample_window_seconds: int,
-        now_ns: int | None = None,
-    ) -> list[FileActivity]:
+        self, sample_window_seconds: int, now_ns: int | None = None,
+    ) -> list[FileActivity]: ...
 
-    def get_collection_health(self) -> CollectionHealth:
+    def get_collection_health(self) -> CollectionHealth: ...
 
-    file_mover.start_move(
-        source_path: str | os.PathLike[str],
-        destination_mount: str,
-        destination_rel_path: Path | None = None
-    ) -> tuple[MoveHandle|None , MoveError|None]
+class WindowsFileMover:
+    def start_move(
+        self, source_path: str | os.PathLike[str],
+        destination_mount: str, destination_rel_path: Path | None = None,
+    ) -> tuple[MoveHandle | None, MoveError | None]: ...
 
-    file_mover.move_file(
-        source_path: str | os.PathLike[str],
-        destination_mount: str,
-        destination_rel_path: Path | None = None,
+    def move_file(
+        self, source_path: str | os.PathLike[str],
+        destination_mount: str, destination_rel_path: Path | None = None,
         progress_callback: Callable[[float], None] | None = None,
-        cancel_call: Callable[[None],bool] | None = None
-    ) -> MoveResult:
+        cancel_call: Callable[[None], bool] | None = None,
+    ) -> MoveResult: ...
 ```
 
-The coded `get_collection_health` interfaces do not work as of now.
+`get_collection_health()` is implemented through `EtwSource.get_health()` and `EtwTransport.get_health()`. It reports session state, received-event count, last event time and errors. `events_lost` is currently fixed at `0`; event-loss tracking is not implemented. CORE does not expose this health record over HTTP.
+
+`backend.file_mover` provides standalone `start_move(...)` and `move_file(...)` calls. CORE's file-move endpoints currently use the Linux adapter; Windows file moves are not yet connected to CORE.
 
 
 ### Expected capabilities — Windows
@@ -845,10 +847,10 @@ The coded `get_collection_health` interfaces do not work as of now.
 | Capability | Status | Notes |
 |---|---|---|
 | `device_metrics` | **Implemented** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
-| `process_metrics` | **Implemented** | Tracing every single FileIO event the kernel fires as to also catch cache hits |
-| `process_to_device_attribution` | **Implemented** | Processes are attributed a device when correlated |
-| `file_access_metrics` | **Implemented** | Tracking FileIO events, path with drive letter correlated. |
-| `file_move` | **Implemented** | Can move files across mountpoints and directories |
+| `process_metrics` | **Implemented** | Aggregates file I/O events by PID and verified process start time |
+| `process_to_device_attribution` | **Implemented in Windows backend** | Returns a device when the selected events contain exactly one known device ID; otherwise `None`. CORE's capability flag is currently false |
+| `file_access_metrics` | **Implemented** | ETW file activity includes resolved paths and source devices when available |
+| `file_move` | **Backend component available** | `WindowsFileMover` supports standalone moves; CORE movement integration remains Linux-only |
 | `file_level_pooling` | **Planned** | WinFsp envisioned |
 | `ssd_caching` | **Planned** | No cache/redirection implementation |
 | `dry_run_action` | **Planned** | No dry-run function |
@@ -1154,14 +1156,15 @@ def list_recommendations(mode: str | None = None) -> list[dict]: ...
 - [x] **TODO · SAHIL** — File activity, sequential gap metrics, and query ordering
   - **Answer / evidence:** 
     - `file_activity` table stores historical file activity windows with `read_average_gap` and `write_average_gap` (`REAL`, nullable), representing sequential vs random I/O gap distance in bytes (`0.0` = fully sequential, `None` if no operations contributed a gap).
-    - `query_file_activity_windows()` queries non-overlapping telemetry windows ordered by `window_start_utc DESC` (most recent windows first) with default `limit=5000` to feed prediction algorithms with the freshest telemetry.
+    - `query_file_activity_windows()` returns telemetry windows ordered by `window_start_utc DESC` (most recent windows first) with default `limit=5000` to feed prediction algorithms with the freshest telemetry. The algorithm checks window continuity and overlap.
     - `query_file_heat()` computes aggregated heat per file key (`total_read_bytes`, `total_write_bytes`, `total_bytes`, `sample_count`, `avg_read_average_gap`, `avg_write_average_gap`) with optional `path` filter for exact absolute filepath lookup.
 
 - [x] **TODO · SAHIL** — File monitoring subscriptions & move resume state persistence
   - **Answer / evidence:**
     - `file_subscriptions` persists watched files and folders across restarts (`subscription_id`, `host_id`, `path` UNIQUE, `target_type`, `status`, `created_at_utc`, `updated_at_utc`).
     - `file_move_records` tracks file migration progress and lifecycle (`move_id`, `recommendation_id`, `source_path`, `target_path`, `bytes_total`, `bytes_moved`, `status`, `error_message`, timestamps).
-    - `get_incomplete_file_moves()` queries moves with `status IN ('approved', 'in_progress')` on startup to enable resilient resume of interrupted migrations.
+    - `get_incomplete_file_moves()` returns stored moves with `status IN ('approved', 'in_progress')`. Records persist across restarts, but CORE does not currently query them on startup or resume transfers from a saved byte offset.
+    - CORE saves an `in_progress` record when a move starts. Live progress and results come from the move handle; ongoing byte counts and completion are not yet written back to the database.
 
 - [x] **TODO · SAHIL** — Expected query cost, indexes and batch limits
   - **Answer / evidence:** Composite indexes implemented: `(device_id, timestamp_utc)`, `(process_instance_id, timestamp_utc)`, `(window_start_utc, window_end_utc)`, `(path, window_start_utc)`, `(device_id, window_start_utc)`, and status indexes on subscriptions and move records. Ingestion executes with batched transactions (`executemany`).

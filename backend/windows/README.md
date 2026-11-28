@@ -1,6 +1,6 @@
 # Windows Backend: ETW decoding and file moving
 
-The Windows backend decodes incoming file and disk events from the ETW library to give accurate metrics on disks, processes and all accessed files on system. It also takes in and executes file moving requests from the CORE level.
+The Windows backend decodes incoming file and disk events from the ETW library to give accurate metrics on disks, processes and all accessed files on system. It also provides a standalone Windows file migration module. CORE's Windows adapter does not yet dispatch file moves to this module.
 
 When requested by the CORE level, it aggregates the requested events for the last requested ammount of seconds into lists of all affected disks, processes, files, and their respective metrics. 
 
@@ -25,7 +25,7 @@ The windows backend uses the WMI library to cache relevant information about mou
 It then offers access points to this data to CORE, the event decoder, and the file mover
 
 ### File moving
-The dedicated file mover receives a move instruction from CORE with a source path, a destination mount point, and optionally a destination relative path, a process callback to report copy completion percentage in float, and a cancel callable that must return true when called if CORE wishes for the move to be cancelled. 
+The dedicated file mover accepts a source path, a destination mount point and, optionally, a destination relative path, a progress callback and a cancellation callable. The cancellation callable returns true when the caller wants to cancel the move.
 
 The move itself first copies the file to a temporary .moving file and then renames it to the desired name. If at any point an error occurs, the mover returns with an appropriate error code. If the error happens after the file has successfully been copied, this work is not thrown away, and instead the mover tries to finish the move once.
 
@@ -63,7 +63,7 @@ To run the backend as a standalone with instructions in `__main__.py`:
 
 ```bash
 
-python -m backend/windows
+python -m backend.windows
 
 ```
 
