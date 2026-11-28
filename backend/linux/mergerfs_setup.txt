@@ -1,18 +1,20 @@
-This is a documentation on how to setup mergerfs so it will work on linux with WSD.
+Using an existing mergerfs pool with WSD
 
-NOTE: IMPORTANT!!!
-When you are going to approve a suggestion made by the algorithm, make sure all file in that suggestion is closed
-or at least nothing is writing to it. When using raid-0 mode, the source file will be deleted on HDD and any write
-to the source file will be lost after you initiate the move.
+For Linux RAID0 recommendations, CORE expects exactly one mounted mergerfs
+pool. Configure the HDD and SSD branch mount paths as writable (=RW), with the
+HDD first. Use these mergerfs options for the WSD layout:
 
-When setting up mergerfs, use the following setting
-HDD(replace with your HDD mount directory)=RW
-SSD(replace with your SSD mount directory)=RW
-category.create=ff
-func.mkdir=all
-moveonenospc=false
+    category.create=ff
+    func.mkdir=all
+    moveonenospc=false
 
-remember to put HDD mount point before SSD
+With this order, new files go to the first eligible branch, usually the HDD.
+Directory creation uses all eligible branches. Check existing directories on
+the destination before moving a file.
 
-This will make create matching directory on both drives, and only put the file on HDD (when it has space)
-If HDD runs out of space, new file will be again placed on SSD (or another HDD)
+In File I/O Monitoring, select a file through its pool path and enter the
+destination branch mount. For example, /srv/pool/docs/a.md and /mnt/ssd
+resolve to a destination of /mnt/ssd/docs/a.md. Confirm that /mnt/ssd is a
+writable branch of this pool, /mnt/ssd/docs exists, the target file is absent,
+and the branch has room for the file. Close writers before confirming.
+A successful move removes the source branch copy and preserves the pool path.

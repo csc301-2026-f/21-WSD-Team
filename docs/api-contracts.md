@@ -1,9 +1,11 @@
-# WSD D2 | Our Internal API Contracts & Team Checklists
+# WSD API contracts and D2 team checklists
 
-> **VERSION: `v0.8` · STATUS: `TEAM DRAFT / NOT APPROVED` · DATE: 2026-10-08**  
-> **Suggested path:** `docs/api-contracts.md`  
+The [dashboard HTTP reference](#dashboard-http-api) lists the routes implemented on this branch as of 2026-11-27. The [Linux backend interface](#python-signatures--linux-backend) covers the Python records, path rules and mergerfs move handle. The D2 proposals and review checklists below record the original design and sign-off process.
+
+> **D2 WORKSHEET VERSION: `v0.8` · STATUS: `TEAM DRAFT / NOT APPROVED` · DATE: 2026-10-08**
+>
 > **Document coordinator:** **John**  
-> **TEAM 21:** This is **our working API contract**. Please fill in the parts you own, review the interfaces you will use, and raise questions directly in the PR. **All signatures and data structures below are proposals, not existing implementations or final decisions.** We can revise the proposed interfaces together, but we must notify affected consumers before merging an incompatible change.
+> **TEAM 21:** This is **our working API contract**. Please fill in the parts you own, review the interfaces you will use, and raise questions directly in the PR. The original design tables are proposals. Sections marked as implemented describe the current code. We can revise the proposed interfaces together, but we must notify affected consumers before merging an incompatible change.
 
 ---
 
@@ -341,7 +343,7 @@ repository interface. ALGO should NOT depend on raw SQL/table internals.
 | **DB-01** | Persist observations + history queries | **Sahil** | Shengrong; John/Jesslyn | **Juan** | P0 | PROPOSED |
 | **ALGO-01** | RAID0 recommendation API | **John + Jesslyn** | Shengrong; Enrique/Mohan; Danny | **Juan** | P0 | PROPOSED |
 | **ALGO-02** | SSD caching recommendation API | **John + Jesslyn** | Shengrong; Enrique/Mohan; Danny | **Juan** | P0* | PROPOSED |
-| **HTTP-01** | Dashboard HTTP/JSON API | **Shengrong** | **Danny** | **Juan** | P0 | PROPOSED |
+| **HTTP-01** | Dashboard HTTP/JSON API | **Shengrong** | **Danny** | **Juan** | P0 | See [implemented routes and outstanding proposals](#dashboard-http-api) |
 | **ACTION-01** | Preview / approved storage action | **Enrique / Mohan**, dispatch Shengrong | John/Jesslyn; Danny | **Juan** | P1/P2 | INVESTIGATE |
 | **QA-01** | Fixtures / contract + negative tests | **Juan** | All module owners | John + Shengrong | P0 | PROPOSED |
 | **QA-02** | Benchmarks + before/after evaluation | **Juan** | John/Jesslyn; OS agents; Danny (results) | John + Shengrong | P1 | PROPOSED |
@@ -638,7 +640,7 @@ All three collectors sample in a daemon thread about once per second. `interval_
 |---|---|---|---|
 | Disk | 600 | 599 | returns `ErrorCode.INVALID_TIME_INTERVAL` while started |
 | Process | 10 | 9 | raises `ValueError` while started |
-| File | 60 | 59 | raises `ValueError` (only while started; returns `{}` when stopped) |
+| File | 61 | 60 | raises `ValueError` (only while started; returns `{}` when stopped) |
 
 At most 16,384 files can be tracked at once (`MAX_TRACKED_FILES`).
 
@@ -651,11 +653,11 @@ At most 16,384 files can be tracked at once (`MAX_TRACKED_FILES`).
 | `file_id` | `int` | Assigned by this collector. IDs can have gaps and can repeat across backend instances |
 | `absolute_path` | `str` | Canonical absolute path, symlinks resolved |
 | `inode` | `int` | `st_ino` from `os.stat()` at the last check |
-| `device` | `int` | `st_dev` from `os.stat()` at the last check (raw value, not a block device name) |
+| `device` | `str \| None` | Linux disk or logical device name from sysfs, or `None` if unresolved. Partitions resolve to their parent disk. For a mergerfs file the collector attempts to identify the underlying branch device. |
 
 Equality and hashing use `(file_id, absolute_path)`. Tracking a path twice or tracking a hard link to the same inode returns the existing record. Removing it and tracking it again assigns a new ID.
 
-**Replacement at the same path.** When the sampler detects a changed device or inode, it constructs a new `File` without the required `file_id`. This raises `TypeError` in the sampling thread and stops new file samples for all tracked files. Existing history can still be returned.
+**Replacement at the same path.** When the sampler detects a changed filesystem device or inode, it updates the record and attempts to bind the probe to the replacement. The path keeps its collector ID and counter slot.
 
 `FileMetric` is the activity of one file over an interval (difference of two cumulative samples):
 
@@ -679,7 +681,7 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 
 `get_all_file_stats()` returns `None` for a file until it has been present in `interval_seconds + 1` samples, for example right after it is tracked.
 
-**Suggested mapping to the shared `FileActivity` record (§02.1)** for CORE:
+CORE emits one row per tracked file with sufficient history. The Linux adapter maps the following fields into the shared `FileActivity` record (§02.1).
 
 | `FileActivity` field | Linux source |
 |---|---|
@@ -687,10 +689,13 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 | `window_start_utc` / `window_end_utc` | `timestamp` / estimated end from `timestamp + duration` seconds |
 | `read_bytes` / `write_bytes` | `read_completed_bytes` / `write_completed_bytes` |
 | `read_ops` / `write_ops` | `read_success_ops` / `write_success_ops` |
-| `file_size_bytes` | **Not provided by `FileMetric`.** Collected internally, but not exposed; CORE can `os.stat()` the path for now |
-| `device_id` | **Not provided.** `File.device` is a raw `st_dev`, not a block device name like `nvme0n1` |
-| `file_id` | `file.file_id` is a collector-local integer. A shared string ID needs a scope if records span backend instances |
-| `source` | Suggested `"linux_ebpf"` |
+| `file_size_bytes` | CORE reads `os.stat(path).st_size`, or returns `null` on an OS error |
+| `device_id` | `file.device`, e.g. `"nvme0n1"` or `null` |
+| `file_id` | `file.file_id` converted to a string, scoped to this collector instance |
+| `source` | `"linux_ebpf"` |
+| `read_average_gap` / `write_average_gap` | Mean gap in bytes, or `null` when no gap was measured |
+
+**Linux path inputs.** File and folder tracking, mergerfs lookup, and both move arguments use `validate_tracking_path()`. Supply an absolute filesystem-encodable string. A relative or empty string returns `PATH_NOT_ABSOLUTE`. Non-string or unencodable input returns `INVALID_PATH` (18). For absolute paths the same error covers ASCII control characters (including DEL), semicolon, ampersand, vertical bar, backtick, angle brackets, and the sequences `$(` and `${`. Spaces are allowed.
 
 #### Requirements for file tracking
 
@@ -706,8 +711,8 @@ These calls work independently of `start()`. The caller supplies an existing mer
 
 | Call | Result |
 |---|---|
-| `get_actual_path(file_path)` | Reads `user.mergerfs.fullpath` and `user.mergerfs.relpath`. Returns the underlying source path, or `NOT_ON_MERGERFS` on any xattr read error, including a missing file or denied access. |
-| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
+| `get_actual_path(file_path)` | Validates the path as above, then reads `user.mergerfs.fullpath` and `user.mergerfs.relpath`. Returns the underlying source path, or `NOT_ON_MERGERFS` on any xattr read error, including a missing file or denied access. |
+| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
 | Existing destination | After the same-path check, an existing destination entry raises `AttributeError` before launch. The code refers to `DESTINATION_EXISTS`, while the enum defines `FILE_ALREADY_EXISTS`. The existence check and the move are separate, so a concurrent destination creation can still be overwritten. |
 
 `MoveHandle` exposes `source_path` (pool path), `actual_path` (source branch path), `destination_path` and `total_bytes` (initial size).
@@ -795,12 +800,12 @@ class WindowsBackend:
         self,
         sample_window_seconds: int,
         now_ns: int | None = None,
-    ) -> list[FileActivity]:
+    ) -> list[FileActivity]: ...
 
-    def get_collection_health(self) -> CollectionHealth:
+    def get_collection_health(self) -> CollectionHealth: ...
 ```
 
-The coded `get_file_activity()`, and `get_collection_health` interfaces do not work as of now.
+`get_file_activity()` returns aggregated ETW windows. `get_collection_health()` reads the ETW transport state through the Python backend.
 
 
 ### Expected capabilities — Windows
@@ -808,9 +813,9 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
 | Capability | Status | Notes |
 |---|---|---|
 | `device_metrics` | **Implemented; verification pending** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
-| `process_metrics` | **Planned** | Already tracing every single FileIO event the kernel fires as to also catch cache hits, can order by PID |
-| `process_to_device_attribution` | **Planned** | Can sort/filter DiskIO events by PID if required |
-| `file_access_metrics` | **Planned** | Tracing FileIO events, need to complete the path with drive letter. |
+| `process_metrics` | **Implemented** | FileIO events grouped by PID and process start time |
+| `process_to_device_attribution` | **Partial** | A process metric can contain a single observed device ID. CORE advertises the general attribution capability as false |
+| `file_access_metrics` | **Implemented** | Aggregates FileIO events with a resolved path, file ID and device ID. |
 | `file_level_pooling` | **Planned** | WinFsp envisioned |
 | `ssd_caching` | **Planned** | No cache/redirection implementation |
 | `file_move` | **Planned** | No file migration function |
@@ -819,8 +824,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
 **Notes:**
 - Device and process information is represented using frozen Python dataclasses.
 - Collects events with a callback: only runs when needed with as little overhead as required.
-- Metrics are always cumulative viewed events: no history from before tracking started is available.
-- FileIO metrics are currently unavailable.
+- Rates and file totals cover the requested window of retained events. Collection begins when tracing starts.
 ---
 
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
@@ -838,7 +842,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
     - `device_provider.py` (discovers disks and mount points with WMI), 
     - `etw_source.py` (ETW DiskIO and FileIO events decoder),
     - `transport.py` (Kernel tracking setup),
-    - `__init.py__` (links the modules together with create_backend),
+    - `__init__.py` (links the modules together with create_backend),
     - `__main__.py` (callable from the admin console with python -m),   
     The implemented `WindowsBackend` API is listed above. `create_backend(host_id : str)` is constructed with the required argument.
 - [x] **TODO · ENRIQUE** — Windows data source(s) and permissions required
@@ -857,7 +861,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
 |---|---|---|
 | `DeviceMetric` | `host_id`, `device_id`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `read_iops`, `write_iops`, `avg_read_latency_ms`, `avg_write_latency_ms`, `source` | UTC ISO 8601; requested seconds (`float`); bytes; completed disk operations from ETW |
 | `ProcessMetric` | `host_id`, `pid`, `start_time_utc`, `process_name`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `attributed_device_id` | UTC ISO 8601; requested seconds (`float`); bytes requested by this PID, based on the I/O operations it emitted |
-| `FileActivity` | `host_id`, `file_id`, `path`, `device_id`, `window_start_utc`, `window_end_utc`, `read_bytes`, `write_bytes`, `read_ops`, `write_ops`, `file_size_bytes`, `source` | UTC ISO 8601; file path determined by `FileObject` name attribution using other `FileIo` events; drive/volume mapping determined through correlation with storage metadata and, where possible, `DiskIo` events; not yet emitted |
+| `FileActivity` | `host_id`, `file_id`, `path`, `device_id`, `window_start_utc`, `window_end_utc`, `read_bytes`, `write_bytes`, `read_ops`, `write_ops`, `file_size_bytes`, `source` | UTC ISO 8601; file path determined by `FileObject` name attribution using other `FileIo` events; drive/volume mapping determined through correlation with storage metadata and, where possible, `DiskIo` events |
 | `Device` | `host_id`, `device_id`, `display_name`, `media_type`, `capacity_bytes`, `free_bytes`, `mount_points`, `is_available` | WMI; capacity reported for each disk/device |
   
 - [x] **TODO · ENRIQUE** — Sample cadence and measured overhead
@@ -875,8 +879,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
 - [x] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
   - **Answer / evidence:**
     - Any unavailable field will be None
-    - A metric (e.g. read IOPS) with 0 events contributing towards it (e.g. only writes) will be marked as None
-    - 
+    - Device IOPS is zero for a direction with no events. Average latency is unavailable when no duration was recorded.
 - [ ] **TODO · ENRIQUE** — One success fixture, one unsupported fixture, relevant PR
   - **Answer / evidence:**
     
@@ -891,7 +894,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
     backend.get_device_metrics(-1)
     raises ValueError
     ```
-Remaining Work:
+Original D2 follow-up list:
   - properly filter by FileIO or DiskIO for their respective metrics
   - properly assign FileIO paths
   - measure collection health and dropped events
@@ -900,7 +903,7 @@ Remaining Work:
 
 ---
 
-**Current milestone:** The Windows backend currently implements EWT to track system-wide IO operations for disk, file, and processes alike. While only diskIO can effectively be measures as of now, the events pertaining to file and process operations are processed correctly. ssd caching, integration tests, process start time and storage actions remain to be implemented.
+**Current milestone.** CORE serves ETW device, process and file activity. Real file recommendations depend on resolved file and device identities. Windows storage actions remain unavailable.
 
 
 ## 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
@@ -931,14 +934,14 @@ Remaining Work:
   | `ProcessMetric` | `timestamp`, `duration`, `read_bytes`, `write_bytes`, `reads_complete`, `writes_complete` | UTC ISO 8601; requested seconds (`int`); bytes attributed by `/proc/[pid]/io`; `syscr`/`syscw` syscall counts |
   | `Drive` | `timestamp`, `device_id`, `model`, `serial`, `size_bytes`, `media_type`, `partitions` | Device metadata; partition `size_bytes`/`available_bytes` report filesystem usage, or zero if unavailable |
   | `Process` | `pid`, `name`, `start_time_timestamp` | Process metadata; start time is UTC ISO 8601 from `/proc/[pid]/stat` + boot time |
-  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. Inode and raw device number come from `os.stat()` |
+  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. Inode comes from `os.stat()`. The device is a resolved disk or logical device name, or `None` |
   | `FileMetric` | `file`, `timestamp`, `duration`, `read_attempts`, `read_requested_bytes`, `read_success_ops`, `read_completed_bytes`, `read_average_gap`, `write_attempts`, `write_requested_bytes`, `write_success_ops`, `write_completed_bytes`, `write_average_gap` | UTC ISO 8601; requested seconds (`int`); call counts; bytes; average gap in bytes (`float`) or `None`. Full definitions in the File tracking records table above |
 
-  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes)` records. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
+  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes, mount_point=None)` records. `mount_point` is the first absolute path from `lsblk MOUNTPOINTS`. If filesystem usage cannot be read, the path is retained with both byte counts zero. Without a usable mount point, the path is `None` and both counts are zero. CORE currently emits an empty `mount_points` array for Linux devices at the HTTP boundary. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
 
   Internally, `DriveSample` counts 512-byte sectors and disk operations. `ProcessSample` holds cumulative storage bytes and syscall counts. `FileSample` adds the file, timestamp and size to the cumulative `FileCounters` fields, including gap sums and counts. Public metric reads return interval differences.
 
-  Not provided: process-to-file attribution (which process did the I/O), file size in `FileMetric`, and the block device a file lives on.
+  Process-to-file attribution and file size are unavailable in `FileMetric`.
 
 - [ ] **TODO · MOHAN** — Sample cadence and measured overhead
 
@@ -958,7 +961,7 @@ Remaining Work:
   File sampling:
   - Dedicated background thread, target cadence 1 second; each tick reads the kernel counters for every tracked file and `os.stat()`s each tracked path to detect replacement
   - Kernel-side counting is continuous (every matching read/write is counted as it happens); only the reading of totals is once per second
-  - Maximum history length: 60 samples
+  - Maximum history length: 61 samples
   - Nonblocking retrieval via `get_all_file_stats()`
 
   **Measured overhead: Not available.**
@@ -980,7 +983,7 @@ Remaining Work:
   **Answer / evidence:**
 
   **Status: Planned; mechanism not selected.**
-- 
+
 - [x] **TODO · MOHAN** — Return shape for unsupported/error conditions
 
   **Answer / evidence:**
@@ -993,8 +996,8 @@ Remaining Work:
   | `get_device_io(interval_seconds, device_name)` | `BACKEND_NOT_STARTED` while stopped. `INVALID_TIME_INTERVAL` for a nonpositive interval, unknown drive, insufficient history, or a missing device in either sample |
   | `get_process_io(interval_seconds, pid)` | `BACKEND_NOT_STARTED` while stopped. While running, a nonpositive interval raises `ValueError`. Returns `INVALID_TIME_INTERVAL` for insufficient history, `PROCESS_NOT_FOUND` if either sample lacks the PID (including unreadable I/O), or `PROCESS_PID_REUSED` if the process records differ |
   | `refresh_disk_collect()` | No-op while stopped; when running, replaces the disk collector and resets its history |
-  | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
-  | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
+  | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
+  | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
   | `untrack_file(file)` | `None`, or `FILE_NOT_TRACKED`. History for the file is discarded |
   | `untrack_folder(files)` | `None`, or `FILE_NOT_TRACKED` if any file was not tracked; the others are still untracked |
   | `list_tracked_files()` | Tuple of tracked `File`s (empty if none); works while stopped |
@@ -1008,6 +1011,7 @@ Remaining Work:
   | 5–9 | `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED` |
   | 10–14 | `FILE_NOT_TRACKED`, `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION` |
   | 15–17 | `FILE_ALREADY_EXISTS`, `MOVE_FAILED`, `MOVE_CANCELLED` |
+  | 18 | `INVALID_PATH` |
 
   Limitations:
   - Unsupported capability responses have not been standardized across platforms.
@@ -1020,7 +1024,7 @@ Remaining Work:
   - Implementing raid-0 mode and caching mode automation.
 ---
 
-**Current milestone:** Device, process and tracked-file telemetry are implemented. An existing mergerfs pool supports path lookup and explicit file moves with progress and cancellation. The file-tracing live test cited above predates the refactor. Multi-distribution validation, benchmarks, cache redirection, capability reporting and an approved-action executor remain outstanding.
+**Current milestone:** Device, process and tracked-file telemetry are implemented. An existing mergerfs pool supports path lookup and explicit file moves with progress and cancellation. The file-tracing live test cited above predates the refactor. Multi-distribution validation, benchmarks, cache redirection and backend-enforced action approval remain outstanding. CORE exposes capability flags and the explicit move routes in §06.1.
 
 ### 03.3 | OS CONSUMERS + JUAN — Review and test checklist
 
@@ -1273,24 +1277,30 @@ def evaluate_ssd_caching_policy(
                       +---------- JUAN contract tests --+
 ```
 
-### 06.1 | Dashboard HTTP endpoints (initial proposals)
+<a id="dashboard-http-api"></a>
 
-| ID | Verb | Endpoint | UI use case | Owner / reviewer |
-|---|---|---|---|---|
-| HTTP-01a | GET | `/api/v1/health` | service/agent availability | Shengrong -> Danny |
-| HTTP-01b | GET | `/api/v1/capabilities` | disable unsupported controls | Shengrong -> Danny |
-| HTTP-01c | GET | `/api/v1/devices` | device list / disk usage | Shengrong -> Danny |
-| HTTP-01d | GET | `/api/v1/metrics/latest` | realtime device charts | Shengrong -> Danny |
-| HTTP-01e | GET | `/api/v1/processes/latest` | process I/O list | Shengrong -> Danny |
-| HTTP-01f | GET | `/api/v1/metrics/history?...` | device history chart | Shengrong -> Danny |
-| HTTP-01g | GET | `/api/v1/recommendations?mode=...` | action suggestions | Shengrong -> Danny |
-| HTTP-01h | POST | `/api/v1/recommendations/refresh` | request recalculation, **read-only** | Shengrong -> Danny |
-| HTTP-01i | GET/PATCH | `/api/v1/settings` | mode settings / workload priority | Shengrong -> Danny |
-| HTTP-01j | POST | `/api/v1/actions/preview` | show safe preview (later) | Shengrong -> Danny |
-| HTTP-01k | POST | `/api/v1/actions/execute` | require approval (later) | Shengrong -> Danny |
-| HTTP-01l | GET | `/api/v1/actions/{action_id}` | action progress/status (later) | Shengrong -> Danny |
-| HTTP-01m | GET | `/api/v1/processes/history?process_instance_id=...&start_utc=...&end_utc=...` | **US-02**: individual application's historical I/O; source DB-01 | Shengrong -> Danny |
-| HTTP-01n | GET | `/api/v1/impact/estimate?...` | **US-07**: evidence-based estimate of time saved; `unavailable` without baseline/comparison | Shengrong -> Danny; Juan reviews metric definition |
+### 06.1 | Implemented dashboard HTTP API
+
+Paths are relative to `/api/v1` on the local Flask server (default `http://127.0.0.1:5000`). Success returns HTTP 200. For example, an empty file activity window returns `{"status":"success","data":[],"error":null}`. An error has `status: "error"`, `data: null`, and an `error` object with `code` and `message`. Check the envelope even on HTTP 200. [Route handlers](../backend/core/http_api.py) · [CORE service](../backend/core/service.py)
+
+| ID | Method and path | Request and successful `data` |
+|---|---|---|
+| HTTP-01b | GET `/capabilities` | Capability flags for the active backend. On real Linux, `file_access_metrics` reflects tracer startup and `file_move` denotes adapter support. Check the pool and branch prerequisites separately. |
+| HTTP-01c | GET `/devices` | Array of device records. Linux reports `mount_points: []` at this boundary even when the underlying partition record has a mount point. |
+| HTTP-01d | GET `/metrics/latest` | Array of device throughput and IOPS measurements. |
+| HTTP-01e | GET `/processes/latest` | Array of per-process measurements with PID, process name, start time and byte rates. |
+| HTTP-01m | GET `/processes/history` | Required query parameters are `process_instance_id`, `start_utc`, and `end_utc`, with the start at or before the end. Use the stored instance key (normally `<pid>_<start_time_utc>`) and UTC timestamps with zero offset. Returns samples in time order, or `[]`. Optional positive integer `bucket_seconds` returns bucket timestamps, `sample_count`, `avg_read_bytes_per_sec` and `avg_write_bytes_per_sec`. |
+| HTTP-01g | GET `/recommendations` | Array of saved recommendations, newest first. Optional query parameter `mode` filters the list. |
+| HTTP-01h | POST `/recommendations/refresh` | Generates, saves and returns recommendations. Query `mode=ssd_caching` selects ALGO-02. Omitted mode or `mode=raid0` selects ALGO-01. Refresh performs no file move. Real Linux RAID0 evaluation uses devices in a single mounted mergerfs pool. |
+| HTTP-01o | GET `/files/activity/latest` | Array of file activity records (§03). CORE requests an eight-second window. Demo mode and empty collections return `[]`. |
+| HTTP-01p | GET `/files/subscriptions` | Array of active subscriptions with `subscription_id`, `host_id`, `path`, `target_type` (`file` or `folder`), `status`, `created_at_utc` and `updated_at_utc`. |
+| HTTP-01p | POST or DELETE `/files/subscriptions` | On real Linux, send a JSON object such as `{"path":"/srv/pool/docs"}` to track or untrack an existing file or directory. Use a canonical absolute path for both calls. Success returns the submitted path string. Folder tracking takes a recursive snapshot of existing files. |
+| HTTP-01k | POST `/actions/execute` | On real Linux, send e.g. `{"file_path":"/srv/pool/docs/a.md","destination_mount":"/mnt/ssd"}`. Starts the mergerfs move immediately and returns the action ID as a JSON string in `data`. The UI asks for confirmation. The endpoint accepts paths directly. |
+| HTTP-01l | GET `/actions/{action_id}` | Poll an ID from the current server process. Returns `progress`, `is_running` and `result`. While running, progress is a fraction capped at 0.9999 and the result is null. Success returns 100.0 and the destination path. A failed move returns its error name. |
+
+**Errors.** Invalid process-history parameters return HTTP 400 (`INVALID_REQUEST`). Unknown routes return HTTP 404 (`NOT_FOUND`). An invalid subscription path or deletion of an existing untracked file can return HTTP 200 with `INVALID_PATH` or `NOT_FOUND`. Other handler failures, including an unknown action ID or a rejected move, return HTTP 500 (`CORE_ERROR`).
+
+**D2 proposals still without routes.** Health (HTTP-01a), device history (01f), settings (01i), action preview (01j) and impact estimates (01n) remain proposals. The File I/O page builds its history from live observations in the browser. [File I/O frontend guide](file-io-monitoring-frontend.md)
 
 ### 06.2 | SHENGRONG — INTEGRATION PRODUCER CHECKLIST
 
@@ -1303,23 +1313,20 @@ def evaluate_ssd_caching_policy(
 - [X] **TODO · SHENGRONG** — How OS agent gets selected and normalized
   - **Answer / evidence:** Through Windows/Linux Agent depends on host OS, normalized to DeviceMetric and ProcessMetric
 - [X] **TODO · SHENGRONG** — Ingestion loop and/or event cadence
-  - **Answer / evidence:** Every second
+  - **Answer / evidence:** The collector requests device and process samples every second and saves a 60-second file activity window about once a minute.
 - [X] **TODO · SHENGRONG** — How DB / Algorithm get called (including the unresolved history route)
   - **Answer / evidence:** Core retrieves required history data from DB and latest data from agents then combines them and passes to Algorithm
 - [X] **TODO · SHENGRONG** — Response envelope; 4xx/5xx/error/unsupported behavior
   - **Answer / evidence:** Response envelope: **status** indicates whether the request is succeeded or failed , **data** indicates the data contained, **error** indicates error type, null if the status is success
 
-| Status | Definition | Notes |
----|---|---|
-| 4xx | Invalid request | Return "error" with error code and message |
-| 5xx | Core error | Return "error" with error code and message |
-| UNSUPPORTED | Request is not supported | Return UNSUPPORTED error code |
+See §06.1 for the HTTP status and error code returned by each implemented route.
+
 - [X] **TODO · SHENGRONG** — One real or mocked end-to-end JSON response + branch/PR
   - **Answer / evidence:** 
 ```json
 {
   "status": "success",
-  "data": {
+  "data": [{
     "host_id": "host_mock",
     "device_id": "disk_mock",
     "timestamp_utc": "2026-10-11T08:30:57Z",
@@ -1331,7 +1338,7 @@ def evaluate_ssd_caching_policy(
     "avg_read_latency_ms": null,
     "avg_write_latency_ms": null,
     "source": "mock"
-  },
+  }],
   "error": null
 }
 ```
@@ -1375,7 +1382,7 @@ def evaluate_ssd_caching_policy(
 > No simulated cache copy, recommendation, or UI toggle is sufficient evidence that a safe action executor exists.
 
 
-**Priority:** Dry-run P1; real filesystem mutations P2, pending feasibility.
+The diagram and signatures below describe the D2 proposal. The current Linux move endpoint in §06.1 starts a move directly. Only the Python handle exposes cancellation.
 
 ```text
  [ALGO] --recommend--> [UI] --user confirms--> [CORE] --preview-->
