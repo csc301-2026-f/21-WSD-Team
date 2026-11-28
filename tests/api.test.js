@@ -4,6 +4,7 @@ import {
     createFileSubscription,
     deleteFileSubscription,
     executeFileMove,
+    executeRecommendedFileMove,
     getCapabilities,
     getDevices,
     getFileActionStatus,
@@ -53,6 +54,7 @@ test("frontend API calls match the implemented Flask request contracts", async (
         await createFileSubscription("/data/file.txt");
         await deleteFileSubscription("/data/file.txt");
         await executeFileMove("/pool/file.txt", "/mnt/ssd");
+        await executeRecommendedFileMove("rec-raid0-001");
         await getFileActionStatus("move-1");
 
         assert.deepEqual(calls.map(call => [call.options.method ?? "GET", call.url]), [
@@ -68,6 +70,7 @@ test("frontend API calls match the implemented Flask request contracts", async (
             ["POST", "/api/v1/files/subscriptions"],
             ["DELETE", "/api/v1/files/subscriptions"],
             ["POST", "/api/v1/actions/execute"],
+            ["POST", "/api/v1/actions/execute"],
             ["GET", "/api/v1/actions/move-1"]
         ]);
 
@@ -77,7 +80,10 @@ test("frontend API calls match the implemented Flask request contracts", async (
             file_path: "/pool/file.txt",
             destination_mount: "/mnt/ssd"
         });
-        for (const index of [9, 10, 11]) {
+        assert.deepEqual(JSON.parse(calls[12].options.body), {
+            recommendation_id: "rec-raid0-001"
+        });
+        for (const index of [9, 10, 11, 12]) {
             assert.equal(calls[index].options.headers["Content-Type"], "application/json");
         }
     } finally {
