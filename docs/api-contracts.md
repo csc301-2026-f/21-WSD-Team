@@ -1,11 +1,9 @@
-# WSD API contracts and D2 team checklists
+# WSD | Our Internal API Contracts & Team Checklists
 
-The [dashboard HTTP reference](#dashboard-http-api) lists the routes implemented on this branch as of 2026-11-27. The [Linux backend interface](#python-signatures--linux-backend) covers the Python records, path rules and mergerfs move handle. The D2 proposals and review checklists below record the original design and sign-off process.
-
-> **D2 WORKSHEET VERSION: `v0.8` · STATUS: `TEAM DRAFT / NOT APPROVED` · DATE: 2026-10-08**
->
+> **VERSION: `v0.8` · STATUS: `TEAM DRAFT / NOT APPROVED` · DATE: 2026-10-08**  
+> **Suggested path:** `docs/api-contracts.md`  
 > **Document coordinator:** **John**  
-> **TEAM 21:** This is **our working API contract**. Please fill in the parts you own, review the interfaces you will use, and raise questions directly in the PR. The original design tables are proposals. Sections marked as implemented describe the current code. We can revise the proposed interfaces together, but we must notify affected consumers before merging an incompatible change.
+> **TEAM 21:** This is **our working API contract**. Please fill in the parts you own, review the interfaces you will use, and raise questions directly in the PR. **Implemented interfaces are identified below; other entries remain proposals.** We can revise the proposed interfaces together, but we must notify affected consumers before merging an incompatible change.
 
 ---
 
@@ -343,7 +341,7 @@ repository interface. ALGO should NOT depend on raw SQL/table internals.
 | **DB-01** | Persist observations + history queries | **Sahil** | Shengrong; John/Jesslyn | **Juan** | P0 | PROPOSED |
 | **ALGO-01** | RAID0 recommendation API | **John + Jesslyn** | Shengrong; Enrique/Mohan; Danny | **Juan** | P0 | PROPOSED |
 | **ALGO-02** | SSD caching recommendation API | **John + Jesslyn** | Shengrong; Enrique/Mohan; Danny | **Juan** | P0* | PROPOSED |
-| **HTTP-01** | Dashboard HTTP/JSON API | **Shengrong** | **Danny** | **Juan** | P0 | See [implemented routes and outstanding proposals](#dashboard-http-api) |
+| **HTTP-01** | Dashboard HTTP/JSON API | **Shengrong** | **Danny** | **Juan** | P0 | PROPOSED |
 | **ACTION-01** | Preview / approved storage action | **Enrique / Mohan**, dispatch Shengrong | John/Jesslyn; Danny | **Juan** | P1/P2 | INVESTIGATE |
 | **QA-01** | Fixtures / contract + negative tests | **Juan** | All module owners | John + Shengrong | P0 | PROPOSED |
 | **QA-02** | Benchmarks + before/after evaluation | **Juan** | John/Jesslyn; OS agents; Danny (results) | John + Shengrong | P1 | PROPOSED |
@@ -408,15 +406,15 @@ A simulated HDD file with 120 reads in 60 seconds. The algorithm recommends SSD 
 No file-level activity is available, so the algorithm returns `none`.
 
 **Platform limits:**  
-See [§05.1 — ALGO-01 limitations](#algo-01-spec). For D2, the algorithm only supports the `performance` goal and selects one SSD per evaluation. It recommends file placement but does not move files, implement caching or estimate actual performance improvements.
+See [§05.1 — ALGO-01 limitations](#algo-01-spec). The algorithm supports the `performance` goal and selects one SSD per evaluation. It recommends file placement but does not move files, implement caching or estimate actual performance improvements.
 
 **Evidence / PR:**  
-Local implementation and tests: `backend/algorithms/algo01/`
+Implementation and tests: `backend/algorithms/algo01/`
 
 Test command:  
-`python -B -m unittest discover -s backend/algorithms/algo01/tests -v`
+`python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"`
 
-PR: Pending. CORE integration has not been completed.
+Merged implementation: [PR #63](https://github.com/csc301-2026-f/21-WSD-Team/pull/63). CORE wiring and historical file input are implemented in [PR #62](https://github.com/csc301-2026-f/21-WSD-Team/pull/62).
 
 - [x] **TODO · PRODUCER** — Signature and input/output schemas filled in; sample values supplied.
 - [x] **TODO · PRODUCER** — Errors, capability limits and unsupported cases documented.
@@ -455,7 +453,7 @@ PR: Pending. CORE integration has not been completed.
 # Device
 {
     "host_id": str, "device_id": str, "display_name": str,
-    "media_type": str | None,              # "hdd"/"ssd"/"unknown"
+    "media_type": str | None,              # "hdd"/"ssd"/"nvme"/"unknown"
     "capacity_bytes": int | None,
     "free_bytes": int | None,
     "mount_points": list[str],
@@ -492,9 +490,13 @@ PR: Pending. CORE integration has not been completed.
     "window_end_utc": str, "read_bytes": int | None,
     "write_bytes": int | None, "read_ops": int | None,
     "write_ops": int | None, "file_size_bytes": int | None,
+    "read_average_gap": float | None,      # optional; bytes
+    "write_average_gap": float | None,     # optional; bytes
     "source": str,
 }
 ```
+
+The optional gap fields measure the average distance from the end of one read or write to the start of the next operation of the same kind on the same open file. Zero means sequential access; omitted or `null` means unavailable. Linux supplies these fields when measured, and DB preserves them for prediction and scoring.
 
 ### 02.2 | Recommendation record — Not action authorization
 
@@ -800,12 +802,12 @@ class WindowsBackend:
         self,
         sample_window_seconds: int,
         now_ns: int | None = None,
-    ) -> list[FileActivity]: ...
+    ) -> list[FileActivity]:
 
-    def get_collection_health(self) -> CollectionHealth: ...
+    def get_collection_health(self) -> CollectionHealth:
 ```
 
-`get_file_activity()` returns aggregated ETW windows. `get_collection_health()` reads the ETW transport state through the Python backend.
+The coded `get_file_activity()`, and `get_collection_health` interfaces do not work as of now.
 
 
 ### Expected capabilities — Windows
@@ -813,9 +815,9 @@ class WindowsBackend:
 | Capability | Status | Notes |
 |---|---|---|
 | `device_metrics` | **Implemented; verification pending** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
-| `process_metrics` | **Implemented** | FileIO events grouped by PID and process start time |
-| `process_to_device_attribution` | **Partial** | A process metric can contain a single observed device ID. CORE advertises the general attribution capability as false |
-| `file_access_metrics` | **Implemented** | Aggregates FileIO events with a resolved path, file ID and device ID. |
+| `process_metrics` | **Planned** | Already tracing every single FileIO event the kernel fires as to also catch cache hits, can order by PID |
+| `process_to_device_attribution` | **Planned** | Can sort/filter DiskIO events by PID if required |
+| `file_access_metrics` | **Planned** | Tracing FileIO events, need to complete the path with drive letter. |
 | `file_level_pooling` | **Planned** | WinFsp envisioned |
 | `ssd_caching` | **Planned** | No cache/redirection implementation |
 | `file_move` | **Planned** | No file migration function |
@@ -824,7 +826,8 @@ class WindowsBackend:
 **Notes:**
 - Device and process information is represented using frozen Python dataclasses.
 - Collects events with a callback: only runs when needed with as little overhead as required.
-- Rates and file totals cover the requested window of retained events. Collection begins when tracing starts.
+- Metrics are always cumulative viewed events: no history from before tracking started is available.
+- FileIO metrics are currently unavailable.
 ---
 
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
@@ -842,7 +845,7 @@ class WindowsBackend:
     - `device_provider.py` (discovers disks and mount points with WMI), 
     - `etw_source.py` (ETW DiskIO and FileIO events decoder),
     - `transport.py` (Kernel tracking setup),
-    - `__init__.py` (links the modules together with create_backend),
+    - `__init.py__` (links the modules together with create_backend),
     - `__main__.py` (callable from the admin console with python -m),   
     The implemented `WindowsBackend` API is listed above. `create_backend(host_id : str)` is constructed with the required argument.
 - [x] **TODO · ENRIQUE** — Windows data source(s) and permissions required
@@ -861,7 +864,7 @@ class WindowsBackend:
 |---|---|---|
 | `DeviceMetric` | `host_id`, `device_id`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `read_iops`, `write_iops`, `avg_read_latency_ms`, `avg_write_latency_ms`, `source` | UTC ISO 8601; requested seconds (`float`); bytes; completed disk operations from ETW |
 | `ProcessMetric` | `host_id`, `pid`, `start_time_utc`, `process_name`, `timestamp_utc`, `sample_window_seconds`, `read_bytes_per_sec`, `write_bytes_per_sec`, `attributed_device_id` | UTC ISO 8601; requested seconds (`float`); bytes requested by this PID, based on the I/O operations it emitted |
-| `FileActivity` | `host_id`, `file_id`, `path`, `device_id`, `window_start_utc`, `window_end_utc`, `read_bytes`, `write_bytes`, `read_ops`, `write_ops`, `file_size_bytes`, `source` | UTC ISO 8601; file path determined by `FileObject` name attribution using other `FileIo` events; drive/volume mapping determined through correlation with storage metadata and, where possible, `DiskIo` events |
+| `FileActivity` | `host_id`, `file_id`, `path`, `device_id`, `window_start_utc`, `window_end_utc`, `read_bytes`, `write_bytes`, `read_ops`, `write_ops`, `file_size_bytes`, `source` | UTC ISO 8601; file path determined by `FileObject` name attribution using other `FileIo` events; drive/volume mapping determined through correlation with storage metadata and, where possible, `DiskIo` events; not yet emitted |
 | `Device` | `host_id`, `device_id`, `display_name`, `media_type`, `capacity_bytes`, `free_bytes`, `mount_points`, `is_available` | WMI; capacity reported for each disk/device |
   
 - [x] **TODO · ENRIQUE** — Sample cadence and measured overhead
@@ -879,7 +882,8 @@ class WindowsBackend:
 - [x] **TODO · ENRIQUE** — Return shape for unsupported/error conditions
   - **Answer / evidence:**
     - Any unavailable field will be None
-    - Device IOPS is zero for a direction with no events. Average latency is unavailable when no duration was recorded.
+    - A metric (e.g. read IOPS) with 0 events contributing towards it (e.g. only writes) will be marked as None
+    - 
 - [ ] **TODO · ENRIQUE** — One success fixture, one unsupported fixture, relevant PR
   - **Answer / evidence:**
     
@@ -894,7 +898,7 @@ class WindowsBackend:
     backend.get_device_metrics(-1)
     raises ValueError
     ```
-Original D2 follow-up list:
+Remaining Work:
   - properly filter by FileIO or DiskIO for their respective metrics
   - properly assign FileIO paths
   - measure collection health and dropped events
@@ -903,7 +907,7 @@ Original D2 follow-up list:
 
 ---
 
-**Current milestone.** CORE serves ETW device, process and file activity. Real file recommendations depend on resolved file and device identities. Windows storage actions remain unavailable.
+**Current milestone:** The Windows backend currently implements EWT to track system-wide IO operations for disk, file, and processes alike. While only diskIO can effectively be measures as of now, the events pertaining to file and process operations are processed correctly. ssd caching, integration tests, process start time and storage actions remain to be implemented.
 
 
 ## 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
@@ -934,14 +938,14 @@ Original D2 follow-up list:
   | `ProcessMetric` | `timestamp`, `duration`, `read_bytes`, `write_bytes`, `reads_complete`, `writes_complete` | UTC ISO 8601; requested seconds (`int`); bytes attributed by `/proc/[pid]/io`; `syscr`/`syscw` syscall counts |
   | `Drive` | `timestamp`, `device_id`, `model`, `serial`, `size_bytes`, `media_type`, `partitions` | Device metadata; partition `size_bytes`/`available_bytes` report filesystem usage, or zero if unavailable |
   | `Process` | `pid`, `name`, `start_time_timestamp` | Process metadata; start time is UTC ISO 8601 from `/proc/[pid]/stat` + boot time |
-  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. Inode comes from `os.stat()`. The device is a resolved disk or logical device name, or `None` |
+  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. Inode and raw device number come from `os.stat()` |
   | `FileMetric` | `file`, `timestamp`, `duration`, `read_attempts`, `read_requested_bytes`, `read_success_ops`, `read_completed_bytes`, `read_average_gap`, `write_attempts`, `write_requested_bytes`, `write_success_ops`, `write_completed_bytes`, `write_average_gap` | UTC ISO 8601; requested seconds (`int`); call counts; bytes; average gap in bytes (`float`) or `None`. Full definitions in the File tracking records table above |
 
-  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes, mount_point=None)` records. `mount_point` is the first absolute path from `lsblk MOUNTPOINTS`. If filesystem usage cannot be read, the path is retained with both byte counts zero. Without a usable mount point, the path is `None` and both counts are zero. CORE currently emits an empty `mount_points` array for Linux devices at the HTTP boundary. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
+  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes)` records. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
 
   Internally, `DriveSample` counts 512-byte sectors and disk operations. `ProcessSample` holds cumulative storage bytes and syscall counts. `FileSample` adds the file, timestamp and size to the cumulative `FileCounters` fields, including gap sums and counts. Public metric reads return interval differences.
 
-  Process-to-file attribution and file size are unavailable in `FileMetric`.
+  Not provided: process-to-file attribution (which process did the I/O), file size in `FileMetric`, and the block device a file lives on.
 
 - [ ] **TODO · MOHAN** — Sample cadence and measured overhead
 
@@ -961,7 +965,7 @@ Original D2 follow-up list:
   File sampling:
   - Dedicated background thread, target cadence 1 second; each tick reads the kernel counters for every tracked file and `os.stat()`s each tracked path to detect replacement
   - Kernel-side counting is continuous (every matching read/write is counted as it happens); only the reading of totals is once per second
-  - Maximum history length: 61 samples
+  - Maximum history length: 60 samples
   - Nonblocking retrieval via `get_all_file_stats()`
 
   **Measured overhead: Not available.**
@@ -983,7 +987,7 @@ Original D2 follow-up list:
   **Answer / evidence:**
 
   **Status: Planned; mechanism not selected.**
-
+- 
 - [x] **TODO · MOHAN** — Return shape for unsupported/error conditions
 
   **Answer / evidence:**
@@ -996,8 +1000,8 @@ Original D2 follow-up list:
   | `get_device_io(interval_seconds, device_name)` | `BACKEND_NOT_STARTED` while stopped. `INVALID_TIME_INTERVAL` for a nonpositive interval, unknown drive, insufficient history, or a missing device in either sample |
   | `get_process_io(interval_seconds, pid)` | `BACKEND_NOT_STARTED` while stopped. While running, a nonpositive interval raises `ValueError`. Returns `INVALID_TIME_INTERVAL` for insufficient history, `PROCESS_NOT_FOUND` if either sample lacks the PID (including unreadable I/O), or `PROCESS_PID_REUSED` if the process records differ |
   | `refresh_disk_collect()` | No-op while stopped; when running, replaces the disk collector and resets its history |
-  | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
-  | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
+  | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
+  | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
   | `untrack_file(file)` | `None`, or `FILE_NOT_TRACKED`. History for the file is discarded |
   | `untrack_folder(files)` | `None`, or `FILE_NOT_TRACKED` if any file was not tracked; the others are still untracked |
   | `list_tracked_files()` | Tuple of tracked `File`s (empty if none); works while stopped |
@@ -1011,7 +1015,6 @@ Original D2 follow-up list:
   | 5–9 | `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED` |
   | 10–14 | `FILE_NOT_TRACKED`, `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION` |
   | 15–17 | `FILE_ALREADY_EXISTS`, `MOVE_FAILED`, `MOVE_CANCELLED` |
-  | 18 | `INVALID_PATH` |
 
   Limitations:
   - Unsupported capability responses have not been standardized across platforms.
@@ -1024,7 +1027,7 @@ Original D2 follow-up list:
   - Implementing raid-0 mode and caching mode automation.
 ---
 
-**Current milestone:** Device, process and tracked-file telemetry are implemented. An existing mergerfs pool supports path lookup and explicit file moves with progress and cancellation. The file-tracing live test cited above predates the refactor. Multi-distribution validation, benchmarks, cache redirection and backend-enforced action approval remain outstanding. CORE exposes capability flags and the explicit move routes in §06.1.
+**Current milestone:** Device, process and tracked-file telemetry are implemented. An existing mergerfs pool supports path lookup and explicit file moves with progress and cancellation. The file-tracing live test cited above predates the refactor. Multi-distribution validation, benchmarks, cache redirection, capability reporting and an approved-action executor remain outstanding.
 
 ### 03.3 | OS CONSUMERS + JUAN — Review and test checklist
 
@@ -1193,24 +1196,25 @@ def evaluate_ssd_caching_policy(
 
 - [x] **TODO · JOHN + JESSLYN** — **RAID0** minimum *required* fields vs optional telemetry
   - **Answer / evidence:** 
-    - **Required:** Device ID, media type (HDD/SSD), availability, and target SSD's free space. ALGO-01 in my design would propose some candidates of files to move, so for each file, I require a file ID, source device ID, file size, read and write op counts, sampling intervals(timesteps), and data source(eg. Mock? from Windows? Linux?). CORE also provides the host ID and evaluation time.
-    - **Optional:** File path, read and write bytes during sample interval, judgement on wether and operation is sequential or random I/O(classification), latency, I/O queue depth(when multiple tasks are all unfinishing on same storage device, depth++, just like ready queue in CSC369), and detailed per device performance metrics.
+    - **Required:** Device ID, host ID, media type, availability, and target SSD/NVMe total and free capacity. Each file needs file/source-device IDs, a positive size, read/write operation counts, sampling start/end times and a source label. CORE also supplies the evaluation time and `file_access_metrics=True`.
+    - **Optional:** File path, read/write bytes, and `read_average_gap` / `write_average_gap` in bytes. Missing gap measurements remain `null` or omitted.
 - [ ] **TODO · JOHN + JESSLYN** — **SSD caching** minimum required fields vs optional telemetry
   - **Answer / evidence:** _Write here, or link the design / fixture / PR; then check the box above._
 - [ ] **TODO · JOHN + JESSLYN** — Actual policy functions/heuristics and configuration keys
   - **ALGO-01 (John):** `evaluate_raid0_policy(devices, realtime, history, mode_config, capabilities)`
-      - **For D2, the algorithm follows these rules:**
+      - **The current algorithm follows these rules:**
         1. Use the most recent valid I/O activity record for each file.
         2. Consider files on HDDs with at least 0.1 read operations per second, where reads account for at least 80% of total read/write operations.
-        3. Prioritize files with higher read frequencies. If two files have the same frequency, prioritize the smaller file.
+        3. Compare latest-rate, moving-average and Ridge predictions against historical observations, and use the best method. Files without enough recent history use their latest observed read rate. Recent read-gap measurements adjust the score when available.
         4. Select the SSD with the most available space after reserving capacity.
-        5. Recommend moving eligible files to the selected SSD, deducting each file's size from the remaining capacity.
+        5. Use Knapsack to select whole files within the capacity and recommendation limits. Fall back to Greedy if the computation budget is exceeded.
       - **Configuration:** The default thresholds are 0.1 reads/second and 80% reads. The algorithm reserves at least 1 GiB or 10% of the SSD's total capacity, whichever is larger, and generates at most 10 recommendations.
-      - **Limitations:** For D2, only the `performance` goal is supported. The algorithm generates recommendations but does not move files or estimate actual performance improvements.
+      - **Prediction input:** CORE passes up to one hour of per-file history in `history["file_activity"]`. Prediction uses consecutive 60-second windows with up to 0.5 seconds of sampling tolerance. Preserve the actual timestamps and counts; mock activity is excluded from training.
+      - **Limitations:** Only the `performance` goal is supported. The algorithm generates recommendations but does not move files or estimate actual performance improvements.
     - **ALGO-02 (Jesslyn):** Pending Jesslyn's implementation details.
 - [ ] **TODO · JOHN + JESSLYN** — User goal translation (if adopted; do not hard-code three algorithms)
   - **Answer / evidence:**
-    - **ALGO-01 (John):** For D2, I only support the `performance` goal. The algorithm tries to find frequently read files on HDDs and recommends moving them to SSDs if enough space is available.
+    - **ALGO-01 (John):** Only the `performance` goal is supported. The algorithm finds frequently read files on HDDs and recommends moving them to SSDs if enough space is available.
     - Other goals, such as `balanced` and `lifespan`, are not implemented yet. The algorithm returns `none` for unsupported goals instead of running three separate algorithms.
     - **ALGO-02 (Jesslyn):** Pending.
 - [ ] **TODO · JOHN + JESSLYN** — Missing/stale/file-level-unavailable data fallback
@@ -1221,6 +1225,7 @@ def evaluate_ssd_caching_policy(
       3. If the I/O data is too old (more than 300 seconds), ignore it.
       4. If no SSD is available or there is not enough space, return `none`.
       5. If the evaluation time is invalid, raise `PolicyInputError`.
+      6. Files without enough recent prediction history use their latest read rate. Missing recent spatial measurements use a neutral factor.
 - [ ] **TODO · JOHN + JESSLYN** — Allowed recommendation actions, constraints, reason format
   - **Answer / evidence:** 
     - **ALGO-01 (John):** The algorithm currently only returns two actions: `move` and `none`.
@@ -1231,7 +1236,7 @@ def evaluate_ssd_caching_policy(
       - `estimated_benefit=null` because we haven't measured the actual performance improvement.
 - [ ] **TODO · JOHN + JESSLYN** — Example recommendation for RAID0 + caching and a `none` case
   - **Answer / evidence:** - **Answer / evidence:**
-    - **ALGO-01 (John):** Suppose we have a 4 MiB file on an HDD. During a 60-second sampling interval, it is read 120 times and written 0 times. Its read frequency is 2 IOPS, and 100% of its I/O operations are reads. Since this file meets our thresholds, if an SSD has enough free space, the algorithm recommends moving it to that SSD (`action="move"`). User approval is required, and no actual file movement occurs in stage D2.
+    - **ALGO-01 (John):** Suppose we have a 4 MiB file on an HDD. During a 60-second sampling interval, it is read 120 times and written 0 times. Its read frequency is 2 IOPS, and 100% of its I/O operations are reads. Since this file meets our thresholds, if an SSD has enough free space, the algorithm recommends moving it to that SSD (`action="move"`). User approval is required; generating the recommendation does not move the file.
     - **None case:** If no file-level I/O data is available, the algorithm returns `action="none"` with a reason explaining that the required data is missing.
 
 ### 05.2 | ALGORITHM CONSUMERS + JUAN — Review and test checklist
@@ -1277,30 +1282,36 @@ def evaluate_ssd_caching_policy(
                       +---------- JUAN contract tests --+
 ```
 
-<a id="dashboard-http-api"></a>
+### 06.1 | Dashboard HTTP endpoints
 
-### 06.1 | Implemented dashboard HTTP API
+| ID | Verb | Endpoint | UI use case | Status | Owner / reviewer |
+|---|---|---|---|---|---|
+| HTTP-01a | GET | `/api/v1/health` | service/agent availability | Proposed | Shengrong -> Danny |
+| HTTP-01b | GET | `/api/v1/capabilities` | disable unsupported controls | Implemented | Shengrong -> Danny |
+| HTTP-01c | GET | `/api/v1/devices` | device list / disk usage | Implemented | Shengrong -> Danny |
+| HTTP-01d | GET | `/api/v1/metrics/latest` | realtime device charts | Implemented | Shengrong -> Danny |
+| HTTP-01e | GET | `/api/v1/processes/latest` | process I/O list | Implemented | Shengrong -> Danny |
+| HTTP-01f | GET | `/api/v1/metrics/history?...` | device history chart | Proposed | Shengrong -> Danny |
+| HTTP-01g | GET | `/api/v1/recommendations?mode=...` | saved recommendations | Implemented | Shengrong -> Danny |
+| HTTP-01h | POST | `/api/v1/recommendations/refresh?mode=...` | generate and save recommendations without moving files | Implemented | Shengrong -> Danny |
+| HTTP-01i | GET/PATCH | `/api/v1/settings` | mode settings / workload priority | Proposed | Shengrong -> Danny |
+| HTTP-01j | POST | `/api/v1/actions/preview` | show safe preview | Proposed | Shengrong -> Danny |
+| HTTP-01k | POST | `/api/v1/actions/execute` | request a file move | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01l | GET | `/api/v1/actions/{action_id}` | action progress/status | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01m | GET | `/api/v1/processes/history?process_instance_id=...&start_utc=...&end_utc=...` | **US-02**: individual application's historical I/O; source DB-01 | Implemented | Shengrong -> Danny |
+| HTTP-01n | GET | `/api/v1/impact/estimate?...` | **US-07**: evidence-based estimate of time saved | Proposed | Shengrong -> Danny; Juan reviews metric definition |
+| HTTP-01o | GET | `/api/v1/files/activity/latest` | latest `FileActivity` records | Implemented | Shengrong -> Danny |
+| HTTP-01p | GET | `/api/v1/files/subscriptions` | active file/folder subscriptions | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01q | POST | `/api/v1/files/subscriptions` | track a file/folder | Implemented (Linux) | Shengrong -> Danny |
+| HTTP-01r | DELETE | `/api/v1/files/subscriptions` | stop tracking a file/folder | Implemented (Linux) | Shengrong -> Danny |
 
-Paths are relative to `/api/v1` on the local Flask server (default `http://127.0.0.1:5000`). Success returns HTTP 200. For example, an empty file activity window returns `{"status":"success","data":[],"error":null}`. An error has `status: "error"`, `data: null`, and an `error` object with `code` and `message`. Check the envelope even on HTTP 200. [Route handlers](../backend/core/http_api.py) · [CORE service](../backend/core/service.py)
+Implemented routes return `{"status": "success", "data": ..., "error": null}` or the error envelope in §06.2. `mode` accepts `raid0` or `ssd_caching`; refresh defaults to `raid0` when omitted.
 
-| ID | Method and path | Request and successful `data` |
-|---|---|---|
-| HTTP-01b | GET `/capabilities` | Capability flags for the active backend. On real Linux, `file_access_metrics` reflects tracer startup and `file_move` denotes adapter support. Check the pool and branch prerequisites separately. |
-| HTTP-01c | GET `/devices` | Array of device records. Linux reports `mount_points: []` at this boundary even when the underlying partition record has a mount point. |
-| HTTP-01d | GET `/metrics/latest` | Array of device throughput and IOPS measurements. |
-| HTTP-01e | GET `/processes/latest` | Array of per-process measurements with PID, process name, start time and byte rates. |
-| HTTP-01m | GET `/processes/history` | Required query parameters are `process_instance_id`, `start_utc`, and `end_utc`, with the start at or before the end. Use the stored instance key (normally `<pid>_<start_time_utc>`) and UTC timestamps with zero offset. Returns samples in time order, or `[]`. Optional positive integer `bucket_seconds` returns bucket timestamps, `sample_count`, `avg_read_bytes_per_sec` and `avg_write_bytes_per_sec`. |
-| HTTP-01g | GET `/recommendations` | Array of saved recommendations, newest first. Optional query parameter `mode` filters the list. |
-| HTTP-01h | POST `/recommendations/refresh` | Generates, saves and returns recommendations. Query `mode=ssd_caching` selects ALGO-02. Omitted mode or `mode=raid0` selects ALGO-01. Refresh performs no file move. Real Linux RAID0 evaluation uses devices in a single mounted mergerfs pool. |
-| HTTP-01o | GET `/files/activity/latest` | Array of file activity records (§03). CORE requests an eight-second window. Demo mode and empty collections return `[]`. |
-| HTTP-01p | GET `/files/subscriptions` | Array of active subscriptions with `subscription_id`, `host_id`, `path`, `target_type` (`file` or `folder`), `status`, `created_at_utc` and `updated_at_utc`. |
-| HTTP-01p | POST or DELETE `/files/subscriptions` | On real Linux, send a JSON object such as `{"path":"/srv/pool/docs"}` to track or untrack an existing file or directory. Use a canonical absolute path for both calls. Success returns the submitted path string. Folder tracking takes a recursive snapshot of existing files. |
-| HTTP-01k | POST `/actions/execute` | On real Linux, send e.g. `{"file_path":"/srv/pool/docs/a.md","destination_mount":"/mnt/ssd"}`. Starts the mergerfs move immediately and returns the action ID as a JSON string in `data`. The UI asks for confirmation. The endpoint accepts paths directly. |
-| HTTP-01l | GET `/actions/{action_id}` | Poll an ID from the current server process. Returns `progress`, `is_running` and `result`. While running, progress is a fraction capped at 0.9999 and the result is null. Success returns 100.0 and the destination path. A failed move returns its error name. |
+- **File activity:** `data` is a list of §02.1 `FileActivity` records; no activity returns `[]`.
+- **Subscriptions:** POST and DELETE accept `{"path": "/absolute/path"}` and return that path in `data`. GET returns active subscription records with ID, host, path, target type, status and timestamps.
+- **Linux moves:** POST accepts `{"recommendation_id": "..."}` or `{"file_path": "/pool/file", "destination_mount": "/ssd"}` and returns the move ID in `data`. The status route returns `progress`, `is_running` and `result`.
 
-**Errors.** Invalid process-history parameters return HTTP 400 (`INVALID_REQUEST`). Unknown routes return HTTP 404 (`NOT_FOUND`). An invalid subscription path or deletion of an existing untracked file can return HTTP 200 with `INVALID_PATH` or `NOT_FOUND`. Other handler failures, including an unknown action ID or a rejected move, return HTTP 500 (`CORE_ERROR`).
-
-**D2 proposals still without routes.** Health (HTTP-01a), device history (01f), settings (01i), action preview (01j) and impact estimates (01n) remain proposals. The File I/O page builds its history from live observations in the browser. [File I/O frontend guide](file-io-monitoring-frontend.md)
+Invalid file/action requests can currently return `CORE_ERROR` with HTTP 500. The proposed 4xx/unsupported behaviour below is not implemented for every case.
 
 ### 06.2 | SHENGRONG — INTEGRATION PRODUCER CHECKLIST
 
@@ -1313,20 +1324,23 @@ Paths are relative to `/api/v1` on the local Flask server (default `http://127.0
 - [X] **TODO · SHENGRONG** — How OS agent gets selected and normalized
   - **Answer / evidence:** Through Windows/Linux Agent depends on host OS, normalized to DeviceMetric and ProcessMetric
 - [X] **TODO · SHENGRONG** — Ingestion loop and/or event cadence
-  - **Answer / evidence:** The collector requests device and process samples every second and saves a 60-second file activity window about once a minute.
+  - **Answer / evidence:** Every second
 - [X] **TODO · SHENGRONG** — How DB / Algorithm get called (including the unresolved history route)
   - **Answer / evidence:** Core retrieves required history data from DB and latest data from agents then combines them and passes to Algorithm
 - [X] **TODO · SHENGRONG** — Response envelope; 4xx/5xx/error/unsupported behavior
   - **Answer / evidence:** Response envelope: **status** indicates whether the request is succeeded or failed , **data** indicates the data contained, **error** indicates error type, null if the status is success
 
-See §06.1 for the HTTP status and error code returned by each implemented route.
-
+| Status | Definition | Notes |
+---|---|---|
+| 4xx | Invalid request | Return "error" with error code and message |
+| 5xx | Core error | Return "error" with error code and message |
+| UNSUPPORTED | Request is not supported | Return UNSUPPORTED error code |
 - [X] **TODO · SHENGRONG** — One real or mocked end-to-end JSON response + branch/PR
   - **Answer / evidence:** 
 ```json
 {
   "status": "success",
-  "data": [{
+  "data": {
     "host_id": "host_mock",
     "device_id": "disk_mock",
     "timestamp_utc": "2026-10-11T08:30:57Z",
@@ -1338,7 +1352,7 @@ See §06.1 for the HTTP status and error code returned by each implemented route
     "avg_read_latency_ms": null,
     "avg_write_latency_ms": null,
     "source": "mock"
-  }],
+  },
   "error": null
 }
 ```
@@ -1382,7 +1396,7 @@ See §06.1 for the HTTP status and error code returned by each implemented route
 > No simulated cache copy, recommendation, or UI toggle is sufficient evidence that a safe action executor exists.
 
 
-The diagram and signatures below describe the D2 proposal. The current Linux move endpoint in §06.1 starts a move directly. Only the Python handle exposes cancellation.
+**Priority:** Dry-run P1; real filesystem mutations P2, pending feasibility.
 
 ```text
  [ALGO] --recommend--> [UI] --user confirms--> [CORE] --preview-->

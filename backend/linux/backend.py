@@ -223,8 +223,8 @@ class LinuxBackend:
         :param destination_mount: Absolute mount point of the destination partition,
                                   e.g. "/run/media/wisky/test1"
         :return: MoveHandle for the running move, or an ErrorCode if it could not
-                 start: INVALID_PATH, PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
-                 NOT_ON_MERGERFS, ALREADY_ON_DESTINATION or MOVE_FAILED
-        :raises AttributeError: The existing-destination branch references an undefined enum member.
+                 start: PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
+                 NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, DESTINATION_EXISTS or
+                 MOVE_FAILED
         """
         return start_mergerfs_move(file_path, destination_mount)

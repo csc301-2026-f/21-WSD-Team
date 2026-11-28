@@ -55,15 +55,18 @@ def normalize_linux_device(devices, host_id) -> list[dict]:
     normalized_devices = []
     for device in devices:
         free_bytes = 0
+        mount_points = []
         for partition in device.partitions:
             free_bytes += partition.available_bytes
+            if partition.mount_point:
+                mount_points.append(partition.mount_point)
         device_dict = {"host_id": host_id,
                        "device_id": device.device_id,
                        "display_name": device.model,
                        "media_type": device.media_type.lower(),
                        "capacity_bytes": device.size_bytes,
                        "free_bytes": free_bytes,
-                       "mount_points": [], #TODO data not provide
+                       "mount_points": mount_points,
                        "is_available": True} #TODO data not provide
         normalized_devices.append(device_dict)
     return normalized_devices
