@@ -20,9 +20,9 @@ The policy's recommendation path loads the saved model when one exists. If there
 
 ### Benefit estimate and candidate selection
 
-The model probability gates candidates using `min_cache_prob`. The default thresholds are 0.45 for `performance`, 0.60 for `balanced`, and 0.75 for `lifespan`. The lifespan goal also skips files with writes in the selected activity window. For each surviving candidate, the algorithm estimates future reads over ten minutes and multiplies them by an assumed HDD-to-SSD average read-latency difference (8.5 ms versus 0.15 ms). This value is a ranking estimate, not a measured speedup.
+The model probability gates candidates using `min_cache_prob`. The default thresholds are 0.45 for `performance`, 0.60 for `balanced`, and 0.75 for `lifespan`. The lifespan goal also skips files with writes in the selected activity window. For each surviving candidate, the algorithm estimates future reads over ten minutes and multiplies them by an assumed HDD-to-SSD average read-latency difference to get the ranking estimate.
 
-The default selector sorts by recent read rate per byte, then read rate, smaller size, and file ID. It selects files that fit the chosen SSD's usable capacity and the recommendation limit. The selected SSD is the eligible target with the greatest usable budget after reserves.
+The default selector prioritizes sorting by recent read rate per byte, then read rate, file size, and file ID. It selects files that fit the chosen SSD's usable capacity and the recommendation limit. The selected SSD is the eligible target with the greatest usable budget after reserves.
 
 ## Developer Guide
 
