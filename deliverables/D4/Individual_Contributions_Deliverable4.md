@@ -6,7 +6,7 @@ Developed adaptive workload prediction and spatial locality scoring for ALGO-01.
 
 **Pull Requests:** [#63](https://github.com/csc301-2026-f/21-WSD-Team/pull/63), [#73](https://github.com/csc301-2026-f/21-WSD-Team/pull/73)
 
-**Approved PRs:** [#61](https://github.com/csc301-2026-f/21-WSD-Team/pull/61), [#66](https://github.com/csc301-2026-f/21-WSD-Team/pull/66), [#67](https://github.com/csc301-2026-f/21-WSD-Team/pull/67), [#68](https://github.com/csc301-2026-f/21-WSD-Team/pull/68), [#71](https://github.com/csc301-2026-f/21-WSD-Team/pull/71), [#72](https://github.com/csc301-2026-f/21-WSD-Team/pull/72), [#74](https://github.com/csc301-2026-f/21-WSD-Team/pull/74)
+**Approved PRs:** [#61](https://github.com/csc301-2026-f/21-WSD-Team/pull/61), [#65](https://github.com/csc301-2026-f/21-WSD-Team/pull/65), [#66](https://github.com/csc301-2026-f/21-WSD-Team/pull/66), [#67](https://github.com/csc301-2026-f/21-WSD-Team/pull/67), [#68](https://github.com/csc301-2026-f/21-WSD-Team/pull/68), [#69](https://github.com/csc301-2026-f/21-WSD-Team/pull/69), [#71](https://github.com/csc301-2026-f/21-WSD-Team/pull/71), [#72](https://github.com/csc301-2026-f/21-WSD-Team/pull/72), [#74](https://github.com/csc301-2026-f/21-WSD-Team/pull/74), [#80](https://github.com/csc301-2026-f/21-WSD-Team/pull/80), [#82](https://github.com/csc301-2026-f/21-WSD-Team/pull/82), [#83](https://github.com/csc301-2026-f/21-WSD-Team/pull/83), [#84](https://github.com/csc301-2026-f/21-WSD-Team/pull/84), [#85](https://github.com/csc301-2026-f/21-WSD-Team/pull/85), [#86](https://github.com/csc301-2026-f/21-WSD-Team/pull/86)
 
 **Additional Code Review:** [#62](https://github.com/csc301-2026-f/21-WSD-Team/pull/62)
 
@@ -14,7 +14,7 @@ Developed adaptive workload prediction and spatial locality scoring for ALGO-01.
 
 Implemented mergerfs file migration, improved file activity monitoring, added partition mount information, strengthened input validation, and updated Linux documentation.
 
-**Pull Requests:** [#61](https://github.com/csc301-2026-f/21-WSD-Team/pull/61), [#74](https://github.com/csc301-2026-f/21-WSD-Team/pull/74)
+**Pull Requests:** [#61](https://github.com/csc301-2026-f/21-WSD-Team/pull/61), [#74](https://github.com/csc301-2026-f/21-WSD-Team/pull/74), [#84](https://github.com/csc301-2026-f/21-WSD-Team/pull/84)
 
 **Approved PRs:** [#62](https://github.com/csc301-2026-f/21-WSD-Team/pull/62), [#64](https://github.com/csc301-2026-f/21-WSD-Team/pull/64), [#72](https://github.com/csc301-2026-f/21-WSD-Team/pull/72), [#75](https://github.com/csc301-2026-f/21-WSD-Team/pull/75), [#76](https://github.com/csc301-2026-f/21-WSD-Team/pull/76)
 
@@ -22,13 +22,13 @@ Implemented mergerfs file migration, improved file activity monitoring, added pa
 
 Developed Windows file migration functionality and updated project documentation.
 
-**Pull Requests:** [#69](https://github.com/csc301-2026-f/21-WSD-Team/pull/69), [#79](https://github.com/csc301-2026-f/21-WSD-Team/pull/79)
+**Pull Requests:** [#69](https://github.com/csc301-2026-f/21-WSD-Team/pull/69), [#79](https://github.com/csc301-2026-f/21-WSD-Team/pull/79), [#85](https://github.com/csc301-2026-f/21-WSD-Team/pull/85), [#86](https://github.com/csc301-2026-f/21-WSD-Team/pull/86)
 
 ## Shengrong Wang — CORE and HTTP API
 
 Integrated Linux file activity monitoring, file subscriptions, historical file activity, recommendation workflows, and file migration APIs. Improved capability reporting and mergerfs device identification.
 
-**Pull Requests:** [#62](https://github.com/csc301-2026-f/21-WSD-Team/pull/62), [#70](https://github.com/csc301-2026-f/21-WSD-Team/pull/70), [#71](https://github.com/csc301-2026-f/21-WSD-Team/pull/71), [#72](https://github.com/csc301-2026-f/21-WSD-Team/pull/72)
+**Pull Requests:** [#62](https://github.com/csc301-2026-f/21-WSD-Team/pull/62), [#70](https://github.com/csc301-2026-f/21-WSD-Team/pull/70), [#71](https://github.com/csc301-2026-f/21-WSD-Team/pull/71), [#72](https://github.com/csc301-2026-f/21-WSD-Team/pull/72), [#83](https://github.com/csc301-2026-f/21-WSD-Team/pull/83)
 
 **Approved PRs:** [#63](https://github.com/csc301-2026-f/21-WSD-Team/pull/63)
 
@@ -38,7 +38,9 @@ Integrated Linux file activity monitoring, file subscriptions, historical file a
 
 Implemented historical file activity storage and queries, persistent file subscriptions, and file migration records.
 
-**Pull Requests:** [#64](https://github.com/csc301-2026-f/21-WSD-Team/pull/64)
+**Pull Requests:** [#64](https://github.com/csc301-2026-f/21-WSD-Team/pull/64), [#82](https://github.com/csc301-2026-f/21-WSD-Team/pull/82)
+
+**Approved PRs:** [#73](https://github.com/csc301-2026-f/21-WSD-Team/pull/73), [#81](https://github.com/csc301-2026-f/21-WSD-Team/pull/81)
 
 ## Jesslyn Perdana — ALGO-02 Development
 
@@ -54,7 +56,7 @@ Following D3, I focused on connecting more of the frontend to the backend's curr
 
 On the Recommendations page, I made file names easier to recognize by showing the name from the activity path instead of only a file ID. I also added a confirmed file-move workflow: eligible recommendations show a Move File button, the dialog displays the source and destination, and confirming sends the recommendation ID to the existing API. The frontend then polls the returned action ID and displays whether the move is running, completed, or failed. A separate demo preview lets users see the interaction without sending a request or moving a file. I added tests for the move-action controls and API request, and audited the integrations against the current branch. Particular attention was given to ensuring that the frontend uses the existing API contracts rather than introducing new endpoints or assuming that an accepted request means a file has already been moved. The workflow also distinguishes between user confirmation, execution progress, and the final operation result, helping prevent misleading success notifications.
 
-These updates made the frontend more useful for monitoring file activity and reviewing recommendations, while keeping preview behavior distinct from real system operations. They also improved the connection between the different parts of the application by making better use of the backend's existing capabilities and handling situations where data or operations are unavailable. The work involved coordinating several layers of the system, including frontend components, API requests, response handling, and backend action-status reporting. The main challenge was aligning frontend behavior with APIs that changed as backend work was merged. Overall, D3 involved not only adding functionality, but also improving integration reliability, testing, and the clarity of how users interact with storage monitoring and file-management features.
+These updates made the frontend more useful for monitoring file activity and reviewing recommendations, while keeping preview behavior distinct from real system operations. They also improved the connection between the different parts of the application by making better use of the backend's existing capabilities and handling situations where data or operations are unavailable. The work involved coordinating several layers of the system, including frontend components, API requests, response handling, and backend action-status reporting. The main challenge was aligning frontend behavior with APIs that changed as backend work was merged. Overall, D4 involved not only adding functionality, but also improving integration reliability, testing, and the clarity of how users interact with storage monitoring and file-management features.
 
 **Pull Requests:** [#68](https://github.com/csc301-2026-f/21-WSD-Team/pull/68), [#75](https://github.com/csc301-2026-f/21-WSD-Team/pull/75), [#80](https://github.com/csc301-2026-f/21-WSD-Team/pull/80)
 

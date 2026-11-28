@@ -35,3 +35,21 @@
 **Tools:** ChatGPT
 
 **Usage:** Sahil used ChatGPT to help create rigorous unit tests for added components to the database. Particularly the table related to tracking file moves and gaps between file activity.
+
+## Windows Backend
+
+**Tools:** ChatGPT
+
+**Usage:** Enrique asked ChatGPT for a small placeholder, then built on it and replaced parts that did not match what he was implementing.
+
+## Frontend
+
+**Tools:** ChatGPT, Codex
+
+**Usage:** Danny used ChatGPT and Codex to help write and debug frontend HTML, CSS and JavaScript.
+
+## CORE: mergerfs Helper
+
+**Tools:** ChatGPT
+
+**Usage:** With limited time to learn mergerfs after changes on D4 demo day, Shengrong used ChatGPT to implement a helper that retrieves device IDs and mount paths from the pool. He also used it to review local code for major errors before pushing to GitHub and to clarify project requirements.
