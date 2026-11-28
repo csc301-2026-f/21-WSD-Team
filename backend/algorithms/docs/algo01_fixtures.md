@@ -9,11 +9,11 @@ The JSON files below contain simulated inputs and saved outputs for checking ALG
 Run from the repository root, which contains `backend/`:
 
 ```powershell
-python -B -m unittest discover -s backend/algorithms/algo01/tests -v
+python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
 python -B -m backend.algorithms.algo01.demo --mock-input backend/algorithms/algo01/tests/fixtures/d2-advisory-monitoring-only.json
 ```
 
-The package uses Python 3.10 or later and needs no third-party packages. The local suite has 41 passing checks, run with Python 3.14.
+Use Python 3.10 or later with `scikit-learn>=1.5,<2` and pytest installed. The command above runs the regular suite; eight performance experiments are available separately with `-m benchmark`.
 
 ## File recommendation examples
 
@@ -62,11 +62,11 @@ Compatibility note: the supplied QA `none` example uses `requires_approval=True`
 在包含 `backend/` 的仓库根目录运行：
 
 ```powershell
-python -B -m unittest discover -s backend/algorithms/algo01/tests -v
+python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
 python -B -m backend.algorithms.algo01.demo --mock-input backend/algorithms/algo01/tests/fixtures/d2-advisory-monitoring-only.json
 ```
 
-本包需要 Python 3.10 或以上，无第三方依赖。本地使用 Python 3.14，41 项检查通过。
+使用 Python 3.10 或以上，并安装 `scikit-learn>=1.5,<2` 和 pytest。上述命令运行常规测试；八个性能实验可用 `-m benchmark` 按需单独运行。
 
 ## 文件推荐样例
 

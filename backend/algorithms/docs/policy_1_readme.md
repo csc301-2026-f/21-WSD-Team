@@ -2,122 +2,308 @@
 
 <a id="english"></a>
 
-# ALGO-01: file recommendations
+# ALGO-01: Adaptive File Placement (D4 updated)
 
-ALGO-01 helps WSD choose files to consider moving from a mechanical hard drive (HDD) to a solid-state drive (SSD). CORE, the backend component connecting the other modules, supplies device details and recent file activity. The algorithm returns suggestions for the dashboard to display.
+ALGO-01 recommends moving frequently read files from HDDs to SSDs in WSD's RAID0 mode. It uses historical file activity to predict future demand, considers access patterns, and selects a group of files that fits within the available SSD space.
 
-The D2 policy looks for HDD files that are read often and mostly read rather than written. It ranks them by read frequency, then checks whether an SSD has enough room for each whole file. This is an initial selection rule: frequent reads alone do not establish that moving a file will improve performance. The policy does not yet distinguish random access from large sequential reads.
+## How it works
 
-The interface calls this mode `raid0`. The function returns advice; it does not create a RAID array or move files. The current goal is performance. A policy for extending drive life is not implemented yet.
+### File filtering
 
-## Try an example
+The algorithm starts with the latest valid activity record for each file. By default, it considers files on available HDDs with at least 0.1 reads per second and a read ratio of 80% or higher.
 
-Run this from the repository root, the folder containing `backend/`:
+### Workload prediction (D4)
 
-```powershell
+Different workloads benefit from different prediction methods. ALGO-01 compares three approaches:
+
+| Method | How it works |
+| --- | --- |
+| Latest read rate | Uses the latest observed activity. |
+| Moving average | Averages the read rate over the last five minutes. |
+| Ridge regression | Learns workload patterns and predicts the average read rate for the next ten minutes. |
+
+The Ridge model uses features such as read frequency, variance, trends, read/write ratio, active-window ratio, and available access-gap information. It uses scikit-learn's `StandardScaler` and `Ridge`.
+
+Training samples use five minutes of activity as input and the following ten minutes as the target. The last twenty minutes of history are reserved for validation. The algorithm compares the three methods using mean absolute error (MAE) and chooses the best-performing one, preferring simpler methods in a tie. If Ridge wins, it is refitted on the full available history. Files with insufficient recent history fall back to their latest observed read rate.
+
+### Spatial locality (D4)
+
+Files with frequent non-sequential accesses can benefit from the lower access latency of SSDs. ALGO-01 uses the average read access gap (in bytes) to adjust each file's priority:
+
+```text
+spatial_factor = 1 + average_read_gap / (average_read_gap + 65536)
+migration_score = estimated_read_rate * spatial_factor
+```
+
+The spatial factor defaults to 1 when recent gap measurements are unavailable. The resulting score estimates the relative benefit of placing a file on an SSD.
+
+### File selection (D3–D4)
+
+We formulate file selection as a 0/1 Knapsack problem, using file size as the weight and migration score as the value. Dynamic programming finds the best combination of files within the SSD space budget and recommendation limit.
+
+Dominated-state pruning reduces the number of states explored. If the DP budget is exceeded, the algorithm switches to greedy selection. Each evaluation uses the SSD or NVMe drive with the largest usable space after reserves.
+
+## Developer Guide
+
+### Setup and testing
+
+Use Python 3.10 or later and install the project dependencies. For standalone algorithm development, install scikit-learn and pytest in your Python environment:
+
+```bash
+python -m pip install "scikit-learn>=1.5,<2" pytest
+```
+
+From the repository root, try the existing mock example:
+
+```bash
 python -B -m backend.algorithms.algo01.demo --mock-input backend/algorithms/algo01/tests/fixtures/d2-advisory-monitoring-only.json
 ```
 
-The sample describes a video on an HDD, read 120 times in 60 seconds, and an SSD with enough free space. The result is a `move` suggestion. Its reason begins with `MOCK:` because the activity is simulated. The sample also reports that file monitoring works but file moving is unavailable, so the result explains that execution support is unconfirmed.
+The example uses a file read 120 times in one minute and returns a labelled sample recommendation.
 
-To call the algorithm directly, run this Python example from the same folder:
+Run the algorithm and integration contract tests with:
 
-```python
-import json
-from pathlib import Path
-from backend.algorithms.algo01 import evaluate_raid0_policy, PolicyInputError
-
-sample = Path("backend/algorithms/algo01/tests/fixtures/d2-advisory-monitoring-only.json")
-data = json.loads(sample.read_text(encoding="utf-8"))
-try:
-    recommendations = evaluate_raid0_policy(**data)
-    print(recommendations)
-except PolicyInputError as error:
-    print(error.code)
+```bash
+python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
+python -m pytest tests/contract/test_algorithm_contract.py -v
 ```
 
-The result is a list of recommendations. `action="move"` means a file is worth considering; approval and execution checks are still required. If no file qualifies, the list contains one `action="none"` result explaining why. A missing or invalid evaluation time raises `PolicyInputError`.
+Run the eight performance experiments separately with `python -B -m pytest backend/algorithms/algo01/tests -q -m benchmark`.
 
-## Read next
+### Code structure
 
-| What you need | Guide |
-|---|---|
-| Prepare inputs and display results | [CORE, OS and DB integration](policy_1_upstream_requirements.md) |
-| Look up rules, settings, fields or functions | [Reference](policy_1_reference.md) |
-| Reuse helpers in ALGO-02 | [Shared helpers for Jesslyn](policy_1_jesslyn_reuse.md) |
-| Run tests and inspect sample data | [Examples and tests](algo01_fixtures.md) |
-| Check the status of model-based selection | [Policy learning](policy_1_learning.md) |
+The main implementation is in [`backend/algorithms/algo01/`](../algo01/).
 
-## D2 integration progress
+| File | Purpose |
+| --- | --- |
+| `raid0_policy.py` | Main recommendation pipeline |
+| `inputs.py` | Input validation and policy settings |
+| `candidates.py` | File filtering |
+| `prediction.py` | Feature extraction, training, prediction and spatial scoring |
+| `knapsack_selection.py` | Dynamic programming and state pruning |
+| `greedy_selection.py` | Greedy selection and recommendation generation |
+| `strategy_controller.py` | Selection strategy switching |
+| `tests/` | Unit and regression tests |
 
-| User story | What this package provides | Remaining integration |
-|---|---|---|
-| US-01: current process activity | Process sample data and checks. This story does not call the file recommendation function. | OS process collection, CORE's API and the process display. |
-| US-02: past process activity | Process history and query examples. The proposed DB name `query_process_history(...)` is not a function in this package. | DB history queries and the CORE/UI connection. |
-| US-05: file recommendations | `evaluate_raid0_policy(...)` returns recommendations in one call. CORE does not need to call the internal scoring functions. | CORE supplies the inputs and handles errors; DB supplies history; the UI displays the result. The complete flow still needs integration testing. Jesslyn's cache policy is separate. |
+Shared utilities are in [`backend/algorithms/common/`](../common/).
 
-The local suite contains 41 passing checks using simulated data. The complete OS → DB/CORE → dashboard flow has not been verified.
+### Configuration
 
-For a first real-data example, use an ordinary file that can be handled on its own, such as a document, movie, music track or short video. Run the sample first, then replace its records with observations from one computer. Installed applications and games may depend on other files or fixed paths; this policy does not check those dependencies or detect anti-cheat software.
+Policy settings can be changed through `mode_config`. Their defaults are defined in `inputs.py`.
+
+| Setting | Default |
+| --- | --- |
+| Optimization goal | `performance` |
+| Minimum read rate / read ratio | 0.1 reads/s / 80% |
+| Activity window / maximum age | 60–3,600 s / 300 s |
+| SSD reserve | Greater of 1 GiB and 10% of total capacity |
+| Maximum recommendations | 10 |
+
+Prediction settings are in `prediction.py`. The sampling tolerance is in `inputs.py`, and DP limits are in `knapsack_selection.py`.
+
+| Parameter | Default |
+| --- | --- |
+| Activity window / history | 60 s / 60 min |
+| Feature window / prediction horizon | 5 min / 10 min |
+| Validation period | 20 min |
+| Minimum training / validation samples | 20 / 5 |
+| Ridge alpha | 1.0 |
+| Sampling tolerance | 0.5 s |
+| DP state / transition budget | 10,000 / 200,000 |
+
+Training takes place during recommendation evaluation when sufficient history is available. Samples are collected across files on the same host.
+
+### API and integration
+
+CORE calls the algorithm through its existing interface:
+
+```python
+from backend.algorithms.algo01 import evaluate_raid0_policy
+
+recommendations = evaluate_raid0_policy(
+    devices=device_records,
+    realtime={"host_id": host_id, "evaluation_time_utc": evaluation_time_utc},
+    history={"file_activity": file_activity_records},
+    mode_config={},
+    capabilities=os_capabilities,
+)
+```
+
+CORE supplies device information, the host ID and evaluation time, file activity, and platform capabilities. File monitoring requires `file_access_metrics=True`.
+
+For prediction, provide up to one hour of consecutive 60-second file activity records with their original timestamps, read/write operation counts and file identities. The 0.5-second tolerance accommodates small sampling delays. The optional `read_average_gap` and `write_average_gap` fields supply spatial features. Mock activity is excluded from model training.
+
+The result is a list of recommendations. A `move` action identifies a file and destination; `none` explains why no recommendation was generated. CORE and the OS backend handle approval and file migration.
+
+## Non-Functional Requirements
+
+- **Performance:** State pruning, bounded DP budgets and greedy fallback keep file selection manageable.
+- **Reliability:** Input validation and prediction fallbacks allow the algorithm to handle incomplete or irregular telemetry.
+- **Maintainability:** Separate prediction and selection modules, a stable API, and automated tests simplify future changes.
+- **Safety and explainability:** Recommendations respect storage reserves and include the scoring rationale and approval requirements.
+
+## Current limitations
+
+Prediction quality depends on the collected history. Spatial scoring uses access-gap measurements as a locality heuristic. Each evaluation currently selects one SSD destination, and the migration score is an estimate of placement priority.
+
+## Related documentation
+
+- [Project README](../../../README.md)
+- [CORE, OS and DB integration](policy_1_upstream_requirements.md)
+- [Examples and test fixtures](algo01_fixtures.md)
+- [Project API contracts](../../../docs/api-contracts.md)
 
 ---
 
 <a id="chinese"></a>
 
-# ALGO-01：文件推荐
+# ALGO-01：自适应文件放置
 
-ALGO-01 帮助 WSD 筛选值得从机械硬盘（HDD）迁往固态硬盘（SSD）的文件。CORE 是后端里连接各模块的部分，负责提供设备信息和最近的文件活动；算法返回建议，供界面展示。
+ALGO-01 是 WSD 在 RAID0 模式下使用的文件放置推荐算法，负责筛选 HDD 上读取频繁的文件，推荐将其迁移至 SSD。算法利用历史文件活动预测未来负载，结合访问模式，在可用 SSD 容量内选择合适的文件组合。
 
-D2 的判断是：先找出 HDD 上读得频繁、读多写少的文件，按读取频率排序，再逐个检查 SSD 是否放得下整个文件。这是一条初步筛选规则：读得频繁并不等于移动后一定更快。目前还不能区分随机访问和大块连续读取。
+## 算法设计
 
-接口把这个模式称为 `raid0`。函数只返回建议，不创建 RAID 阵列，也不移动文件。目前实现的是性能目标，延长硬盘寿命的策略尚未实现。
+### 文件筛选
 
-## 先跑一个例子
+算法首先选取每个文件最新的有效活动记录。默认筛选位于可用 HDD 上、读取频率达到每秒 0.1 次且读操作占比达到 80% 的文件。
 
-在包含 `backend/` 的仓库根目录运行：
+### 负载预测（D4）
 
-```powershell
+不同类型的负载适合不同的预测方式。ALGO-01 比较以下三种方法：
+
+| 方法 | 原理 |
+| --- | --- |
+| 最新读取频率 | 使用最近一次观测到的读取频率。 |
+| 移动平均 | 计算最近五分钟的平均读取频率。 |
+| Ridge 回归 | 学习历史负载特征，预测未来十分钟的平均读取频率。 |
+
+Ridge 模型使用读取频率、方差、变化趋势、读写比例、活跃窗口比例以及可用的访问间距等特征。实现采用 scikit-learn 的 `StandardScaler` 和 `Ridge`。
+
+每个训练样本使用五分钟的活动记录作为输入，随后十分钟的活动作为预测目标。历史数据中最近二十分钟用于验证。算法通过平均绝对误差（MAE）比较三种方法，选择表现最好的方法；误差相同时优先采用简单的方法。如果 Ridge 表现最佳，就使用全部可用历史重新训练。近期历史不足的文件回退至最新读取频率。
+
+### 空间局部性（D4）
+
+频繁进行非顺序访问的文件有望受益于 SSD 更低的访问延迟。ALGO-01 利用平均读取间距（单位为字节）调整文件的优先级：
+
+```text
+spatial_factor = 1 + average_read_gap / (average_read_gap + 65536)
+migration_score = estimated_read_rate * spatial_factor
+```
+
+近期访问间距数据缺失时，空间因子默认为 1。最终的迁移评分用于估算文件迁移至 SSD 的相对收益。
+
+### 文件选择（D3–D4）
+
+我们将文件选择建模为 0/1 背包问题，以文件大小作为重量、迁移评分作为价值，通过动态规划在 SSD 容量预算和推荐数量限制内寻找最佳文件组合。
+
+通过支配状态剪枝减少需要探索的状态数量。当计算量超过预设预算时，算法切换至贪心选择。每次评估选择扣除预留空间后可用容量最大的 SSD 或 NVMe 设备。
+
+## 开发者指南
+
+### 环境配置与测试
+
+使用 Python 3.10 或更高版本并安装项目依赖。独立开发算法时，可以在 Python 环境中安装 scikit-learn 和 pytest：
+
+```bash
+python -m pip install "scikit-learn>=1.5,<2" pytest
+```
+
+在仓库根目录运行已有的模拟数据示例：
+
+```bash
 python -B -m backend.algorithms.algo01.demo --mock-input backend/algorithms/algo01/tests/fixtures/d2-advisory-monitoring-only.json
 ```
 
-样例描述了 HDD 上的一个视频：60 秒内读了 120 次，SSD 也有足够空间。返回的 `move` 表示建议移动。因为活动是模拟的，原因以 `MOCK:` 开头。样例还设置了“支持文件监控，但不能移动文件”，所以结果会说明执行支持尚未确认。
+示例模拟了一个在一分钟内被读取 120 次的文件，并返回带有模拟数据标记的推荐。
 
-要直接调用算法，可以在同一目录运行下面的 Python 例子：
+运行算法测试和接口契约测试：
 
-```python
-import json
-from pathlib import Path
-from backend.algorithms.algo01 import evaluate_raid0_policy, PolicyInputError
-
-sample = Path("backend/algorithms/algo01/tests/fixtures/d2-advisory-monitoring-only.json")
-data = json.loads(sample.read_text(encoding="utf-8"))
-try:
-    recommendations = evaluate_raid0_policy(**data)
-    print(recommendations)
-except PolicyInputError as error:
-    print(error.code)
+```bash
+python -B -m pytest backend/algorithms/algo01/tests -q -m "not benchmark"
+python -m pytest tests/contract/test_algorithm_contract.py -v
 ```
 
-返回值是推荐列表。`action="move"` 表示这个文件值得考虑，仍需批准和执行前检查。没有合适文件时，列表只有一条 `action="none"`，说明原因。评估时间缺失或无效时，函数抛出 `PolicyInputError`。
+八个性能实验按需单独运行：`python -B -m pytest backend/algorithms/algo01/tests -q -m benchmark`。
 
-## 接下来读哪里
+### 代码结构
 
-| 要做什么 | 文档 |
-|---|---|
-| 准备输入、展示结果 | [CORE、OS 和 DB 接入说明](policy_1_upstream_requirements.md) |
-| 查规则、设置、字段或函数 | [参考文档](policy_1_reference.md) |
-| 在 ALGO-02 中复用辅助函数 | [给 Jesslyn 的复用说明](policy_1_jesslyn_reuse.md) |
-| 跑测试、看样例 | [样例与测试](algo01_fixtures.md) |
-| 了解模型选文件的开发状态 | [策略学习](policy_1_learning.md) |
+主要实现位于 [`backend/algorithms/algo01/`](../algo01/)。
 
-## D2 接入进度
+| 文件 | 用途 |
+| --- | --- |
+| `raid0_policy.py` | 主推荐流程 |
+| `inputs.py` | 输入校验与策略配置 |
+| `candidates.py` | 文件筛选 |
+| `prediction.py` | 特征提取、训练、预测与空间评分 |
+| `knapsack_selection.py` | 动态规划与状态剪枝 |
+| `greedy_selection.py` | 贪心选择与推荐生成 |
+| `strategy_controller.py` | 选择策略切换 |
+| `tests/` | 单元测试与回归测试 |
 
-| 用户故事 | 本包提供什么 | 还需接通什么 |
-|---|---|---|
-| US-01：当前进程活动 | 进程样例和检查；这个故事不调用文件推荐函数 | OS 进程采集、CORE 接口和进程展示页面 |
-| US-02：历史进程活动 | 进程历史和查询样例；`query_process_history(...)` 是 DB 接口草案名，不是本包里的函数 | DB 历史查询，以及 CORE 与界面的连接 |
-| US-05：文件推荐 | 调用一次 `evaluate_raid0_policy(...)` 即可拿到建议，CORE 无需逐个调用内部评分函数 | CORE 提供输入并处理错误，DB 提供历史，界面展示结果；完整流程还需集成测试。Jesslyn 的缓存策略是另一部分 |
+共享工具函数位于 [`backend/algorithms/common/`](../common/)。
 
-目前 41 项本地检查通过，使用的是模拟数据。OS → DB／CORE → 界面的完整流程尚未验证。
+### 配置参数
 
-首次接真实数据时，可以先选一个能独立处理的普通文件，例如文档、电影、音乐或短视频。先运行样例，再换成同一台电脑的实际记录。已安装应用和游戏可能依赖其他文件或固定路径；本策略尚不检查这些依赖，也不识别反作弊软件。
+策略参数可以通过 `mode_config` 修改，默认值定义于 `inputs.py`。
+
+| 配置项 | 默认值 |
+| --- | --- |
+| 优化目标 | `performance` |
+| 最低读取频率 / 读操作占比 | 0.1 次/秒 / 80% |
+| 活动窗口长度 / 记录最大年龄 | 60–3,600 秒 / 300 秒 |
+| SSD 预留空间 | 1 GiB 与总容量的 10% 中的较大值 |
+| 最大推荐数量 | 10 |
+
+预测参数位于 `prediction.py`，采样容差位于 `inputs.py`，DP 计算预算位于 `knapsack_selection.py`。
+
+| 参数 | 默认值 |
+| --- | --- |
+| 活动窗口 / 历史范围 | 60 秒 / 60 分钟 |
+| 特征窗口 / 预测范围 | 5 分钟 / 10 分钟 |
+| 验证期 | 20 分钟 |
+| 最少训练样本 / 验证样本 | 20 / 5 |
+| Ridge alpha | 1.0 |
+| 采样容差 | 0.5 秒 |
+| DP 状态数 / 转移次数预算 | 10,000 / 200,000 |
+
+历史数据充足时，模型在推荐评估过程中训练。训练样本来自同一台主机上的多个文件。
+
+### API 与集成
+
+CORE 通过现有接口调用算法：
+
+```python
+from backend.algorithms.algo01 import evaluate_raid0_policy
+
+recommendations = evaluate_raid0_policy(
+    devices=device_records,
+    realtime={"host_id": host_id, "evaluation_time_utc": evaluation_time_utc},
+    history={"file_activity": file_activity_records},
+    mode_config={},
+    capabilities=os_capabilities,
+)
+```
+
+CORE 提供设备信息、主机 ID、评估时间、文件活动记录和平台能力。文件监控需要 `file_access_metrics=True`。
+
+预测功能需要最近一小时内连续的 60 秒文件活动记录，保留原始时间戳、读写操作次数及文件标识。0.5 秒的采样容差用于处理轻微调度偏差。可选字段 `read_average_gap` 和 `write_average_gap` 提供空间特征。模拟数据会被排除在模型训练之外。
+
+接口返回推荐列表。`move` 表示建议迁移的文件与目标设备，`none` 说明未生成推荐的原因。文件迁移的批准与执行由 CORE 和 OS Backend 负责。
+
+## 非功能性要求（NFR）
+
+- **性能：** 通过状态剪枝、DP 计算预算和贪心回退控制文件选择的计算量。
+- **可靠性：** 通过输入校验和预测回退处理不完整或不规则的监控数据。
+- **可维护性：** 预测与选择模块独立，保留统一接口和自动化测试，便于后续扩展。
+- **安全性与可解释性：** 推荐遵循存储预留要求，提供评分依据和批准条件。
+
+## 当前限制
+
+预测效果取决于采集到的历史数据。空间评分通过访问间距近似衡量局部性。目前每次评估选择一个 SSD 目标，迁移评分用于估算文件放置的优先级。
+
+## 相关文档
+
+- [项目 README](../../../README.md)
+- [CORE、OS 和 DB 接入说明](policy_1_upstream_requirements.md)
+- [样例与测试](algo01_fixtures.md)
+- [项目 API 契约](../../../docs/api-contracts.md)
