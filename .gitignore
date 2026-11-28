@@ -31,6 +31,18 @@ Thumbs.db
 # Local application databases
 /.wsd/
 
+# Local ALGO-02 benchmark runner and generated results
+/backend/algorithms/algo02/benchmark.py
+/deliverables/D4/algo02_real_benchmark.json
+/deliverables/D4/algo02_real_benchmark.png
+/deliverables/D4/algo02_real_benchmark.svg
+/deliverables/D4/algo02_ml_vs_no_ml_synthetic.json
+/deliverables/D4/algo02_ml_vs_no_ml_synthetic.png
+/deliverables/D4/algo02_ml_vs_no_ml_synthetic.svg
+/deliverables/D4/algo02_ml_vs_no_ml_complex_synthetic.json
+/deliverables/D4/algo02_ml_vs_no_ml_complex_synthetic.png
+/deliverables/D4/algo02_ml_vs_no_ml_complex_synthetic.svg
+
 # Python bytecode
 __pycache__/
 *.py[cod]
