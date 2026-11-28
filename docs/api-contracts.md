@@ -714,8 +714,8 @@ These calls work independently of `start()`. The caller supplies an existing mer
 | Call | Result |
 |---|---|
 | `get_actual_path(file_path)` | Validates the path as above, then reads `user.mergerfs.fullpath` and `user.mergerfs.relpath`. Returns the underlying source path, or `NOT_ON_MERGERFS` on any xattr read error, including a missing file or denied access. |
-| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
-| Existing destination | After the same-path check, an existing destination entry raises `AttributeError` before launch. The code refers to `DESTINATION_EXISTS`, while the enum defines `FILE_ALREADY_EXISTS`. The existence check and the move are separate, so a concurrent destination creation can still be overwritten. |
+| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, `FILE_ALREADY_EXISTS`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
+| Existing destination | After the same-path check, an existing destination entry returns `FILE_ALREADY_EXISTS` before launch. The existence check and the move are separate, so a concurrent destination creation can still be overwritten. |
 
 `MoveHandle` exposes `source_path` (pool path), `actual_path` (source branch path), `destination_path` and `total_bytes` (initial size).
 
@@ -938,14 +938,14 @@ Remaining Work:
   | `ProcessMetric` | `timestamp`, `duration`, `read_bytes`, `write_bytes`, `reads_complete`, `writes_complete` | UTC ISO 8601; requested seconds (`int`); bytes attributed by `/proc/[pid]/io`; `syscr`/`syscw` syscall counts |
   | `Drive` | `timestamp`, `device_id`, `model`, `serial`, `size_bytes`, `media_type`, `partitions` | Device metadata; partition `size_bytes`/`available_bytes` report filesystem usage, or zero if unavailable |
   | `Process` | `pid`, `name`, `start_time_timestamp` | Process metadata; start time is UTC ISO 8601 from `/proc/[pid]/stat` + boot time |
-  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. Inode and raw device number come from `os.stat()` |
+  | `File` | `file_id`, `absolute_path`, `inode`, `device` | Collector-local ID and canonical path determine equality. The inode comes from `os.stat()`. The device is a resolved disk or logical device name, or `None` |
   | `FileMetric` | `file`, `timestamp`, `duration`, `read_attempts`, `read_requested_bytes`, `read_success_ops`, `read_completed_bytes`, `read_average_gap`, `write_attempts`, `write_requested_bytes`, `write_success_ops`, `write_completed_bytes`, `write_average_gap` | UTC ISO 8601; requested seconds (`int`); call counts; bytes; average gap in bytes (`float`) or `None`. Full definitions in the File tracking records table above |
 
-  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes)` records. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
+  `Drive.partitions` contains `Partition(name, size_bytes, available_bytes, mount_point=None)` records. The mount point is the first absolute mount path reported by `lsblk`, or `None`. Discovery includes devices whose `lsblk` transport is `sata`, `nvme`, `usb`, `sas`, `scsi`, or `mmc`. Missing model and serial values default to `"Unknown Model"` and `"N/A"`.
 
   Internally, `DriveSample` counts 512-byte sectors and disk operations. `ProcessSample` holds cumulative storage bytes and syscall counts. `FileSample` adds the file, timestamp and size to the cumulative `FileCounters` fields, including gap sums and counts. Public metric reads return interval differences.
 
-  Not provided: process-to-file attribution (which process did the I/O), file size in `FileMetric`, and the block device a file lives on.
+  Not provided: process-to-file attribution (which process did the I/O), and file size in `FileMetric`.
 
 - [ ] **TODO · MOHAN** — Sample cadence and measured overhead
 
@@ -965,7 +965,7 @@ Remaining Work:
   File sampling:
   - Dedicated background thread, target cadence 1 second; each tick reads the kernel counters for every tracked file and `os.stat()`s each tracked path to detect replacement
   - Kernel-side counting is continuous (every matching read/write is counted as it happens); only the reading of totals is once per second
-  - Maximum history length: 60 samples
+  - Maximum history length: 61 samples (a 60-second interval)
   - Nonblocking retrieval via `get_all_file_stats()`
 
   **Measured overhead: Not available.**
@@ -1000,8 +1000,8 @@ Remaining Work:
   | `get_device_io(interval_seconds, device_name)` | `BACKEND_NOT_STARTED` while stopped. `INVALID_TIME_INTERVAL` for a nonpositive interval, unknown drive, insufficient history, or a missing device in either sample |
   | `get_process_io(interval_seconds, pid)` | `BACKEND_NOT_STARTED` while stopped. While running, a nonpositive interval raises `ValueError`. Returns `INVALID_TIME_INTERVAL` for insufficient history, `PROCESS_NOT_FOUND` if either sample lacks the PID (including unreadable I/O), or `PROCESS_PID_REUSED` if the process records differ |
   | `refresh_disk_collect()` | No-op while stopped; when running, replaces the disk collector and resets its history |
-  | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
-  | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
+  | `track_file(file_path)` | `File` on success, or if the path is already tracked (existing `File` returned). Works before `start()`. Errors: `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `PERMISSION_DENIED` (cannot stat, or cannot be opened while the tracer is running), `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE` |
+  | `track_folder(folder_path)` | `tuple[File, ...]` (empty tuple for an empty folder). Files that cannot be tracked are skipped silently; if the limit is reached, files tracked so far are returned. Errors: `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED`, `FILE_TRACER_UNAVAILABLE` |
   | `untrack_file(file)` | `None`, or `FILE_NOT_TRACKED`. History for the file is discarded |
   | `untrack_folder(files)` | `None`, or `FILE_NOT_TRACKED` if any file was not tracked; the others are still untracked |
   | `list_tracked_files()` | Tuple of tracked `File`s (empty if none); works while stopped |
@@ -1014,7 +1014,7 @@ Remaining Work:
   | 0–4 | `SUCCESS`, `PROCESS_NOT_FOUND`, `PROCESS_PID_REUSED`, `BACKEND_NOT_STARTED`, `INVALID_TIME_INTERVAL` |
   | 5–9 | `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_REGULAR_FILE`, `NOT_A_DIRECTORY`, `PERMISSION_DENIED` |
   | 10–14 | `FILE_NOT_TRACKED`, `TRACKING_LIMIT_REACHED`, `FILE_TRACER_UNAVAILABLE`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION` |
-  | 15–17 | `FILE_ALREADY_EXISTS`, `MOVE_FAILED`, `MOVE_CANCELLED` |
+  | 15–18 | `FILE_ALREADY_EXISTS`, `MOVE_FAILED`, `MOVE_CANCELLED`, `INVALID_PATH` |
 
   Limitations:
   - Unsupported capability responses have not been standardized across platforms.

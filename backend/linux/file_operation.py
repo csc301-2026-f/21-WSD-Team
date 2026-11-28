@@ -187,14 +187,13 @@ def start_mergerfs_move(source_path: str, destination_mount: str) -> MoveHandle 
     to another partition, keeping the same relative path. Returns immediately.
 
     Calls `mv` on the underlying partition paths, not on the mergerfs path.
-    The destination directory must already exist. An existing file at the
-    destination is never overwritten.
+    The destination directory must already exist. The destination path must be unused.
 
     :param source_path: Absolute path of the file inside the mergerfs mount
     :param destination_mount: Absolute mount point of the destination partition
     :return: MoveHandle for the running move, or an ErrorCode if it could not
              start: INVALID_PATH, PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
-             NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, DESTINATION_EXISTS or
+             NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, FILE_ALREADY_EXISTS or
              MOVE_FAILED (mv could not be run)
     """
     for path in (source_path, destination_mount):
@@ -215,7 +214,7 @@ def start_mergerfs_move(source_path: str, destination_mount: str) -> MoveHandle 
     if os.path.realpath(actual_path) == os.path.realpath(destination_path):
         return ErrorCode.ALREADY_ON_DESTINATION
     if os.path.lexists(destination_path):
-        return ErrorCode.DESTINATION_EXISTS
+        return ErrorCode.FILE_ALREADY_EXISTS
 
     try:
         total_bytes = os.path.getsize(actual_path)
