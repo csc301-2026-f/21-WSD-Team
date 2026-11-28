@@ -800,53 +800,65 @@ Current implemented interface:
 ```python
 class WindowsBackend:
     # don't call __init__, call create_backend instead
-    def __init__(self, host_id: str,etw_source: EtwSource,device_provider: DeviceProvider): ...
+    def __init__(host_id: str,etw_source: EtwSource,device_provider: DeviceProvider): ...
 
-    def start(self) -> None: ...
-    def close(self) -> None: ...
+    def start() -> None: ...
+    def close() -> None: ...
 
-    def get_devices(self) -> list[Device]: ...
+    def get_devices() -> list[Device]: ...
 
     def get_device_metrics(
-        self,
         sample_window_seconds: float = 10.0,
     ) -> list[DeviceMetric]: ...
 
     def get_process_metrics(
-        self,
         sample_window_seconds: float = 10.0,
     ) -> list[ProcessMetric]: ...
 
     def get_file_activity(
-        self,
         sample_window_seconds: int,
         now_ns: int | None = None,
     ) -> list[FileActivity]:
 
     def get_collection_health(self) -> CollectionHealth:
+
+    file_mover.start_move(
+        source_path: str | os.PathLike[str],
+        destination_mount: str,
+        destination_rel_path: Path | None = None
+    ) -> tuple[MoveHandle|None , MoveError|None]
+
+    file_mover.move_file(
+        source_path: str | os.PathLike[str],
+        destination_mount: str,
+        destination_rel_path: Path | None = None,
+        progress_callback: Callable[[float], None] | None = None,
+        cancel_call: Callable[[None],bool] | None = None
+    ) -> MoveResult:
 ```
 
-The coded `get_file_activity()`, and `get_collection_health` interfaces do not work as of now.
+The coded `get_collection_health` interfaces do not work as of now.
 
 
 ### Expected capabilities — Windows
 
 | Capability | Status | Notes |
 |---|---|---|
-| `device_metrics` | **Implemented; verification pending** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
-| `process_metrics` | **Planned** | Already tracing every single FileIO event the kernel fires as to also catch cache hits, can order by PID |
-| `process_to_device_attribution` | **Planned** | Can sort/filter DiskIO events by PID if required |
-| `file_access_metrics` | **Planned** | Tracing FileIO events, need to complete the path with drive letter. |
+| `device_metrics` | **Implemented** | Tracing every single DiskIO event the kernel fires and logging it with disk number |
+| `process_metrics` | **Implemented** | Tracing every single FileIO event the kernel fires as to also catch cache hits |
+| `process_to_device_attribution` | **Implemented** | Processes are attributed a device when correlated |
+| `file_access_metrics` | **Implemented** | Tracking FileIO events, path with drive letter correlated. |
+| `file_move` | **Implemented** | Can move files across mountpoints and directories |
 | `file_level_pooling` | **Planned** | WinFsp envisioned |
 | `ssd_caching` | **Planned** | No cache/redirection implementation |
-| `file_move` | **Planned** | No file migration function |
 | `dry_run_action` | **Planned** | No dry-run function |
   
 **Notes:**
 - Device and process information is represented using frozen Python dataclasses.
 - Collects events with a callback: only runs when needed with as little overhead as required.
-- Metrics are always cumulative viewed events: no history from before tracking started is available.
-- FileIO metrics are currently unavailable.
+- Metrics are always cumulative viewed events: no history from before tracking started is available, rely on database layer.
+- File moving may fail and return a move error code.
+- Process attribution is not guaranteed and may return `None`
 ---
 
 ### 03.1 | ENRIQUE — WINDOWS PRODUCER CHECKLIST
@@ -863,6 +875,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
     - `aggregation.py` (keeps all processed events and uses them to create metrics),
     - `device_provider.py` (discovers disks and mount points with WMI), 
     - `etw_source.py` (ETW DiskIO and FileIO events decoder),
+    - `file_operations.py` (file mover, alongside its defined classes),
     - `transport.py` (Kernel tracking setup),
     - `__init.py__` (links the modules together with create_backend),
     - `__main__.py` (callable from the admin console with python -m),   
@@ -875,6 +888,8 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
     - WMI:
       - discover all disks and mount points
       - admin permission may be required
+    - File Moving:
+      - r/w permissions on relevant files and directories
 - [x] **TODO · ENRIQUE** — Available process/file/device IO metrics and units / unavailable fields
 
   - **Answer / evidence:**
@@ -891,7 +906,7 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
   Event handling happens by callback, so cadence is as fast as events happen. Overhead not yet measured.
 
   **Known Limitations**
-  - FileIO events are dropped if no prior DiskIO event has mapped their FileObject to a physical drive
+  - FileIO events are kept until usable if no prior DiskIO event has mapped their FileObject to a physical drive
   - Likewise DiskIO events will not count towards a file's diskIO if no prior FileIO event has mapped it to its FileObject
   - A FileIO event is only duplicated as DiskIO event if it misses the cache
   - Process name may not always be obtainable
@@ -918,15 +933,12 @@ The coded `get_file_activity()`, and `get_collection_health` interfaces do not w
     raises ValueError
     ```
 Remaining Work:
-  - properly filter by FileIO or DiskIO for their respective metrics
-  - properly assign FileIO paths
   - measure collection health and dropped events
-  - move from pid to either (start_time,pid) or process name
   - investigate WinFsp
 
 ---
 
-**Current milestone:** The Windows backend currently implements EWT to track system-wide IO operations for disk, file, and processes alike. While only diskIO can effectively be measures as of now, the events pertaining to file and process operations are processed correctly. ssd caching, integration tests, process start time and storage actions remain to be implemented.
+**Current milestone:** The Windows backend currently implements EWT to track system-wide IO operations for disk, file, and processes alike, and it reports metrics for all three. ssd caching, and winfsp remain to be implemented.
 
 
 ## 03.2 | MOHAN — LINUX PRODUCER CHECKLIST
