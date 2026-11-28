@@ -1,16 +1,20 @@
 # SPDX-FileCopyrightText: 2026 Wise Storage Director contributors
 # SPDX-License-Identifier: GPL-3.0-only
 """D3 SSD Caching contract checks. These do not prove OS/DB/CORE/UI integration."""
+"""D4 SSD Caching contract checks (ML Integration). These do not prove OS/DB/CORE/UI integration."""
 import copy
-import importlib
 import io
 import json
+import tempfile
 import unittest
 from contextlib import redirect_stdout, redirect_stderr
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from backend.algorithms.algo02 import evaluate_ssd_caching_policy, PolicyInputError
 from backend.algorithms.algo02.demo import main
+from backend.algorithms.algo02.prediction import build_sliding_window_dataset, train_val_test_model
 from backend.algorithms.common.recommendations import FIELDS
+
 FIXTURES = Path(__file__).parent / 'fixtures'
 
 def payload():
@@ -44,8 +48,10 @@ class SSDCachingContractTests(unittest.TestCase):
         self.assertEqual(item['mode'], 'ssd_caching')
         self.assertEqual((item['action'], item['file_id'], item['source_device_id'], item['target_device_id']), ('cache', 'sample-video', 'hdd-1', 'ssd-1'))
         self.assertTrue(item['requires_approval'])
-        self.assertIsNone(item['estimated_benefit'])
-        self.assertIn('unmeasured', item['reason'])
+        self.assertIsNotNone(item['estimated_benefit'])
+        self.assertIn("ms saved / 10 min", item['estimated_benefit'])
+        self.assertIn("ML cache probability:", item["reason"])
+        self.assertIn("d4_ml_logistic_cache_scorer", item["constraints"])
 
     def test_no_input_mutation_and_repeatability(self):
         data = payload()
@@ -137,11 +143,89 @@ class SSDCachingContractTests(unittest.TestCase):
         data['devices'].reverse()
         self.assertEqual(rows, evaluate_ssd_caching_policy(**data))
 
-    def test_invalid_config_does_not_silently_activate_v2(self):
-        for config, code in (({'min_cost_confidence': 0.8}, 'invalid_config'), ({'goal': 'lifespan'}, 'goal_not_implemented_in_d2'), ({'reserve_fraction': float('nan')}, 'invalid_config'), ({'reserve_bytes': True}, 'invalid_config'), ({'max_recommendations': 0}, 'invalid_config')):
+    def test_invalid_config_and_goal_validation(self):
+        for config, code in (
+            ({"min_cost_confidence": 0.8}, "invalid_config"),
+            ({"goal": "unsupported_goal"}, "invalid_goal"),
+            ({"min_cache_prob": 1.5}, "invalid_config"),
+            ({"min_cache_prob": True}, "invalid_config"),
+            ({"reserve_fraction": float("nan")}, "invalid_config"),
+            ({"reserve_bytes": True}, "invalid_config"),
+            ({"max_recommendations": 0}, "invalid_config"),
+        ):
             data = payload()
             data['mode_config'] = config
             self.none(data, code)
+
+    def test_goal_modes_enforce_ml_threshold_and_lifespan_write_rules(self):
+        data = payload()
+        data["history"]["file_activity"][0]["write_ops"] = 2
+        data["mode_config"] = {"goal": "lifespan"}
+        self.none(data, "skipped_write_active_for_lifespan")
+
+        data = payload()
+        data["mode_config"] = {"goal": "balanced", "min_cache_prob": 0.9999}
+        self.none(data, "below_ml_cache_threshold")
+
+    def test_ml_prefers_compact_random_read_file_over_large_sequential_file(self):
+        data = payload()
+        data["mode_config"] = {"goal": "performance", "reserve_bytes": 0, "reserve_fraction": 0}
+        # Keep both examples eligible so this checks ranking, not the model cutoff.
+        data["mode_config"]["min_cache_prob"] = 0.0
+        large_seq = copy.deepcopy(data["history"]["file_activity"][0])
+        large_seq.update(
+            file_id="large-seq",
+            file_size_bytes=500 * 1024 ** 2,
+            read_ops=120,
+            read_bytes=120 * 1024 ** 2,
+        )
+        small_rand = copy.deepcopy(data["history"]["file_activity"][0])
+        small_rand.update(
+            file_id="small-rand",
+            file_size_bytes=2 * 1024 ** 2,
+            read_ops=120,
+            read_bytes=120 * 4096,
+        )
+        data["history"]["file_activity"] = [large_seq, small_rand]
+        rows = evaluate_ssd_caching_policy(**data)
+        self.assertEqual([r["file_id"] for r in rows], ["small-rand", "large-seq"])
+
+    def test_sliding_window_dataset_and_chronological_training_pipeline(self):
+        base = datetime(2026, 10, 17, 10, 0, tzinfo=timezone.utc)
+        rows = []
+        # Generate 60 minutes of 1-minute snapshots for two files (1 positive, 1 negative)
+        for minute in range(60):
+            t0 = (base + timedelta(minutes=minute)).isoformat().replace("+00:00", "Z")
+            t1 = (base + timedelta(minutes=minute + 1)).isoformat().replace("+00:00", "Z")
+            rows.append({
+                "file_id": "hot-small",
+                "window_start_utc": t0,
+                "window_end_utc": t1,
+                "read_ops": 30,
+                "write_ops": 0,
+                "read_bytes": 30 * 4096,
+                "file_size_bytes": 1024 * 1024,
+            })
+            rows.append({
+                "file_id": "write-churn",
+                "window_start_utc": t0,
+                "window_end_utc": t1,
+                "read_ops": 5,
+                "write_ops": 10,
+                "read_bytes": 5 * 1024 * 1024,
+                "file_size_bytes": 500 * 1024 * 1024,
+            })
+
+        X, y, groups, end_times = build_sliding_window_dataset(rows, horizon_minutes=10, min_future_reads=15)
+        self.assertEqual(len(X), len(y))
+        self.assertGreater(len(y), 20)
+        self.assertEqual(set(y.tolist()), {0, 1})
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            model_file = Path(tmpdir) / "test_cache_model.joblib"
+            metrics = train_val_test_model(rows, train_ratio=0.70, val_ratio=0.15, model_path=model_file)
+            self.assertTrue(model_file.exists())
+            self.assertGreaterEqual(metrics["test_accuracy"], 0.8)
 
     def test_old_entry_import_calls_d3(self):
         from backend.algorithms.algo02.ssd_policy import evaluate_ssd_caching_policy as old_entry
@@ -156,7 +240,7 @@ class SSDCachingContractTests(unittest.TestCase):
     def test_advice_does_not_require_file_move_or_pooling(self):
         for value in (False, None):
             data = payload()
-            data['capabilities'].update(file_move=value, file_level_pooling=value)
+            data['capabilities'].update(file_move=value, file_cache=False, file_level_pooling=value)
             item = evaluate_ssd_caching_policy(**data)[0]
             self.assertEqual(item['action'], 'cache')
             self.assertTrue(item['requires_approval'])
@@ -194,15 +278,27 @@ class SSDCachingContractTests(unittest.TestCase):
         older = copy.deepcopy(data['history']['file_activity'][0])
         older.update(window_start_utc='2026-10-17T11:58:00Z', window_end_utc='2026-10-17T11:59:00Z', read_ops=6000)
         data['history']['file_activity'].append(older)
-        self.assertEqual(evaluate_ssd_caching_policy(**data), expected)
+        actual = evaluate_ssd_caching_policy(**data)
+        self.assertEqual(
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in actual],
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in expected],
+        )
         data['history']['file_activity'].reverse()
-        self.assertEqual(evaluate_ssd_caching_policy(**data), expected)
+        actual = evaluate_ssd_caching_policy(**data)
+        self.assertEqual(
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in actual],
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in expected],
+        )
 
     def test_identical_duplicate_window_does_not_double_count_reads(self):
         data = payload()
         expected = evaluate_ssd_caching_policy(**data)
         data['history']['file_activity'] *= 2
-        self.assertEqual(evaluate_ssd_caching_policy(**data), expected)
+        actual = evaluate_ssd_caching_policy(**data)
+        self.assertEqual(
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in actual],
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in expected],
+        )
 
     def test_overlapping_windows_are_not_added_together(self):
         data = payload()
@@ -210,7 +306,11 @@ class SSDCachingContractTests(unittest.TestCase):
         older = copy.deepcopy(data['history']['file_activity'][0])
         older.update(window_start_utc='2026-10-17T11:58:30Z', window_end_utc='2026-10-17T11:59:30Z', read_ops=9000)
         data['history']['file_activity'].append(older)
-        self.assertEqual(evaluate_ssd_caching_policy(**data), expected)
+        actual = evaluate_ssd_caching_policy(**data)
+        self.assertEqual(
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in actual],
+            [(row['action'], row['file_id'], row['source_device_id'], row['target_device_id']) for row in expected],
+        )
 
     def test_conflicting_latest_counts_or_window_bounds_are_ambiguous(self):
         for change in ({'read_ops': 240}, {'window_start_utc': '2026-10-17T11:58:00Z'}, {'device_id': 'ssd-1'}, {'file_size_bytes': 8 * 1024 ** 2}):

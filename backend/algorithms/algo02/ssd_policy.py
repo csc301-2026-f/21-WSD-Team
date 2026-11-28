@@ -5,6 +5,7 @@ from ..common.validation import is_mock_source
 from .inputs import PolicyInputError, validate_inputs
 from .candidates import collect_candidates
 from .greedy_selection import select_recommendations
+from .prediction import score_cache_candidates
 
 def _has_mock_activity(history):
     rows = history.get("file_activity", []) if isinstance(history, dict) else []
@@ -31,10 +32,24 @@ def evaluate_ssd_caching_policy(devices: list[dict], realtime: dict, history: di
         warnings.add("missing_file_activity")
     if not budgets:
         warnings.add("no_eligible_ssd")
-        
-    candidates = collect_candidates(context, device_map, warnings)
+
+    raw_candidates = collect_candidates(context, device_map, warnings)
+    scored_candidates = score_cache_candidates(raw_candidates, context.activity)
+    min_cache_prob = context.config["min_cache_prob"]
+    goal = context.config["goal"]
+    eligible_candidates = []
+    
+    for row in scored_candidates:
+        if goal == "lifespan" and row.get("write_ops", 0) > 0:
+            warnings.add("skipped_write_active_for_lifespan")
+            continue
+        if row["ml_cache_prob"] < min_cache_prob:
+            warnings.add("below_ml_cache_threshold")
+            continue
+        eligible_candidates.append(row)
+
     result = select_recommendations(
-        candidates, budgets, context, warnings,
+        eligible_candidates, budgets, context, warnings,
         execution_supported=capabilities.get("file_cache") is True or capabilities.get("file_move") is True
     )
     return result or [make_none(

@@ -169,6 +169,7 @@ The main implementation is organized under `backend/` and `frontend/`. CORE conn
 - [D3 AI Usage Disclosure](deliverables/D3/AI_usage.md)
 - [D4 Individual Contributions](deliverables/D4/Individual_Contributions_Deliverable4.md)
 - [D4 AI Usage Disclosure](deliverables/D4/AI_usage.md)
+- [D4 ALGO-02 README](backend/algorithms/docs/policy_2_readme.md)
 
 ## License
 

@@ -105,12 +105,22 @@ def collect_candidates(context, devices, warnings):
             warnings.add("file_too_large_for_cache")
             continue
 
+        read_bytes = row.get("read_bytes")
+        if not isinstance(read_bytes, int) or read_bytes < 0:
+            read_bytes = row["file_size_bytes"]
+        
+        write_ops = row.get("write_ops")
+        if not isinstance(write_ops, int) or write_ops < 0:
+            write_ops = 0
+
         result.append({
             "file_id": file_id, 
             "source": source, 
             "size": row["file_size_bytes"],
+            "read_ops": reads,
+            "write_ops": write_ops,
+            "read_bytes": read_bytes,
             "read_rate": rate, 
-            "read_ops": reads, 
             "is_mock": is_mock_source(row["source"])
         })
         
