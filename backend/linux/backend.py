@@ -25,10 +25,8 @@ class LinuxBackend:
 
         Disk and process collection start even if file tracking cannot.
 
-        :return: None on success, or ErrorCode.FILE_TRACER_UNAVAILABLE if the
-                 eBPF file tracer could not be loaded. Things that could cause the error are: (missing BCC, kernel
-                 headers, privileges or fentry support)
-                 A return of ErrorCode still means dick_collector and process_collector started.
+        :return: None on success, or ErrorCode.FILE_TRACER_UNAVAILABLE if probe startup fails,
+                 for example due to missing kernel headers, privileges or fentry support.
         """
         if self._started:
             return None
@@ -42,7 +40,7 @@ class LinuxBackend:
 
     def close(self) -> None:
         """
-        Stop background collection and wait for both threads to terminate.
+        Stop background collection and wait for the collector threads to terminate.
         """
         if not self._started:
             return
@@ -95,8 +93,8 @@ class LinuxBackend:
 
         :param interval_seconds: Number of one-second sampling intervals to compare; must be positive
         :param device_name: Linux block device ID, e.g. "nvme0n1"
-        :return: DriveMetric containing interval I/O statistics, or None if stopped, device is invalid,
-                 or history is insufficient
+        :return: DriveMetric containing interval I/O statistics, or BACKEND_NOT_STARTED while stopped.
+                 INVALID_TIME_INTERVAL covers an invalid interval, unknown device or insufficient samples.
         """
         if not self._started:
             return ErrorCode.BACKEND_NOT_STARTED
@@ -112,8 +110,9 @@ class LinuxBackend:
 
         :param interval_seconds: Number of one-second sampling intervals to compare; must be positive
         :param pid: Linux process ID
-        :return: ProcessMetric containing interval I/O statistics, or None if stopped, history is insufficient,
-                 process is unavailable, or access is denied
+        :return: ProcessMetric containing interval I/O statistics, or an ErrorCode (BACKEND_NOT_STARTED,
+                 INVALID_TIME_INTERVAL, PROCESS_NOT_FOUND or PROCESS_PID_REUSED).
+        :raises ValueError: If started and interval_seconds is nonpositive.
         """
         if not self._started:
             return ErrorCode.BACKEND_NOT_STARTED
@@ -214,17 +213,17 @@ class LinuxBackend:
         Start moving a file in a mergerfs pool to another partition, keeping the
         same relative path. Returns immediately while mv runs in the background.
 
-        The destination directory must already exist; an existing file at the
-        destination is never overwritten.
+        The destination parent must exist and the destination path must be unused.
 
-        Use the returned handle to follow the move: progress() (0.0 to 1.0),
+        Use the returned handle to follow the move: progress() (0.0–0.9999 while running,
+        100.0 on success),
         is_running(), result(), wait(timeout) and cancel().
 
         :param file_path: Absolute path of the file inside the mergerfs mount
         :param destination_mount: Absolute mount point of the destination partition,
                                   e.g. "/run/media/wisky/test1"
         :return: MoveHandle for the running move, or an ErrorCode if it could not
-                 start: INVALID_PATH, PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
+                 start: PATH_NOT_ABSOLUTE, FILE_NOT_FOUND, NOT_A_DIRECTORY,
                  NOT_ON_MERGERFS, ALREADY_ON_DESTINATION, DESTINATION_EXISTS or
                  MOVE_FAILED
         """

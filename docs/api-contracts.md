@@ -642,7 +642,7 @@ All three collectors sample in a daemon thread about once per second. `interval_
 |---|---|---|---|
 | Disk | 600 | 599 | returns `ErrorCode.INVALID_TIME_INTERVAL` while started |
 | Process | 10 | 9 | raises `ValueError` while started |
-| File | 60 | 59 | raises `ValueError` (only while started; returns `{}` when stopped) |
+| File | 61 | 60 | raises `ValueError` (only while started; returns `{}` when stopped) |
 
 At most 16,384 files can be tracked at once (`MAX_TRACKED_FILES`).
 
@@ -655,11 +655,11 @@ At most 16,384 files can be tracked at once (`MAX_TRACKED_FILES`).
 | `file_id` | `int` | Assigned by this collector. IDs can have gaps and can repeat across backend instances |
 | `absolute_path` | `str` | Canonical absolute path, symlinks resolved |
 | `inode` | `int` | `st_ino` from `os.stat()` at the last check |
-| `device` | `int` | `st_dev` from `os.stat()` at the last check (raw value, not a block device name) |
+| `device` | `str \| None` | Linux disk or logical device name from sysfs, or `None` if unresolved. Partitions resolve to their parent disk. For a mergerfs file the collector attempts to identify the underlying branch device. |
 
 Equality and hashing use `(file_id, absolute_path)`. Tracking a path twice or tracking a hard link to the same inode returns the existing record. Removing it and tracking it again assigns a new ID.
 
-**Replacement at the same path.** When the sampler detects a changed device or inode, it constructs a new `File` without the required `file_id`. This raises `TypeError` in the sampling thread and stops new file samples for all tracked files. Existing history can still be returned.
+**Replacement at the same path.** When the sampler detects a changed filesystem device or inode, it updates the record and attempts to bind the probe to the replacement. The path keeps its collector ID and counter slot.
 
 `FileMetric` is the activity of one file over an interval (difference of two cumulative samples):
 
@@ -683,7 +683,7 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 
 `get_all_file_stats()` returns `None` for a file until it has been present in `interval_seconds + 1` samples, for example right after it is tracked.
 
-**Suggested mapping to the shared `FileActivity` record (§02.1)** for CORE:
+CORE emits one row per tracked file with sufficient history. The Linux adapter maps the following fields into the shared `FileActivity` record (§02.1).
 
 | `FileActivity` field | Linux source |
 |---|---|
@@ -691,10 +691,13 @@ Gap details: the gap of an operation is `|start − previous_end|`, tracked per 
 | `window_start_utc` / `window_end_utc` | `timestamp` / estimated end from `timestamp + duration` seconds |
 | `read_bytes` / `write_bytes` | `read_completed_bytes` / `write_completed_bytes` |
 | `read_ops` / `write_ops` | `read_success_ops` / `write_success_ops` |
-| `file_size_bytes` | **Not provided by `FileMetric`.** Collected internally, but not exposed; CORE can `os.stat()` the path for now |
-| `device_id` | **Not provided.** `File.device` is a raw `st_dev`, not a block device name like `nvme0n1` |
-| `file_id` | `file.file_id` is a collector-local integer. A shared string ID needs a scope if records span backend instances |
-| `source` | Suggested `"linux_ebpf"` |
+| `file_size_bytes` | CORE reads `os.stat(path).st_size`, or returns `null` on an OS error |
+| `device_id` | `file.device`, e.g. `"nvme0n1"` or `null` |
+| `file_id` | `file.file_id` converted to a string, scoped to this collector instance |
+| `source` | `"linux_ebpf"` |
+| `read_average_gap` / `write_average_gap` | Mean gap in bytes, or `null` when no gap was measured |
+
+**Linux path inputs.** File and folder tracking, mergerfs lookup, and both move arguments use `validate_tracking_path()`. Supply an absolute filesystem-encodable string. A relative or empty string returns `PATH_NOT_ABSOLUTE`. Non-string or unencodable input returns `INVALID_PATH` (18). For absolute paths the same error covers ASCII control characters (including DEL), semicolon, ampersand, vertical bar, backtick, angle brackets, and the sequences `$(` and `${`. Spaces are allowed.
 
 #### Requirements for file tracking
 
@@ -710,8 +713,8 @@ These calls work independently of `start()`. The caller supplies an existing mer
 
 | Call | Result |
 |---|---|
-| `get_actual_path(file_path)` | Reads `user.mergerfs.fullpath` and `user.mergerfs.relpath`. Returns the underlying source path, or `NOT_ON_MERGERFS` on any xattr read error, including a missing file or denied access. |
-| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
+| `get_actual_path(file_path)` | Validates the path as above, then reads `user.mergerfs.fullpath` and `user.mergerfs.relpath`. Returns the underlying source path, or `NOT_ON_MERGERFS` on any xattr read error, including a missing file or denied access. |
+| `start_move_file(file_path, destination_mount)` | Starts `mv --` on the underlying paths, preserving the pool-relative path. Returns a `MoveHandle` once the process starts. Validation or launch can return `INVALID_PATH`, `PATH_NOT_ABSOLUTE`, `FILE_NOT_FOUND`, `NOT_A_DIRECTORY`, `NOT_ON_MERGERFS`, `ALREADY_ON_DESTINATION`, or `MOVE_FAILED`. A missing destination subdirectory normally causes a later `MOVE_FAILED`. |
 | Existing destination | After the same-path check, an existing destination entry raises `AttributeError` before launch. The code refers to `DESTINATION_EXISTS`, while the enum defines `FILE_ALREADY_EXISTS`. The existence check and the move are separate, so a concurrent destination creation can still be overwritten. |
 
 `MoveHandle` exposes `source_path` (pool path), `actual_path` (source branch path), `destination_path` and `total_bytes` (initial size).

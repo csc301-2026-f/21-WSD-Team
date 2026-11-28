@@ -48,50 +48,38 @@ WSD supports disk, process, and file I/O monitoring on Linux and Windows.
 - **ALGO-01 (RAID0):** Predicts future read activity by selecting among Ridge regression, moving average, and the latest observed read rate. It considers spatial locality and uses Knapsack optimization with state pruning to select files within the available SSD capacity. Greedy selection serves as a fallback when the DP budget is exceeded.
 - **ALGO-02 (SSD caching):** Generates cache recommendations using a greedy selection algorithm. CORE supports recommendation generation for both storage modes.
 - Display recommended source and target devices, reasons, and constraints.
+- On Windows, evaluate real file activity for eligible HDD-to-SSD/NVMe placement recommendations.
 
-Demo mode uses clearly labelled sample activity. Real recommendations depend on file activity and available SSD/NVMe capacity. ALGO-01 can use observed activity while historical data is still being collected.
+On the D4 Linux build, **Recommendations** can generate advice for either **RAID 0 / File-Level Pooling** (ALGO-01) or **SSD Caching** (ALGO-02). Generating advice leaves the files in place.
 
 See the [ALGO-01 Developer Guide](backend/algorithms/docs/policy_1_readme.md) for algorithm details.
 
 ## Installation and Usage
 
-Download an appropriate Linux or Windows package from [GitHub Releases](https://github.com/csc301-2026-f/21-WSD-Team/releases). Development pre-releases include both packages.
+### Linux D4 setup
 
-### Linux
+TODO: Add linux d4 release 
+On Ubuntu 24.04, run these commands from the D4 repository root. The virtual environment uses the system Python so it can load Ubuntu’s BCC bindings. Live file tracing also requires a kernel with BTF and fentry/fexit support. [Linux installation guide](packaging/linux/README.md)
 
-The Linux package targets **Ubuntu 24.04 x86-64** and includes a standalone executable and installation script.
+```bash
+sudo apt install python3-venv python3-bpfcc util-linux "linux-headers-$(uname -r)"
+/usr/bin/python3 -m venv --system-site-packages .venv
+.venv/bin/python -m pip install Flask 'scikit-learn>=1.5,<2'
+sudo .venv/bin/python -m backend.main
+```
 
-See the [Linux Installation Guide](packaging/linux/README.md) for installation, dependencies, and remote access. For RAID0 mode, prepare an existing pool using the [mergerfs Setup Guide](backend/linux/mergerfs_setup.txt).
+Open [the local dashboard](http://127.0.0.1:5000/). For sample recommendations, stop the server with Ctrl+C and run `.venv/bin/python -m backend.main --demo --data-dir /tmp/wsd-d4-demo`.
 
 ### Windows
 
 See the **[Windows Setup Guide](packaging/windows/README.md)** for the desktop launcher, source setup, portable builds, and screenshots. Choose **Start Monitoring** for real activity or **Start Demo** for sample data. Real monitoring requests Administrator access.
 
-### Running WSD on Linux
+### Verify D4 on Linux
 
-After installation, choose one of the following modes.
-
-**Real Mode — Disk and Process Monitoring**
-
-```bash
-~/.local/bin/wsd
-```
-
-Collects real disk and process I/O measurements from the Linux operating system.
-
-**Demo Mode — Storage Recommendations**
-
-```bash
-~/.local/bin/wsd --demo
-```
-
-Uses sample file-activity data to demonstrate storage placement recommendations.
-
-Once started, open:
-
-**http://127.0.0.1:5000/**
-
-Stop the current mode using `Ctrl+C` before switching modes.
+1. **Track a file.** In a second terminal, run `sample=$(mktemp /tmp/wsd-io.XXXXXX)`, then `head -c 1048576 /dev/zero > "$sample"` and `echo "$sample"`. In **File I/O Monitoring**, choose **Live backend**, paste the printed path and click **Track path**. You can also track a directory to subscribe to the regular files currently under it.
+2. **Observe reads.** Allow eight seconds for the first measurement window. In the same terminal, run `for i in {1..15}; do dd if="$sample" of=/dev/null bs=64K status=none; sleep 1; done` in Bash. During the loop, click **Refresh file activity** and check the file’s read bytes and operations.
+3. **Generate placement advice.** For a real RAID0 recommendation, configure one mergerfs pool with HDD and SSD branches. Repeat the tracking and read steps with a disposable file on the HDD accessed through its pool path. Keep it active through a complete 60-second collection window, then select **RAID 0 / File-Level Pooling** and **Generate recommendations**. The result depends on file activity, device identification and free SSD capacity. [mergerfs setup](backend/linux/mergerfs_setup.txt)
+4. **Verify a manual move.** For example, if the pool path is `/srv/pool/docs/sample.bin` and the SSD branch is `/mnt/ssd`, first confirm that `/mnt/ssd/docs` exists, the target filename is unused, and writers have closed the file. Select the file in **File I/O Monitoring**, enter `/mnt/ssd` as the destination branch and choose **Move selected file**. After completion, verify that `/mnt/ssd/docs/sample.bin` exists, the old HDD branch copy is gone, and `/srv/pool/docs/sample.bin` is still readable.
 
 ## Testing the Main Features
 
